@@ -17,6 +17,9 @@ import CartProvider from "contexts/CartContext";
 // SITE SETTINGS PROVIDER
 import SettingsProvider from "contexts/SettingContext";
 
+// APOLLO CLIENT PROVIDER
+import ApolloWrapper from "components/ApolloWrapper";
+
 // GLOBAL CUSTOM COMPONENTS
 import RTL from "components/rtl";
 import ProgressBar from "components/progress";
@@ -35,18 +38,20 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body id="body" className={geist.className}>
-        <CartProvider>
-          <SettingsProvider>
-            <ThemeProvider>
-              <RTL>
-                {modal}
-                {children}
-              </RTL>
+        <ApolloWrapper>
+          <CartProvider>
+            <SettingsProvider>
+              <ThemeProvider>
+                <RTL>
+                  {modal}
+                  {children}
+                </RTL>
 
-              <ProgressBar />
-            </ThemeProvider>
-          </SettingsProvider>
-        </CartProvider>
+                <ProgressBar />
+              </ThemeProvider>
+            </SettingsProvider>
+          </CartProvider>
+        </ApolloWrapper>
 
         <GoogleAnalytics gaId="G-XKPD36JXY0" />
       </body>

@@ -1,4 +1,4 @@
-import decodeJWT from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { initializeApollo } from '../../../apollo/client';
 import { userVar } from '../../../apollo/store';
 import { CustomJwtPayload } from '../types/customJwtPayload';
@@ -26,7 +26,6 @@ export const logIn = async (nick: string, password: string): Promise<void> => {
 	} catch (err) {
 		console.warn('login err', err);
 		logOut();
-		// throw new Error('Login Err');
 	}
 };
 
@@ -37,7 +36,7 @@ const requestJwtToken = async ({
 	nick: string;
 	password: string;
 }): Promise<{ jwtToken: string }> => {
-	const apolloClient = await initializeApollo();
+	const apolloClient = initializeApollo();
 
 	try {
 		const result = await apolloClient.mutate({
@@ -46,13 +45,11 @@ const requestJwtToken = async ({
 			fetchPolicy: 'network-only',
 		});
 
-		console.log('---------- login ----------');
-		const { accessToken } = result?.data?.login;
-
+		const { accessToken } = (result?.data as any)?.login;
 		return { jwtToken: accessToken };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
-		switch (err.graphQLErrors[0].message) {
+		switch (err.graphQLErrors?.[0]?.message) {
 			case 'Definer: login and password do not match':
 				await sweetMixinErrorAlert('Please check your password again');
 				break;
@@ -73,9 +70,8 @@ export const signUp = async (nick: string, password: string, phone: string, type
 			updateUserInfo(jwtToken);
 		}
 	} catch (err) {
-		console.warn('login err', err);
+		console.warn('signup err', err);
 		logOut();
-		// throw new Error('Login Err');
 	}
 };
 
@@ -90,7 +86,7 @@ const requestSignUpJwtToken = async ({
 	phone: string;
 	type: string;
 }): Promise<{ jwtToken: string }> => {
-	const apolloClient = await initializeApollo();
+	const apolloClient = initializeApollo();
 
 	try {
 		const result = await apolloClient.mutate({
@@ -101,13 +97,11 @@ const requestSignUpJwtToken = async ({
 			fetchPolicy: 'network-only',
 		});
 
-		console.log('---------- login ----------');
-		const { accessToken } = result?.data?.signup;
-
+		const { accessToken } = (result?.data as any)?.signup;
 		return { jwtToken: accessToken };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
-		switch (err.graphQLErrors[0].message) {
+		switch (err.graphQLErrors?.[0]?.message) {
 			case 'Definer: login and password do not match':
 				await sweetMixinErrorAlert('Please check your password again');
 				break;
@@ -127,12 +121,12 @@ export const updateStorage = ({ jwtToken }: { jwtToken: any }) => {
 export const updateUserInfo = (jwtToken: any) => {
 	if (!jwtToken) return false;
 
-	const claims = decodeJWT<CustomJwtPayload>(jwtToken);
+	const claims = jwtDecode<CustomJwtPayload>(jwtToken);
 	userVar({
 		_id: claims._id ?? '',
 		memberType: claims.memberType ?? '',
 		memberStatus: claims.memberStatus ?? '',
-		memberAuthType: claims.memberAuthType,
+		memberAuthType: claims.memberAuthType ?? '',
 		memberPhone: claims.memberPhone ?? '',
 		memberNick: claims.memberNick ?? '',
 		memberFullName: claims.memberFullName ?? '',
@@ -142,14 +136,14 @@ export const updateUserInfo = (jwtToken: any) => {
 				: `${claims.memberImage}`,
 		memberAddress: claims.memberAddress ?? '',
 		memberDesc: claims.memberDesc ?? '',
-		memberProperties: claims.memberProperties,
-		memberRank: claims.memberRank,
-		memberArticles: claims.memberArticles,
-		memberPoints: claims.memberPoints,
-		memberLikes: claims.memberLikes,
-		memberViews: claims.memberViews,
-		memberWarnings: claims.memberWarnings,
-		memberBlocks: claims.memberBlocks,
+		memberProperties: claims.memberProperties ?? 0,
+		memberRank: claims.memberRank ?? 0,
+		memberArticles: claims.memberArticles ?? 0,
+		memberPoints: claims.memberPoints ?? 0,
+		memberLikes: claims.memberLikes ?? 0,
+		memberViews: claims.memberViews ?? 0,
+		memberWarnings: claims.memberWarnings ?? 0,
+		memberBlocks: claims.memberBlocks ?? 0,
 	});
 };
 
