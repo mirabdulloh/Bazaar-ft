@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "ui-lib.com"
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3007"
       }
     ]
   }

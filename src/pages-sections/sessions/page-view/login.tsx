@@ -4,6 +4,7 @@ import Button from "@mui/material/Button";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useRouter } from "next/navigation";
 // GLOBAL CUSTOM COMPONENTS
 import { TextField, FormProvider } from "components/form-hook";
 // LOCAL CUSTOM COMPONENTS
@@ -11,17 +12,20 @@ import Label from "../components/label";
 import EyeToggleButton from "../components/eye-toggle-button";
 // LOCAL CUSTOM HOOK
 import usePasswordVisible from "../use-password-visible";
+// AUTH
+import { logIn } from "lib/auth";
 
 // LOGIN FORM FIELD VALIDATION SCHEMA
 const validationSchema = yup.object().shape({
-  password: yup.string().required("Password is required"),
-  email: yup.string().email("Invalid Email Address").required("Email is required")
+  nick: yup.string().min(3, "Min 3 characters").max(12, "Max 12 characters").required("Nickname is required"),
+  password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required")
 });
 
 export default function LoginPageView() {
+  const router = useRouter();
   const { visiblePassword, togglePasswordVisible } = usePasswordVisible();
 
-  const initialValues = { email: "", password: "" };
+  const initialValues = { nick: "", password: "" };
 
   const methods = useForm({
     defaultValues: initialValues,
@@ -33,20 +37,21 @@ export default function LoginPageView() {
     formState: { isSubmitting }
   } = methods;
 
-  const handleSubmitForm = handleSubmit((values) => {
-    alert(JSON.stringify(values, null, 2));
+  const handleSubmitForm = handleSubmit(async (values) => {
+    await logIn(values.nick, values.password);
+    router.push("/");
   });
 
   return (
     <FormProvider methods={methods} onSubmit={handleSubmitForm}>
       <div className="mb-1">
-        <Label>Email or Phone Number</Label>
+        <Label>Nickname</Label>
         <TextField
           fullWidth
-          name="email"
-          type="email"
+          name="nick"
+          type="text"
           size="medium"
-          placeholder="exmple@mail.com"
+          placeholder="your_nickname"
         />
       </div>
 

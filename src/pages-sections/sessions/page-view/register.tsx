@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useRouter } from "next/navigation";
 // GLOBAL CUSTOM COMPONENTS
 import { Checkbox, TextField, FormProvider } from "components/form-hook";
 // LOCAL CUSTOM COMPONENTS
@@ -15,12 +16,16 @@ import BoxLink from "../components/box-link";
 import usePasswordVisible from "../use-password-visible";
 // GLOBAL CUSTOM COMPONENTS
 import FlexBox from "components/flex-box/flex-box";
+// AUTH
+import { signUp } from "lib/auth";
 
 // REGISTER FORM FIELD VALIDATION SCHEMA
+type RegisterValues = { nick: string; phone: string; password: string; re_password: string; agreement: boolean | undefined };
+
 const validationSchema = yup.object().shape({
-  name: yup.string().required("Name is required"),
-  email: yup.string().email("Invalid Email Address").required("Email is required"),
-  password: yup.string().required("Password is required"),
+  nick: yup.string().min(3, "Min 3 characters").max(12, "Max 12 characters").required("Name is required"),
+  phone: yup.string().matches(/^\+?[0-9]{7,15}$/, "Digits only, e.g. +821012345678").required("Phone number is required"),
+  password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required"),
   re_password: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords must match")
@@ -36,6 +41,7 @@ const validationSchema = yup.object().shape({
 });
 
 export default function RegisterPageView() {
+  const router = useRouter();
   const { visiblePassword, togglePasswordVisible } = usePasswordVisible();
 
   const inputProps = {
@@ -43,8 +49,8 @@ export default function RegisterPageView() {
   };
 
   const initialValues = {
-    name: "",
-    email: "",
+    nick: "",
+    phone: "",
     password: "",
     re_password: "",
     agreement: false
@@ -60,25 +66,26 @@ export default function RegisterPageView() {
     formState: { isSubmitting }
   } = methods;
 
-  const handleSubmitForm = handleSubmit((values) => {
-    alert(JSON.stringify(values, null, 2));
+  const handleSubmitForm = handleSubmit(async (values: RegisterValues) => {
+    await signUp(values.nick, values.password, values.phone, "USER");
+    router.push("/");
   });
 
   return (
     <FormProvider methods={methods} onSubmit={handleSubmitForm}>
       <div className="mb-1">
         <Label>Full Name</Label>
-        <TextField fullWidth name="name" size="medium" placeholder="Ralph Awards" />
+        <TextField fullWidth name="nick" size="medium" placeholder="Your name" />
       </div>
 
       <div className="mb-1">
-        <Label>Email or Phone Number</Label>
+        <Label>Phone Number</Label>
         <TextField
           fullWidth
-          name="email"
+          name="phone"
           size="medium"
-          type="email"
-          placeholder="exmple@mail.com"
+          type="text"
+          placeholder="+821012345678"
         />
       </div>
 
