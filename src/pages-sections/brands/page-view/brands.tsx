@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@apollo/client/react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
@@ -35,15 +35,21 @@ const ShopsPageView = ({ initialInput }: T) => {
 		fetchPolicy: "cache-and-network",
 		variables: { input: searchBrands },
 		notifyOnNetworkStatusChange: true,
-		onCompleted: (data: T) => {
-			setBrands(data?.getBrands?.list ?? []);
-			setTotalCount(data?.getBrands?.metaData?.total ?? 0);
-		},
 	});
 
+	useEffect(() => {
+		const data = getBrandsData as T;
+		if (data?.getBrands) {
+			setBrands(data.getBrands.list ?? []);
+			setTotalCount(data.getBrands.metaData?.total ?? 0);
+		}
+	}, [getBrandsData]);
+
 	/** HANDLERS **/
-	const paginationHandler = (e: T, value: number) => {
-		setSearchBrands({ ...searchBrands, page: value });
+	const paginationHandler = async (_e: T, value: number) => {
+		const newSearch = { ...searchBrands, page: value };
+		setSearchBrands(newSearch);
+		await getBrandsRefetch({ input: newSearch });
 	};
 
 	return (
