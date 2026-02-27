@@ -1,8 +1,12 @@
+"use client";
+
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 // CUSTOM COMPONENTS
 import NavItem from "./nav-item";
+// AUTH
+import { logOut } from "lib/auth";
 // STYLED COMPONENTS
 import { MainContainer } from "./styles";
 
@@ -10,9 +14,9 @@ const MENUS = [
   {
     title: "DASHBOARD",
     list: [
-      { count: 5, icon: "Packages", href: "/orders", title: "Orders" },
-      { count: 19, icon: "HeartLine", href: "/wish-list", title: "Wishlist" },
-      { count: 3, icon: "BellOutlined", href: "/notifications", title: "Notifications" },
+      { icon: "Packages", href: "/orders", title: "Orders" },
+      { icon: "HeartLine", href: "/wish-list", title: "Wishlist" },
+      { icon: "BellOutlined", href: "/notifications", title: "Notifications" },
       { icon: "HeartLine", href: "/following", title: "Following Brands" }
     ]
   },
@@ -20,8 +24,8 @@ const MENUS = [
     title: "ACCOUNT SETTINGS",
     list: [
       { icon: "User3", href: "/profile", title: "Profile Info" },
-      { count: 16, icon: "Location", href: "/address", title: "Addresses" },
-      { count: 4, icon: "CreditCard", href: "/payment-methods", title: "Payment Methods" }
+      { icon: "Location", href: "/address", title: "Addresses" },
+      { icon: "CreditCard", href: "/payment-methods", title: "Payment Methods" }
     ]
   }
 ];
@@ -49,7 +53,13 @@ export function Navigation() {
       ))}
 
       <Box px={4} mt={6} pb={2}>
-        <Button disableElevation variant="outlined" color="primary" fullWidth>
+        <Button
+          disableElevation
+          variant="outlined"
+          color="primary"
+          fullWidth
+          onClick={logOut}
+        >
           Logout
         </Button>
       </Box>

@@ -6,8 +6,10 @@ import OverlayScrollbar from "components/overlay-scrollbar";
 import SidebarAccordion from "./sidebar-accordion";
 // LOCAL CUSTOM HOOKS
 import { useLayout } from "../dashboard-layout-context";
+// AUTH
+import { logOut } from "lib/auth";
 // SIDEBAR NAVIGATION LIST
-import { navigation } from "../dashboard-navigation";
+import { adminNavigation, brandNavigation } from "../dashboard-navigation";
 // STYLED COMPONENTS
 import {
   ListLabel,
@@ -65,6 +67,21 @@ export default function MultiLevelMenu() {
         );
       }
 
+      if (item.type === "logout") {
+        return (
+          <NavItemButton key={index} className="navItem" active={0} onClick={logOut}>
+            {item?.icon ? (
+              <ListIconWrapper>
+                <item.icon />
+              </ListIconWrapper>
+            ) : (
+              <BulletIcon active={0} />
+            )}
+            <StyledText compact={COMPACT}>{item.name}</StyledText>
+          </NavItemButton>
+        );
+      }
+
       return (
         <Link key={index} href={item.path} passHref>
           <NavItemButton
@@ -89,11 +106,13 @@ export default function MultiLevelMenu() {
     });
   };
 
+  const nav = pathname.startsWith("/admin") ? adminNavigation : brandNavigation;
+
   return (
     <OverlayScrollbar
       sx={{ px: 2, overflowX: "hidden", maxHeight: `calc(100vh - ${TOP_HEADER_AREA}px)` }}
     >
-      {renderLevels(navigation)}
+      {renderLevels(nav)}
     </OverlayScrollbar>
   );
 }

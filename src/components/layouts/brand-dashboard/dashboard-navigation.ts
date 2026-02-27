@@ -1,11 +1,14 @@
 import duotone from "icons/duotone";
 
-export const navigation = [
+export const adminNavigation = [
   { type: "label", label: "Admin" },
   {
-    name: "Dashboard",
-    icon: duotone.Dashboard,
-    path: "/brand/dashboard"
+    name: "Brands",
+    icon: duotone.Apps,
+    children: [
+      { name: "Brand List", path: "/admin/brands" },
+      { name: "Add Brand", path: "/admin/brands/create" }
+    ]
   },
   {
     name: "Products",
@@ -25,19 +28,9 @@ export const navigation = [
     ]
   },
   {
-    name: "Brands",
-    icon: duotone.Apps,
-    children: [
-      { name: "Brand List", path: "/admin/brands" },
-      { name: "Create Brand", path: "/admin/brands/create" }
-    ]
-  },
-  {
     name: "Orders",
     icon: duotone.Order,
-    children: [
-      { name: "Order List", path: "/admin/orders" }
-    ]
+    path: "/admin/orders"
   },
   {
     name: "Customers",
@@ -59,7 +52,15 @@ export const navigation = [
     icon: duotone.Invoice,
     path: "/admin/coupons"
   },
+  {
+    name: "Logout",
+    icon: duotone.Session,
+    path: "/",
+    type: "logout"
+  }
+];
 
+export const brandNavigation = [
   { type: "label", label: "Brand" },
   {
     name: "Dashboard",
@@ -71,7 +72,7 @@ export const navigation = [
     icon: duotone.Products,
     children: [
       { name: "My Products", path: "/brand/products" },
-      { name: "Add Product", path: "/admin/products/create" }
+      { name: "Add Product", path: "/brand/products/create" }
     ]
   },
   {
@@ -90,29 +91,9 @@ export const navigation = [
     path: "/brand/coupons"
   },
   {
-    name: "Earnings",
-    icon: duotone.ProjectChart,
-    children: [
-      { name: "Earning History", path: "/brand/earning-history" },
-      { name: "Payouts", path: "/brand/payouts" },
-      { name: "Payout Request", path: "/brand/payout-requests" },
-      { name: "Payout Settings", path: "/brand/payout-settings" }
-    ]
-  },
-  {
-    name: "Refund Request",
-    icon: duotone.Refund,
-    path: "/brand/refund-request"
-  },
-  {
     name: "Reviews",
     icon: duotone.Review,
     path: "/brand/reviews"
-  },
-  {
-    name: "Brand Settings",
-    icon: duotone.SiteSetting,
-    path: "/brand/shop-settings"
   },
   {
     name: "Account Settings",
@@ -122,6 +103,10 @@ export const navigation = [
   {
     name: "Logout",
     icon: duotone.Session,
-    path: "/"
+    path: "/",
+    type: "logout"
   }
 ];
+
+// kept for any legacy imports
+export const navigation = adminNavigation;

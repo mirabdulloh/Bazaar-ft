@@ -43,12 +43,8 @@ export function HeaderUser() {
     );
   }
 
-  const dashboardHref =
-    user.memberType === "ADMIN"
-      ? "/admin/brands"
-      : user.memberType === "BRAND"
-        ? "/brand/dashboard"
-        : "/orders";
+  const isAdminOrBrand = user.memberType === "ADMIN" || user.memberType === "BRAND";
+  const dashboardHref = user.memberType === "ADMIN" ? "/admin/brands" : "/brand/dashboard";
 
   return (
     <>
@@ -82,9 +78,14 @@ export function HeaderUser() {
         <MenuItem component={Link} href="/profile" onClick={() => setAnchorEl(null)}>
           My Profile
         </MenuItem>
-        <MenuItem component={Link} href={dashboardHref} onClick={() => setAnchorEl(null)}>
-          Dashboard
+        <MenuItem component={Link} href="/orders" onClick={() => setAnchorEl(null)}>
+          My Orders
         </MenuItem>
+        {isAdminOrBrand && (
+          <MenuItem component={Link} href={dashboardHref} onClick={() => setAnchorEl(null)}>
+            Dashboard
+          </MenuItem>
+        )}
 
         <Divider />
 
