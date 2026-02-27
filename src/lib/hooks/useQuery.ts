@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery as useApolloQuery, DocumentNode, OperationVariables } from '@apollo/client';
+import { useQuery as useApolloQuery, DocumentNode, OperationVariables } from '@apollo/client/react';
 import { T } from '../types/common';
 
 interface UseQueryOptions {

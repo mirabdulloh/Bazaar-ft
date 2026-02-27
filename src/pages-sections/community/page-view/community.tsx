@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client/react";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
+import { useQuery } from "../../../lib/hooks/useQuery";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
