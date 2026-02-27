@@ -1,43 +1,53 @@
 import { gql } from "@apollo/client";
 
-const BRAND_FRAGMENT = `
-  _id
-  brandName
-  brandLogo
-  brandDesc
-  brandStatus
-  brandRating
-  brandFollowersCount
-  brandReviewsCount
-  createdAt
-  updatedAt
-`;
+// ─── Brand Profile ────────────────────────────────────────────────────────────
 
-export const GET_BRAND = gql`
-  query GetBrand($brandId: String!) {
-    getBrand(brandId: $brandId) {
-      ${BRAND_FRAGMENT}
+export const GET_MY_BRAND = gql`
+  query GetMyBrand {
+    getMyBrand {
+      _id
+      brandName
+      brandLogo
+      brandDesc
+      brandStatus
+      brandRating
+      brandFollowersCount
+      brandReviewsCount
+      createdAt
+      updatedAt
       memberData {
         _id
         memberNick
+        memberPhone
+        memberEmail
         memberImage
-        memberFollowers
-        memberProducts
       }
     }
   }
 `;
 
-export const GET_BRANDS_LIST = gql`
-  query GetBrandsList($input: BrandsInquiry!) {
-    getBrands(input: $input) {
+// ─── Brand Products ───────────────────────────────────────────────────────────
+
+export const GET_BRAND_PRODUCTS = gql`
+  query GetBrandProducts($input: BrandProductsInquiry!) {
+    getBrandProducts(input: $input) {
       list {
-        ${BRAND_FRAGMENT}
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
+        _id
+        productType
+        productCategoryId
+        productStatus
+        productTitle
+        productPrice
+        productDiscountPrice
+        productViews
+        productLikes
+        productRatingAverage
+        productStockQuantity
+        productImages
+        productSize
+        productColor
+        createdAt
+        updatedAt
       }
       metaData {
         total
@@ -48,16 +58,29 @@ export const GET_BRANDS_LIST = gql`
   }
 `;
 
-export const GET_MY_BRAND = gql`
-  query GetMyBrand {
-    getMyBrand {
-      ${BRAND_FRAGMENT}
-      memberData {
+// ─── Brand Chats ──────────────────────────────────────────────────────────────
+
+export const GET_BRAND_CHATS = gql`
+  query GetBrandChats($input: ChatsInquiry!) {
+    getBrandChats(input: $input) {
+      list {
         _id
-        memberNick
-        memberPhone
-        memberEmail
-        memberImage
+        memberId
+        brandId
+        chatStatus
+        chatSubject
+        createdAt
+        updatedAt
+        memberData {
+          _id
+          memberNick
+          memberImage
+        }
+      }
+      metaData {
+        total
+        page
+        limit
       }
     }
   }
