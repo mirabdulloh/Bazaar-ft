@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
-import { ApolloClient, ApolloLink, HttpLink, InMemoryCache, split, from, NormalizedCacheObject } from '@apollo/client';
+import { ApolloClient, HttpLink, InMemoryCache, CombinedGraphQLErrors } from '@apollo/client';
+import { ApolloLink } from '@apollo/client/link';
 import { WebSocketLink } from '@apollo/client/link/ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { onError } from '@apollo/client/link/error';
+import { ErrorLink } from '@apollo/client/link/error';
 import { getJwtToken } from '../src/lib/auth';
 import { sweetErrorAlert } from '../src/lib/sweetAlert';
 import { socketVar } from './store';
 
-let apolloClient: ApolloClient<NormalizedCacheObject>;
+let apolloClient: ApolloClient;
 
 function getHeaders() {
 	const headers = {} as HeadersInit;
@@ -35,51 +36,55 @@ class LoggingWebSocket {
 	}
 }
 
-function createIsomorphicLink() {
-	if (typeof window !== 'undefined') {
-		const authLink = new ApolloLink((operation, forward) => {
-			operation.setContext(({ headers = {} }) => ({
-				headers: { ...headers, ...getHeaders() },
-			}));
-			return forward(operation);
-		});
-
-		const httpLink = new HttpLink({
-			uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL,
-		});
-
-		/* WEBSOCKET SUBSCRIPTION LINK */
-		const wsLink = new WebSocketLink({
-			uri: process.env.NEXT_PUBLIC_API_WS ?? 'ws://127.0.0.1:3007',
-			options: {
-				reconnect: false,
-				timeout: 30000,
-				connectionParams: () => ({ headers: getHeaders() }),
-			},
-			webSocketImpl: LoggingWebSocket,
-		});
-
-		const errorLink = onError(({ graphQLErrors, networkError }) => {
-			if (graphQLErrors) {
-				graphQLErrors.forEach(({ message, locations, path }) => {
-					console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`);
-					if (!message.includes('input')) sweetErrorAlert(message);
-				});
-			}
-			if (networkError) console.log(`[Network error]: ${networkError}`);
-		});
-
-		const splitLink = split(
-			({ query }) => {
-				const definition = getMainDefinition(query);
-				return definition.kind === 'OperationDefinition' && definition.operation === 'subscription';
-			},
-			wsLink,
-			authLink.concat(httpLink),
-		);
-
-		return from([errorLink, splitLink]);
+function createIsomorphicLink(): ApolloLink {
+	if (typeof window === 'undefined') {
+		// SSR: use a simple HTTP link with no auth
+		return new HttpLink({ uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL });
 	}
+
+	const authLink = new ApolloLink((operation, forward) => {
+		operation.setContext(({ headers = {} }) => ({
+			headers: { ...headers, ...getHeaders() },
+		}));
+		return forward(operation);
+	});
+
+	const httpLink = new HttpLink({
+		uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL,
+	});
+
+	/* WEBSOCKET SUBSCRIPTION LINK */
+	const wsLink = new WebSocketLink({
+		uri: process.env.NEXT_PUBLIC_API_WS ?? 'ws://127.0.0.1:3007',
+		options: {
+			reconnect: false,
+			timeout: 30000,
+			connectionParams: () => ({ headers: getHeaders() }),
+		},
+		webSocketImpl: LoggingWebSocket,
+	});
+
+	const errorLink = new ErrorLink(({ error }) => {
+		if (CombinedGraphQLErrors.is(error)) {
+			error.errors.forEach(({ message, locations, path }) => {
+				console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`);
+				if (!message.includes('input')) sweetErrorAlert(message);
+			});
+		} else {
+			console.log(`[Network error]: ${error}`);
+		}
+	});
+
+	const splitLink = ApolloLink.split(
+		({ query }) => {
+			const definition = getMainDefinition(query);
+			return definition.kind === 'OperationDefinition' && definition.operation === 'subscription';
+		},
+		wsLink,
+		authLink.concat(httpLink),
+	);
+
+	return ApolloLink.from([errorLink, splitLink]);
 }
 
 function createApolloClient() {
