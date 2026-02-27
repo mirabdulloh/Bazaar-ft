@@ -85,17 +85,132 @@ export const UPDATE_MEMBER = gql`
   mutation UpdateMember($input: MemberUpdate!) {
     updateMember(input: $input) {
       _id
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
       memberNick
       memberFullName
-      memberPhone
       memberEmail
       memberImage
       memberAddress
       memberDesc
+      memberArticles
+      memberFollowers
+      memberFollowings
+      memberPoints
+      memberLikes
+      memberViews
+      memberComments
+      memberRank
+      memberWarnings
+      memberProducts
+      memberBlocks
+      memberCouponId
+      memberCouponStatus
+      memberCouponUsedAt
+      memberCouponAssignedAt
+      lastLoginAt
+      lastActiveAt
+      deletedAt
+      createdAt
       updatedAt
+      accessToken
+      refreshToken
     }
   }
 `;
+
+export const FORGOT_PASSWORD = gql`
+  mutation ForgotPassword($input: String!) {
+    forgotPassword(email: $input)
+  }
+`;
+
+export const CHANGE_PASSWORD = gql`
+  mutation ChangePassword($input: ChangePasswordInput!) {
+    changePassword(input: $input) {
+      _id
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
+      memberNick
+      memberFullName
+      memberEmail
+      memberImage
+      memberAddress
+      memberDesc
+      memberArticles
+      memberFollowers
+      memberFollowings
+      memberPoints
+      memberLikes
+      memberViews
+      memberComments
+      memberRank
+      memberWarnings
+      memberBlocks
+      memberCouponId
+      memberCouponStatus
+      memberCouponUsedAt
+      memberCouponAssignedAt
+      lastLoginAt
+      lastActiveAt
+      deletedAt
+      createdAt
+      updatedAt
+      accessToken
+    }
+  }
+`;
+
+export const LIKE_TARGET_MEMBER = gql`
+  mutation LikeTargetMember($input: String!) {
+    likeTargetMember(memberId: $input) {
+      _id
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
+      memberNick
+      memberFullName
+      memberEmail
+      memberImage
+      memberAddress
+      memberDesc
+      memberArticles
+      memberFollowers
+      memberFollowings
+      memberPoints
+      memberLikes
+      memberViews
+      memberComments
+      memberRank
+      memberWarnings
+      memberProducts
+      memberBlocks
+      memberCouponId
+      memberCouponStatus
+      memberCouponUsedAt
+      memberCouponAssignedAt
+      lastLoginAt
+      lastActiveAt
+      deletedAt
+      createdAt
+      updatedAt
+      accessToken
+    }
+  }
+`;
+
+export const LOGOUT = gql`
+  mutation Logout {
+    logout
+  }
+`;
+
+
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 

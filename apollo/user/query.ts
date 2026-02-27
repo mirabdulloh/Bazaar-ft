@@ -3,14 +3,18 @@ import { gql } from "@apollo/client";
 // ─── Member ───────────────────────────────────────────────────────────────────
 
 export const GET_MEMBER = gql`
-  query GetMember($memberId: String!) {
-    getMember(memberId: $memberId) {
+  query GetMember($input: String!) {
+    getMember(memberId: $input) {
       _id
       memberType
       memberStatus
+      memberAuthType
+      memberPhone
       memberNick
       memberFullName
+      memberEmail
       memberImage
+      memberAddress
       memberDesc
       memberArticles
       memberFollowers
@@ -18,11 +22,125 @@ export const GET_MEMBER = gql`
       memberPoints
       memberLikes
       memberViews
+      memberComments
       memberRank
+      memberWarnings
+      memberBlocks
+      memberCouponId
+      memberCouponStatus
+      memberCouponUsedAt
+      memberCouponAssignedAt
+      lastLoginAt
+      lastActiveAt
+      deletedAt
       createdAt
+      updatedAt
+      accessToken
+      memberProducts
     }
   }
 `;
+export const GET_MEMBERS = gql`
+  query GetMembers($input: MembersInquiry!) {
+    getMembers(input: $input) {
+      members {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+        refreshToken
+      }
+      metaData {
+        total
+        page
+        limit
+      }
+    }
+  }
+`;
+
+export const GET_BRANDS = gql`
+  query GetBrands($input: BrandsInquiry!) {
+    getBrands(input: $input) {
+      brands {
+        _id
+        brandName
+        brandLogo
+        brandDesc
+        brandStatus
+        brandRating
+        brandFollowersCount
+        brandReviewsCount
+        deletedAt
+        createdAt
+        updatedAt
+        memberData {
+          _id
+          memberType
+          memberStatus
+          memberAuthType
+          memberPhone
+          memberNick
+          memberFullName
+          memberEmail
+          memberImage
+          memberAddress
+          memberDesc
+          memberArticles
+          memberFollowers
+          memberFollowings
+          memberPoints
+          memberLikes
+          memberViews
+          memberComments
+          memberRank
+          memberWarnings
+          memberBlocks
+          memberCouponId
+          memberCouponStatus
+          memberCouponUsedAt
+          memberCouponAssignedAt
+          lastLoginAt
+          lastActiveAt
+          deletedAt
+          createdAt
+          updatedAt
+          accessToken
+        }
+      }
+    }
+  }
+`;
+
+
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
@@ -191,33 +309,6 @@ export const GET_BRAND = gql`
   }
 `;
 
-export const GET_BRANDS = gql`
-  query GetBrands($input: BrandsInquiry!) {
-    getBrands(input: $input) {
-      list {
-        _id
-        brandName
-        brandLogo
-        brandDesc
-        brandStatus
-        brandRating
-        brandFollowersCount
-        brandReviewsCount
-        createdAt
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
-      }
-      metaData {
-        total
-        page
-        limit
-      }
-    }
-  }
-`;
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
