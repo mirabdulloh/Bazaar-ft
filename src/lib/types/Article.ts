@@ -25,6 +25,7 @@ export interface Article {
   articleCategory: ArticleCategory;
   articleStatus: ArticleStatus;
   articleTitle: string;
+  articleContent?: string;
   articleImages: string[];
   articleViews: number;
   articleLikes: number;
