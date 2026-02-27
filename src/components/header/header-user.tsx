@@ -54,7 +54,7 @@ export function HeaderUser() {
     <>
       <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
         <Avatar
-          src={user.memberImage || "/img/profile/defaultUser.svg"}
+          src={user.memberImage || `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(user.memberNick || "U")}&backgroundColor=6366f1&textColor=ffffff`}
           alt={user.memberNick}
           sx={{ width: 32, height: 32 }}
         />

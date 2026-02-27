@@ -132,7 +132,7 @@ export const updateUserInfo = (jwtToken: any) => {
 		memberFullName: claims.memberFullName ?? '',
 		memberImage:
 			claims.memberImage === null || claims.memberImage === undefined
-				? '/img/profile/defaultUser.svg'
+				? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(claims.memberNick ?? 'User')}&backgroundColor=6366f1&textColor=ffffff`
 				: `${claims.memberImage}`,
 		memberAddress: claims.memberAddress ?? '',
 		memberDesc: claims.memberDesc ?? '',
