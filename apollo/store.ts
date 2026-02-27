@@ -1,9 +1,10 @@
 import { makeVar } from "@apollo/client";
-
+import { jwtDecode } from "jwt-decode";
 import { CustomJwtPayload } from "../src/lib/types/customJwtPayload";
+
 export const themeVar = makeVar({});
 
-export const userVar = makeVar<CustomJwtPayload>({
+const emptyUser: CustomJwtPayload = {
   _id: "",
   memberType: "",
   memberStatus: "",
@@ -21,6 +22,19 @@ export const userVar = makeVar<CustomJwtPayload>({
   memberLikes: 0,
   memberViews: 0,
   memberWarnings: 0,
-  memberBlocks: 0
-});
+  memberBlocks: 0,
+};
+
+function getInitialUser(): CustomJwtPayload {
+  if (typeof window === "undefined") return emptyUser;
+  try {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return emptyUser;
+    return jwtDecode<CustomJwtPayload>(token);
+  } catch {
+    return emptyUser;
+  }
+}
+
+export const userVar = makeVar<CustomJwtPayload>(getInitialUser());
 
