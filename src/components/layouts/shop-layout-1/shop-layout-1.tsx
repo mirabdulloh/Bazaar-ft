@@ -19,7 +19,7 @@ import { SecondaryHeader } from "components/secondary-header";
 import { MobileNavigationBar } from "components/mobile-navigation";
 import { SearchInput1, SearchInput2 } from "components/search-box";
 import { Topbar, TopbarLanguageSelector, TopbarSocialLinks } from "components/topbar";
-import { Header, HeaderCart, HeaderLogin, MobileHeader, HeaderSearch } from "components/header";
+import { Header, HeaderCart, HeaderUser, MobileHeader, HeaderSearch } from "components/header";
 // CUSTOM DATA MODEL
 import LayoutModel from "models/Layout.model";
 
@@ -45,7 +45,7 @@ export default function ShopLayout1({ children, data }: Props) {
           <SearchInput2 />
         </HeaderSearch>
 
-        <HeaderLogin />
+        <HeaderUser />
         <HeaderCart />
       </MobileHeader.Right>
     </MobileHeader>
@@ -73,7 +73,7 @@ export default function ShopLayout1({ children, data }: Props) {
           </Header.Mid>
 
           <Header.Right>
-            <HeaderLogin />
+            <HeaderUser />
             <HeaderCart />
           </Header.Right>
         </Header>
@@ -110,7 +110,7 @@ export default function ShopLayout1({ children, data }: Props) {
         </Footer1.Brand>
 
         <Footer1.Widget1>
-          <FooterLinksWidget title="About Seoulé" links={footer.about} />
+          <FooterLinksWidget title="About BAZAAR" links={footer.about} />
         </Footer1.Widget1>
 
         <Footer1.Widget2>
@@ -134,7 +134,7 @@ export default function ShopLayout1({ children, data }: Props) {
             variant="body2"
             sx={{ py: 3, textAlign: "center", span: { fontWeight: 500 } }}
           >
-            &copy; Copyright {new Date().getFullYear()} <span>Seoulé</span>. All rights reserved.
+            &copy; Copyright {new Date().getFullYear()} <span>BAZAAR</span>. All rights reserved.
           </Typography>
         </Footer1.Copyright>
       </Footer1>
