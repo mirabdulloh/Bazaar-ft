@@ -41,8 +41,6 @@ export const UPDATE_MEMBER_BY_ADMIN = gql`
   }
 `;
 
-
-
 // ─── Brands ───────────────────────────────────────────────────────────────────
 
 export const UPDATE_BRAND_BY_ADMIN = gql`
@@ -58,10 +56,30 @@ export const UPDATE_BRAND_BY_ADMIN = gql`
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export const REMOVE_PRODUCT_BY_ADMIN = gql`
-  mutation RemoveProductByAdmin($productId: String!) {
-    removeProductByAdmin(productId: $productId) {
+  mutation RemoveProductByAdmin($input: String!) {
+    removeProductByAdmin(productId: $input) {
       _id
+      memberId
+      productType
+      productCategoryId
       productStatus
+      productTitle
+      productPrice
+      productDiscountPrice
+      productViews
+      productLikes
+      productComments
+      productRank
+      productImages
+      productRatingAverage
+      productRatingCount
+      productStockQuantity
+      productDesc
+      productSize
+      productColor
+      productMaterials
+      createdAt
+      updatedAt
     }
   }
 `;

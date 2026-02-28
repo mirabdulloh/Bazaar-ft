@@ -84,24 +84,29 @@ export const GET_ALL_BRANDS_BY_ADMIN = gql`
 export const GET_ALL_PRODUCTS_BY_ADMIN = gql`
   query GetAllProductsByAdmin($input: AllProductsInquiry!) {
     getAllProductsByAdmin(input: $input) {
-      list {
+      products {
         _id
         memberId
         productType
+        productCategoryId
         productStatus
         productTitle
         productPrice
         productDiscountPrice
         productViews
         productLikes
-        productRatingAverage
-        productStockQuantity
+        productComments
+        productRank
         productImages
+        productRatingAverage
+        productRatingCount
+        productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
         createdAt
-        memberData {
-          _id
-          memberNick
-        }
+        updatedAt
       }
       metaData {
         total

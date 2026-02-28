@@ -140,13 +140,10 @@ export const GET_BRANDS = gql`
   }
 `;
 
-
-
 // ─── Products ─────────────────────────────────────────────────────────────────
-
 export const GET_PRODUCT = gql`
-  query GetProduct($productId: String!) {
-    getProduct(productId: $productId) {
+  query GetProduct($input: String!) {
+    getProduct(productId: $input) {
       _id
       memberId
       productType
@@ -171,8 +168,47 @@ export const GET_PRODUCT = gql`
       updatedAt
       memberData {
         _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
         memberNick
+        memberFullName
+        memberEmail
         memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
+        }
+        meFollowed {
+          followerId
+          followingId
+          myFollowing
+        }
       }
       meLiked {
         memberId
@@ -186,7 +222,7 @@ export const GET_PRODUCT = gql`
 export const GET_PRODUCTS = gql`
   query GetProducts($input: ProductsInquiry!) {
     getProducts(input: $input) {
-      list {
+      products {
         _id
         memberId
         productType
@@ -197,24 +233,97 @@ export const GET_PRODUCTS = gql`
         productDiscountPrice
         productViews
         productLikes
+        productComments
         productRank
         productImages
         productRatingAverage
         productRatingCount
         productStockQuantity
+        productDesc
         productSize
         productColor
+        productMaterials
         createdAt
+        updatedAt
         memberData {
           _id
+          memberType
+          memberStatus
+          memberAuthType
+          memberPhone
           memberNick
+          memberFullName
+          memberEmail
           memberImage
+          memberAddress
+          memberDesc
+          memberArticles
+          memberFollowers
+          memberFollowings
+          memberPoints
+          memberLikes
+          memberViews
+          memberComments
+          memberRank
+          memberWarnings
+          memberProducts
+          memberBlocks
+          memberCouponId
+          memberCouponStatus
+          memberCouponUsedAt
+          memberCouponAssignedAt
+          lastLoginAt
+          lastActiveAt
+          deletedAt
+          createdAt
+          updatedAt
+          accessToken
+          meLiked {
+            memberId
+            likeRefId
+            myFavorite
+          }
+          meFollowed {
+            followerId
+            followingId
+            myFollowing
+          }
         }
         meLiked {
           memberId
           likeRefId
           myFavorite
         }
+      }
+    }
+  }
+`;
+export const GET_BRAND_PRODUCTS = gql`
+  query GetBrandProducts($input: BrandProductsInquiry!) {
+    getBrandProducts(input: $input) {
+      products {
+        _id
+        memberId
+        productType
+        productCategoryId
+        productStatus
+        productTitle
+        productPrice
+        productDiscountPrice
+        productViews
+        productLikes
+        productComments
+        productRank
+        productImages
+        productRatingAverage
+        productRatingCount
+        productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
+        createdAt
+        updatedAt
       }
       metaData {
         total
@@ -228,25 +337,62 @@ export const GET_PRODUCTS = gql`
 export const GET_FAVORITE_PRODUCTS = gql`
   query GetFavoriteProducts($input: OrdinaryInquiry!) {
     getFavoriteProducts(input: $input) {
-      list {
+      products {
         _id
+        memberId
         productType
+        productCategoryId
+        productStatus
         productTitle
         productPrice
         productDiscountPrice
+        productViews
+        productLikes
+        productComments
+        productRank
         productImages
         productRatingAverage
+        productRatingCount
         productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
         createdAt
+        updatedAt
         memberData {
           _id
+          memberType
+          memberStatus
+          memberAuthType
+          memberPhone
           memberNick
+          memberFullName
+          memberEmail
           memberImage
-        }
-        meLiked {
-          memberId
-          likeRefId
-          myFavorite
+          memberAddress
+          memberDesc
+          memberArticles
+          memberFollowers
+          memberFollowings
+          memberPoints
+          memberLikes
+          memberViews
+          memberComments
+          memberRank
+          memberWarnings
+          memberProducts
+          memberBlocks
+          memberCouponId
+          memberCouponStatus
+          memberCouponUsedAt
+          memberCouponAssignedAt
+          lastLoginAt
+          lastActiveAt
+          deletedAt
+          createdAt
+          updatedAt
+          accessToken
         }
       }
       metaData {
@@ -261,19 +407,29 @@ export const GET_FAVORITE_PRODUCTS = gql`
 export const GET_VISITED_PRODUCTS = gql`
   query GetVisitedProducts($input: OrdinaryInquiry!) {
     getVisitedProducts(input: $input) {
-      list {
+      products {
         _id
+        memberId
         productType
+        productCategoryId
+        productStatus
         productTitle
         productPrice
         productDiscountPrice
+        productViews
+        productLikes
+        productComments
+        productRank
         productImages
         productRatingAverage
+        productRatingCount
+        productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
         createdAt
-        memberData {
-          _id
-          memberNick
-        }
+        updatedAt
       }
       metaData {
         total
@@ -308,7 +464,6 @@ export const GET_BRAND = gql`
     }
   }
 `;
-
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 

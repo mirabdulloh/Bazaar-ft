@@ -210,15 +210,67 @@ export const LOGOUT = gql`
   }
 `;
 
-
-
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export const LIKE_TARGET_PRODUCT = gql`
-  mutation LikeTargetProduct($productId: String!) {
-    likeTargetProduct(productId: $productId) {
+  mutation LikeTargetProduct($input: String!) {
+    likeTargetProduct(productId: $input) {
       _id
+      memberId
+      productType
+      productCategoryId
+      productStatus
+      productTitle
+      productPrice
+      productDiscountPrice
+      productViews
       productLikes
+      productComments
+      productRank
+      productImages
+      productRatingAverage
+      productRatingCount
+      productStockQuantity
+      productDesc
+      productSize
+      productColor
+      productMaterials
+      createdAt
+      updatedAt
+      memberData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+      }
       meLiked {
         memberId
         likeRefId
@@ -227,6 +279,8 @@ export const LIKE_TARGET_PRODUCT = gql`
     }
   }
 `;
+
+
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 

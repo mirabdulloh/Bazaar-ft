@@ -21,16 +21,27 @@ export const CREATE_PRODUCT = gql`
   mutation CreateProduct($input: ProductInput!) {
     createProduct(input: $input) {
       _id
+      memberId
       productType
+      productCategoryId
       productStatus
       productTitle
       productPrice
       productDiscountPrice
+      productViews
+      productLikes
+      productComments
+      productRank
       productImages
+      productRatingAverage
+      productRatingCount
       productStockQuantity
+      productDesc
       productSize
       productColor
+      productMaterials
       createdAt
+      updatedAt
     }
   }
 `;
@@ -39,17 +50,26 @@ export const UPDATE_PRODUCT = gql`
   mutation UpdateProduct($input: ProductUpdate!) {
     updateProduct(input: $input) {
       _id
+      memberId
       productType
+      productCategoryId
       productStatus
       productTitle
       productPrice
       productDiscountPrice
+      productViews
+      productLikes
+      productComments
+      productRank
       productImages
+      productRatingAverage
+      productRatingCount
       productStockQuantity
       productDesc
       productSize
       productColor
       productMaterials
+      createdAt
       updatedAt
     }
   }
