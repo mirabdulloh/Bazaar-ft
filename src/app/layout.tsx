@@ -23,6 +23,7 @@ import ApolloWrapper from "components/ApolloWrapper";
 // GLOBAL CUSTOM COMPONENTS
 import RTL from "components/rtl";
 import ProgressBar from "components/progress";
+import InitialBrandLoader from "components/initial-brand-loader";
 
 // IMPORT i18n SUPPORT FILE
 import "i18n";
@@ -43,8 +44,10 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
             <SettingsProvider>
               <ThemeProvider>
                 <RTL>
-                  {modal}
-                  {children}
+                  <InitialBrandLoader>
+                    {modal}
+                    {children}
+                  </InitialBrandLoader>
                 </RTL>
 
                 <ProgressBar />
