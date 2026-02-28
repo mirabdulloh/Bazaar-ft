@@ -10,6 +10,7 @@ import Section5 from "../section-5";
 import Section6 from "../section-6";
 import Section7 from "../section-7";
 import FeaturedBrandsSection from "../section-brands";
+import SectionCommunity from "../section-community";
 
 export default function HomePageView() {
   return (
@@ -29,7 +30,7 @@ export default function HomePageView() {
       {/* PROMOTIONAL BANNER GRID */}
       <Section4 />
 
-      {/* HOT DEAL OF THE DAY WITH COUNTDOWN */}
+      {/* BEST SELLERS */}
       <Section5 />
 
       {/* TRENDING NOW */}
@@ -37,6 +38,9 @@ export default function HomePageView() {
 
       {/* SERVICE CARDS */}
       <Section7 />
+
+      {/* LATEST FROM COMMUNITY */}
+      <SectionCommunity />
 
       {/* NEWSLETTER POPUP */}
       <Newsletter />
