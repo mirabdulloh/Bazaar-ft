@@ -35,6 +35,7 @@
     "embla-carousel-auto-height": "^8.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.34.3",
     "graphql": "^16.13.0",
     "i18next": "^25.7.3",
     "jwt-decode": "^4.0.0",

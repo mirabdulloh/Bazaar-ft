@@ -22,6 +22,7 @@ import { GET_BRAND } from "../../../../apollo/user/query";
 import { GET_PRODUCTS } from "../../../../apollo/user/query";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
+import { FadeInCard } from "../../../components/scroll-reveal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Product {
@@ -149,55 +150,57 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 			) : (
 				<>
 					<Grid container spacing={3}>
-						{products.map((product: Product) => (
+						{products.map((product: Product, i: number) => (
 							<Grid size={{ xs: 12, sm: 6, md: 4 }} key={product._id}>
-								<Link
-									href={`/products/${product._id}`}
-									style={{ textDecoration: "none" }}
-								>
-									<Card
-										sx={{
-											height: "100%",
-											transition: "box-shadow 0.2s",
-											"&:hover": { boxShadow: 4 },
-										}}
+								<FadeInCard index={i}>
+									<Link
+										href={`/products/${product._id}`}
+										style={{ textDecoration: "none", display: "block", height: "100%" }}
 									>
-										<CardMedia
-											component="img"
-											height="240"
-											image={
-												product.productImages?.[0] ??
-												"/assets/images/products/product-1.png"
-											}
-											alt={product.productTitle}
-											sx={{ objectFit: "cover" }}
-										/>
-										<CardContent>
-											<Typography
-												variant="subtitle2"
-												fontWeight={600}
-												noWrap
-												mb={0.5}
-											>
-												{product.productTitle}
-											</Typography>
-											<Stack direction="row" alignItems="center" gap={1}>
-												{product.productDiscountPrice < product.productPrice && (
-													<Typography
-														variant="body2"
-														color="text.disabled"
-														sx={{ textDecoration: "line-through" }}
-													>
-														${product.productPrice}
-													</Typography>
-												)}
-												<Typography variant="body1" fontWeight={700} color="primary.main">
-													${product.productDiscountPrice ?? product.productPrice}
+										<Card
+											sx={{
+												height: "100%",
+												transition: "box-shadow 0.2s",
+												"&:hover": { boxShadow: 4 },
+											}}
+										>
+											<CardMedia
+												component="img"
+												height="240"
+												image={
+													product.productImages?.[0] ??
+													"/assets/images/products/product-1.png"
+												}
+												alt={product.productTitle}
+												sx={{ objectFit: "cover" }}
+											/>
+											<CardContent>
+												<Typography
+													variant="subtitle2"
+													fontWeight={600}
+													noWrap
+													mb={0.5}
+												>
+													{product.productTitle}
 												</Typography>
-											</Stack>
-										</CardContent>
-									</Card>
-								</Link>
+												<Stack direction="row" alignItems="center" gap={1}>
+													{product.productDiscountPrice < product.productPrice && (
+														<Typography
+															variant="body2"
+															color="text.disabled"
+															sx={{ textDecoration: "line-through" }}
+														>
+															${product.productPrice}
+														</Typography>
+													)}
+													<Typography variant="body1" fontWeight={700} color="primary.main">
+														${product.productDiscountPrice ?? product.productPrice}
+													</Typography>
+												</Stack>
+											</CardContent>
+										</Card>
+									</Link>
+								</FadeInCard>
 							</Grid>
 						))}
 					</Grid>

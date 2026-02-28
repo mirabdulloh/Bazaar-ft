@@ -19,6 +19,7 @@ import Link from "next/link";
 import { GET_BRANDS } from "../../../../apollo/user/query";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
+import { FadeInCard } from "../../../components/scroll-reveal";
 
 const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {} } }: T) => {
 	const [searchBrands, setSearchBrands] = useState({ ...initialInput });
@@ -66,72 +67,74 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {} } }: T)
 			) : (
 				<>
 					<Grid container spacing={3}>
-						{brands.map((brand: Brand) => (
+						{brands.map((brand: Brand, i: number) => (
 							<Grid size={{ xs: 12, sm: 6, md: 4 }} key={brand._id}>
-								<Link
-									href={`/brands/${brand._id}`}
-									style={{ textDecoration: "none" }}
-								>
-									<Card
-										sx={{
-											height: "100%",
-											transition: "box-shadow 0.2s",
-											"&:hover": { boxShadow: 4 },
-											cursor: "pointer",
-										}}
+								<FadeInCard index={i}>
+									<Link
+										href={`/brands/${brand._id}`}
+										style={{ textDecoration: "none", display: "block", height: "100%" }}
 									>
-										<CardContent>
-											<Stack alignItems="center" spacing={2} py={2}>
-												<Avatar
-													src={brand.brandLogo}
-													alt={brand.brandName}
-													sx={{ width: 80, height: 80 }}
-												/>
-												<Box textAlign="center">
-													<Typography variant="h6" fontWeight={700}>
-														{brand.brandName}
-													</Typography>
-													<Typography
-														variant="body2"
-														color="text.secondary"
-														sx={{
-															mt: 0.5,
-															display: "-webkit-box",
-															WebkitLineClamp: 2,
-															WebkitBoxOrient: "vertical",
-															overflow: "hidden",
-														}}
-													>
-														{brand.brandDesc}
-													</Typography>
-												</Box>
+										<Card
+											sx={{
+												height: "100%",
+												transition: "box-shadow 0.2s",
+												"&:hover": { boxShadow: 4 },
+												cursor: "pointer",
+											}}
+										>
+											<CardContent>
+												<Stack alignItems="center" spacing={2} py={2}>
+													<Avatar
+														src={brand.brandLogo}
+														alt={brand.brandName}
+														sx={{ width: 80, height: 80 }}
+													/>
+													<Box textAlign="center">
+														<Typography variant="h6" fontWeight={700}>
+															{brand.brandName}
+														</Typography>
+														<Typography
+															variant="body2"
+															color="text.secondary"
+															sx={{
+																mt: 0.5,
+																display: "-webkit-box",
+																WebkitLineClamp: 2,
+																WebkitBoxOrient: "vertical",
+																overflow: "hidden",
+															}}
+														>
+															{brand.brandDesc}
+														</Typography>
+													</Box>
 
-												<Stack
-													direction="row"
-													spacing={3}
-													justifyContent="center"
-												>
-													<Stack alignItems="center" direction="row" gap={0.5}>
-														<GroupIcon
-															sx={{ fontSize: 16, color: "text.secondary" }}
-														/>
-														<Typography variant="caption" color="text.secondary">
-															{brand.brandFollowersCount} followers
-														</Typography>
-													</Stack>
-													<Stack alignItems="center" direction="row" gap={0.5}>
-														<StarIcon
-															sx={{ fontSize: 16, color: "warning.main" }}
-														/>
-														<Typography variant="caption" color="text.secondary">
-															{brand.brandRating?.toFixed(1) ?? "—"}
-														</Typography>
+													<Stack
+														direction="row"
+														spacing={3}
+														justifyContent="center"
+													>
+														<Stack alignItems="center" direction="row" gap={0.5}>
+															<GroupIcon
+																sx={{ fontSize: 16, color: "text.secondary" }}
+															/>
+															<Typography variant="caption" color="text.secondary">
+																{brand.brandFollowersCount} followers
+															</Typography>
+														</Stack>
+														<Stack alignItems="center" direction="row" gap={0.5}>
+															<StarIcon
+																sx={{ fontSize: 16, color: "warning.main" }}
+															/>
+															<Typography variant="caption" color="text.secondary">
+																{brand.brandRating?.toFixed(1) ?? "—"}
+															</Typography>
+														</Stack>
 													</Stack>
 												</Stack>
-											</Stack>
-										</CardContent>
-									</Card>
-								</Link>
+											</CardContent>
+										</Card>
+									</Link>
+								</FadeInCard>
 							</Grid>
 						))}
 					</Grid>
