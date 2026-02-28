@@ -10,6 +10,11 @@ export const UPDATE_BRAND = gql`
       brandLogo
       brandDesc
       brandStatus
+      brandRating
+      brandFollowersCount
+      brandReviewsCount
+      deletedAt
+      createdAt
       updatedAt
     }
   }

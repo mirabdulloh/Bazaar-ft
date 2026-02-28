@@ -47,7 +47,15 @@ export const UPDATE_BRAND_BY_ADMIN = gql`
   mutation UpdateBrandByAdmin($input: BrandUpdateByAdmin!) {
     updateBrandByAdmin(input: $input) {
       _id
+      brandName
+      brandLogo
+      brandDesc
       brandStatus
+      brandRating
+      brandFollowersCount
+      brandReviewsCount
+      deletedAt
+      createdAt
       updatedAt
     }
   }

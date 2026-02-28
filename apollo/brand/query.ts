@@ -13,21 +13,14 @@ export const GET_MY_BRAND = gql`
       brandRating
       brandFollowersCount
       brandReviewsCount
+      deletedAt
       createdAt
       updatedAt
-      memberData {
-        _id
-        memberNick
-        memberPhone
-        memberEmail
-        memberImage
-      }
     }
   }
 `;
 
 // ─── Brand Products ───────────────────────────────────────────────────────────
-
 
 // ─── Brand Chats ──────────────────────────────────────────────────────────────
 

@@ -53,7 +53,7 @@ export const GET_ALL_MEMBERS_BY_ADMIN = gql`
 export const GET_ALL_BRANDS_BY_ADMIN = gql`
   query GetAllBrandsByAdmin($input: AllBrandsInquiry!) {
     getAllBrandsByAdmin(input: $input) {
-      list {
+      brands {
         _id
         brandName
         brandLogo
@@ -62,13 +62,9 @@ export const GET_ALL_BRANDS_BY_ADMIN = gql`
         brandRating
         brandFollowersCount
         brandReviewsCount
+        deletedAt
         createdAt
-        memberData {
-          _id
-          memberNick
-          memberPhone
-          memberEmail
-        }
+        updatedAt
       }
       metaData {
         total
