@@ -6,6 +6,8 @@ export const StyledRoot = styled("div")<{ hasSecondImage?: boolean }>(({ hasSeco
   height: "100%",
   margin: "auto",
   position: "relative",
+  minWidth: 0, // prevents overflow in flex/grid containers on mobile
+  "& .img-secondary": { opacity: 0 }, // hide secondary image by default (CSS so hover can override)
   "&:hover .card-img-box": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" },
   "&:hover .img-primary": { opacity: hasSecondImage ? 0 : 1 },
   "&:hover .img-secondary": { opacity: 1 },
@@ -117,7 +119,9 @@ export const ContentWrapper = styled("div")(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: 4,
-    "& svg": { fontSize: 17, color: theme.palette.grey[500] },
+    cursor: "pointer",
+    "& svg": { fontSize: 22, transition: "color 0.2s, transform 0.2s" },
+    "&:hover svg": { transform: "scale(1.15)" },
     "& span": {
       fontSize: 13,
       color: theme.palette.text.secondary,

@@ -1,10 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 // MUI
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+// APOLLO
+import { useMutation } from "@apollo/client/react";
+import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
 // UTILS
 import { calculateDiscount, currency } from "lib";
 // LOCAL CUSTOM COMPONENTS
@@ -27,6 +34,31 @@ export default function ProductCard2({ product, showReview = true }: Props) {
   const discountedPrice = calculateDiscount(price, discount);
   const originalPrice = currency(price);
 
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(productLikes ?? 0);
+
+  /** APOLLO REQUESTS **/
+  const [likeTargetProduct, { loading: likeLoading }] = useMutation(LIKE_TARGET_PRODUCT);
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (likeLoading) return;
+    try {
+      const { data } = await likeTargetProduct({ variables: { input: product.id } });
+      const updated = data?.likeTargetProduct;
+      if (updated?.productLikes !== undefined) {
+        setLikeCount(updated.productLikes);
+      } else {
+        // Optimistic toggle
+        setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+      }
+      setLiked((prev) => !prev);
+    } catch {
+      // silently ignore (e.g. not logged in)
+    }
+  };
+
   return (
     <StyledRoot hasSecondImage={!!secondImage}>
       <Link href={`/products/${slug}`} style={{ textDecoration: "none" }}>
@@ -42,9 +74,9 @@ export default function ProductCard2({ product, showReview = true }: Props) {
             />
           </ImageLayer>
 
-          {/* Secondary image — shown on hover */}
+          {/* Secondary image — shown on hover (opacity controlled by CSS class, not inline style) */}
           {secondImage && (
-            <ImageLayer className="img-secondary" style={{ opacity: 0 }}>
+            <ImageLayer className="img-secondary">
               <Image
                 fill
                 alt={title}
@@ -99,11 +131,14 @@ export default function ProductCard2({ product, showReview = true }: Props) {
             )}
           </div>
 
-          {/* Likes */}
+          {/* Likes — interactive */}
           {productLikes !== undefined && (
-            <div className="likes">
-              <FavoriteBorderIcon />
-              <span>{productLikes}</span>
+            <div className="likes" onClick={handleLike} role="button" aria-label="Like product">
+              {liked
+                ? <FavoriteIcon sx={{ color: "error.main" }} />
+                : <FavoriteBorderIcon />
+              }
+              <span>{likeCount}</span>
             </div>
           )}
         </div>

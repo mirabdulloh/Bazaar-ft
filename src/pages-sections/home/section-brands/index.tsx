@@ -34,7 +34,7 @@ export default function FeaturedBrandsSection() {
   } = useQuery(GET_BRANDS, {
     fetchPolicy: "cache-and-network",
     variables: {
-      input: { page: 1, limit: 6, search: {} },
+      input: { page: 1, limit: 6, sort: "brandFollowersCount", direction: "DESC", search: {} },
     },
     notifyOnNetworkStatusChange: true,
     onCompleted: (data: T) => {
