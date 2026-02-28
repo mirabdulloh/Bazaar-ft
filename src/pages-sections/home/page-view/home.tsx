@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 // GLOBAL CUSTOM COMPONENTS
 import Newsletter from "components/newsletter";
+import { ScrollReveal } from "components/scroll-reveal";
 // LOCAL CUSTOM SECTION COMPONENTS
 import Section1 from "../section-1";
 import Section2 from "../section-2";
@@ -15,32 +16,48 @@ import SectionCommunity from "../section-community";
 export default function HomePageView() {
   return (
     <Fragment>
-      {/* HERO BANNERS */}
+      {/* HERO BANNERS — always visible, no reveal */}
       <Section1 />
 
       {/* SALE / FLASH DEALS */}
-      <Section2 />
+      <ScrollReveal>
+        <Section2 />
+      </ScrollReveal>
 
       {/* NEW ARRIVALS */}
-      <Section3 />
+      <ScrollReveal>
+        <Section3 />
+      </ScrollReveal>
 
       {/* FEATURED BRANDS */}
-      <FeaturedBrandsSection />
+      <ScrollReveal>
+        <FeaturedBrandsSection />
+      </ScrollReveal>
 
       {/* PROMOTIONAL BANNER GRID */}
-      <Section4 />
+      <ScrollReveal>
+        <Section4 />
+      </ScrollReveal>
 
       {/* BEST SELLERS */}
-      <Section5 />
+      <ScrollReveal>
+        <Section5 />
+      </ScrollReveal>
 
       {/* TRENDING NOW */}
-      <Section6 />
+      <ScrollReveal>
+        <Section6 />
+      </ScrollReveal>
 
       {/* SERVICE CARDS */}
-      <Section7 />
+      <ScrollReveal>
+        <Section7 />
+      </ScrollReveal>
 
       {/* LATEST FROM COMMUNITY */}
-      <SectionCommunity />
+      <ScrollReveal>
+        <SectionCommunity />
+      </ScrollReveal>
 
       {/* NEWSLETTER POPUP */}
       <Newsletter />

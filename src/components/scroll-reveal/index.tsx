@@ -1,75 +1,109 @@
 "use client";
 
-import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 
-// ─── Easing curve (typed correctly for framer-motion) ─────────────────────────
-const EASE_OUT_EXPO: [number, number, number, number] = [0.22, 1, 0.36, 1];
+// ─── ScrollReveal ─────────────────────────────────────────────────────────────
+interface ScrollRevealProps extends PropsWithChildren {
+  style?: React.CSSProperties;
+  delayMs?: number;
+  threshold?: number;
+  rootMargin?: string;
+  once?: boolean;
+}
+
+export function ScrollReveal({
+  children,
+  style,
+  delayMs = 0,
+  threshold = 0.12,
+  rootMargin = "0px 0px -8% 0px",
+  once = true,
+}: ScrollRevealProps) {
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const target = elementRef.current;
+    if (!target) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (once) observer.disconnect();
+          return;
+        }
+
+        if (!once) setIsVisible(false);
+      },
+      { threshold, rootMargin }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [once, rootMargin, threshold]);
+
+  return (
+    <div
+      ref={elementRef}
+      style={{
+        transition: "opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
+        willChange: "transform",
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : "translateY(48px)",
+        ...(delayMs > 0 ? { transitionDelay: `${delayMs}ms` } : {}),
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 // ─── FadeInCard ───────────────────────────────────────────────────────────────
 /**
- * Wraps a card/item so it fades + slides up when it first renders.
- * Pass `index` to create a stagger delay between siblings.
- *
- * Usage inside a data grid:
- *   {products.map((p, i) => (
- *     <Grid key={p._id} size={{ xs: 12, sm: 6, md: 4 }}>
- *       <FadeInCard index={i}>
- *         <ProductCard product={p} />
- *       </FadeInCard>
- *     </Grid>
- *   ))}
+ * Scroll-triggered fade + slide-up for cards in a grid.
+ * Pass `index` to stagger siblings.
  */
 export function FadeInCard({
   children,
   index = 0,
   style,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   index?: number;
   style?: React.CSSProperties;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.48,
-        delay: Math.min(index * 0.07, 0.56), // cap at 0.56s so last cards don't wait too long
-        ease: EASE_OUT_EXPO,
-      }}
-      style={{ height: "100%", ...style }}
-    >
+    <ScrollReveal delayMs={Math.min(index * 70, 420)} style={{ height: "100%", ...style }}>
       {children}
-    </motion.div>
+    </ScrollReveal>
   );
 }
 
 // ─── FadeInSection ────────────────────────────────────────────────────────────
-/**
- * Fades a section heading or block in when it first renders.
- * Useful for section titles, hero text, etc.
- */
 export function FadeInSection({
   children,
   delay = 0,
   style,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   delay?: number;
   style?: React.CSSProperties;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: EASE_OUT_EXPO }}
-      style={style}
-    >
+    <ScrollReveal delayMs={delay * 1000} style={style}>
       {children}
-    </motion.div>
+    </ScrollReveal>
   );
 }
 
-// ─── Default export (kept for any future use) ─────────────────────────────────
 export default FadeInCard;
