@@ -28,7 +28,7 @@ const CATEGORIES: { value: FaqCategory | ""; label: string }[] = [
 	{ value: "OTHER", label: "Other" },
 ];
 
-const FaqPageView = ({ initialInput }: T) => {
+const FaqPageView = ({ initialInput = { page: 1, limit: 100, search: {} } }: T) => {
 	const [searchFaqs, setSearchFaqs] = useState({ ...initialInput });
 	const [faqs, setFaqs] = useState<Faq[]>([]);
 	const [activeCategory, setActiveCategory] = useState<FaqCategory | "">("");

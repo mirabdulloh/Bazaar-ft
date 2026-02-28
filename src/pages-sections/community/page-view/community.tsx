@@ -36,7 +36,7 @@ const CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
 	{ value: "OTHER", label: "Other" },
 ];
 
-const CommunityPageView = ({ initialInput }: T) => {
+const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "createdAt", direction: "DESC", search: {} } }: T) => {
 	const user = useReactiveVar(userVar);
 	const [searchArticles, setSearchArticles] = useState({ ...initialInput });
 	const [articles, setArticles] = useState<Article[]>([]);

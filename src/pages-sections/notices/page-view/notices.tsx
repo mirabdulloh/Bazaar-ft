@@ -37,7 +37,7 @@ const CATEGORY_LABELS: Record<NoticeCategory, string> = {
 	OTHER: "Other",
 };
 
-const NoticesPageView = ({ initialInput }: T) => {
+const NoticesPageView = ({ initialInput = { page: 1, limit: 50, search: {} } }: T) => {
 	const [searchNotices, setSearchNotices] = useState({ ...initialInput });
 	const [notices, setNotices] = useState<Notice[]>([]);
 	const [activeCategory, setActiveCategory] = useState<NoticeCategory | "">("");
