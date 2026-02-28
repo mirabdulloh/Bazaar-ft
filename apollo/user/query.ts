@@ -99,42 +99,18 @@ export const GET_BRANDS = gql`
         brandRating
         brandFollowersCount
         brandReviewsCount
-        deletedAt
         createdAt
         updatedAt
         memberData {
           _id
-          memberType
-          memberStatus
-          memberAuthType
-          memberPhone
           memberNick
-          memberFullName
-          memberEmail
           memberImage
-          memberAddress
-          memberDesc
-          memberArticles
-          memberFollowers
-          memberFollowings
-          memberPoints
-          memberLikes
-          memberViews
-          memberComments
-          memberRank
-          memberWarnings
-          memberBlocks
-          memberCouponId
-          memberCouponStatus
-          memberCouponUsedAt
-          memberCouponAssignedAt
-          lastLoginAt
-          lastActiveAt
-          deletedAt
-          createdAt
-          updatedAt
-          accessToken
         }
+      }
+      metaData {
+        total
+        page
+        limit
       }
     }
   }

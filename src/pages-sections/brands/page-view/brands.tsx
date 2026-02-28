@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@apollo/client/react";
+import { useState } from "react";
+import { useQuery } from "../../../lib/hooks/useQuery";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -10,9 +10,9 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
 import Pagination from "@mui/material/Pagination";
-import Rating from "@mui/material/Rating";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+
 import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
 import Link from "next/link";
@@ -20,7 +20,7 @@ import { GET_BRANDS } from "../../../../apollo/user/query";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
 
-const ShopsPageView = ({ initialInput }: T) => {
+const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {} } }: T) => {
 	const [searchBrands, setSearchBrands] = useState({ ...initialInput });
 	const [brands, setBrands] = useState<Brand[]>([]);
 	const [totalCount, setTotalCount] = useState<number>(0);
@@ -28,28 +28,22 @@ const ShopsPageView = ({ initialInput }: T) => {
 	/** APOLLO REQUESTS **/
 	const {
 		loading: getBrandsLoading,
-		data: getBrandsData,
+		data: _getBrandsData,
 		error: getBrandsError,
 		refetch: getBrandsRefetch,
 	} = useQuery(GET_BRANDS, {
 		fetchPolicy: "cache-and-network",
 		variables: { input: searchBrands },
 		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			setBrands(data?.getBrands?.brands ?? []);
+			setTotalCount(data?.getBrands?.metaData?.total ?? 0);
+		},
 	});
 
-	useEffect(() => {
-		const data = getBrandsData as T;
-		if (data?.getBrands) {
-			setBrands(data.getBrands.list ?? []);
-			setTotalCount(data.getBrands.metaData?.total ?? 0);
-		}
-	}, [getBrandsData]);
-
 	/** HANDLERS **/
-	const paginationHandler = async (_e: T, value: number) => {
-		const newSearch = { ...searchBrands, page: value };
-		setSearchBrands(newSearch);
-		await getBrandsRefetch({ input: newSearch });
+	const paginationHandler = (_e: T, value: number) => {
+		setSearchBrands({ ...searchBrands, page: value });
 	};
 
 	return (

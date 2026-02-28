@@ -22,7 +22,7 @@ export interface Brand {
 }
 
 export interface BrandsData {
-  list: Brand[];
+  brands: Brand[];
   metaData: {
     total: number;
     page: number;
