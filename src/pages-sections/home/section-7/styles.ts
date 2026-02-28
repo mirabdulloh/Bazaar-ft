@@ -10,5 +10,5 @@ export const Wrapper = styled("div")(({ theme }) => ({
   padding: "1rem 2rem",
   border: `1px solid ${theme.palette.divider}`,
   [theme.breakpoints.between("sm", "lg")]: { justifyContent: "space-evenly" },
-  [theme.breakpoints.down("sm")]: { flexDirection: "column", alignItems: "flex-start" }
+  [theme.breakpoints.down("sm")]: { flexDirection: "column", alignItems: "stretch", padding: "1rem" }
 }));

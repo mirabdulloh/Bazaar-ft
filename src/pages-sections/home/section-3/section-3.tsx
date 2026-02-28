@@ -74,7 +74,7 @@ export default function Section3() {
       <SectionCreator title="New Arrivals" seeMoreLink="/products/search?sort=newest">
         <Box display="flex" gap={2} overflow="hidden">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Box key={i} minWidth={260} flex="0 0 auto">
+            <Box key={i} sx={{ minWidth: { xs: "75vw", sm: 260 }, flex: "0 0 auto" }}>
               <Skeleton variant="rectangular" height={370} sx={{ borderRadius: 3 }} />
               <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
               <Skeleton variant="text" width="50%" />

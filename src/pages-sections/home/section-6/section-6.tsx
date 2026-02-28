@@ -106,7 +106,7 @@ export default function Section6() {
 
         <Grid container spacing={4} size={{ md: 9, xs: 12 }}>
           {TRENDING_ITEMS.map((product) => (
-            <Grid size={{ sm: 4, xs: 16 }} key={product.id}>
+            <Grid size={{ sm: 4, xs: 12 }} key={product.id}>
               <ProductCard2 product={product} />
             </Grid>
           ))}
