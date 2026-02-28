@@ -19,6 +19,8 @@ interface GqlProduct {
   productDiscountPrice: number;
   productImages: string[];
   productRatingAverage: number;
+  productLikes: number;
+  productViews: number;
 }
 
 function toProductModel(p: GqlProduct): Product {
@@ -36,6 +38,8 @@ function toProductModel(p: GqlProduct): Product {
     images: p.productImages ?? [],
     rating: p.productRatingAverage ?? 0,
     categories: [],
+    productLikes: p.productLikes,
+    productViews: p.productViews,
   };
 }
 

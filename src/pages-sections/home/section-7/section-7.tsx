@@ -1,20 +1,21 @@
 import Container from "@mui/material/Container";
-// GLOBAL CUSTOM COMPONENTS
 import ServiceCard2 from "components/service-cards/service-card-2";
-// STYLED COMPONENTS
 import { Wrapper } from "./styles";
-// API FUNCTIONS
-import api from "utils/__api__/home";
 
-export default async function Section7() {
-  const serviceList = await api.getServiceList();
-  if (!serviceList || !serviceList.length) return null;
+const SERVICE_ITEMS = [
+  { id: "1", icon: "Truck", title: "Fast Delivery", description: "Start from $10" },
+  { id: "2", icon: "MoneyGuarantee", title: "Money Guarantee", description: "7 Days Back" },
+  { id: "3", icon: "AlarmClock", title: "365 Days", description: "For free return" },
+  { id: "4", icon: "Payment", title: "Payment", description: "Secure system" },
+  { id: "5", icon: "OnlineSupport", title: "Online Support", description: "24/7 daily" },
+];
 
+export default function Section7() {
   return (
     <Container className="mb-4">
       <Wrapper>
-        {serviceList.map(({ icon, id, title, description }) => (
-          <ServiceCard2 key={id} title={title} description={description!} icon={icon} />
+        {SERVICE_ITEMS.map(({ icon, id, title, description }) => (
+          <ServiceCard2 key={id} title={title} description={description} icon={icon} />
         ))}
       </Wrapper>
     </Container>

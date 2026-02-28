@@ -4,6 +4,8 @@ import Image from "next/image";
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 // LOCAL CUSTOM COMPONENTS
 import ProductPrice from "../product-price";
 // CUSTOM DATA MODEL
@@ -17,7 +19,7 @@ interface Props {
 // ========================================================
 
 export default function ProductCard2({ product, showReview = true }: Props) {
-  const { slug, title, price, thumbnail, rating, discount } = product;
+  const { slug, title, price, thumbnail, rating, discount, productLikes, productViews } = product;
 
   return (
     <div>
@@ -48,6 +50,27 @@ export default function ProductCard2({ product, showReview = true }: Props) {
         {showReview && <Rating size="small" value={rating} color="warn" readOnly />}
 
         <ProductPrice price={price} discount={discount} />
+
+        {(productLikes !== undefined || productViews !== undefined) && (
+          <Box display="flex" justifyContent="space-between" mt={0.5}>
+            {productLikes !== undefined && (
+              <Box display="flex" alignItems="center" gap={0.4}>
+                <FavoriteBorderIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                <Typography variant="caption" color="text.secondary">
+                  {productLikes}
+                </Typography>
+              </Box>
+            )}
+            {productViews !== undefined && (
+              <Box display="flex" alignItems="center" gap={0.4}>
+                <VisibilityOutlinedIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                <Typography variant="caption" color="text.secondary">
+                  {productViews}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
       </Box>
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import debounce from "lodash/debounce";
+import { useSnackbar } from "notistack";
 // MUI
 import Grid from "@mui/material/Grid";
 import Modal from "@mui/material/Modal";
@@ -25,7 +26,20 @@ type Props = { image?: string };
 
 export default function Newsletter({ image = "/assets/images/newsletter/bg-1.png" }: Props) {
   const [open, setOpen] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const { enqueueSnackbar } = useSnackbar();
+
   const handleClose = useCallback(() => setOpen(false), []);
+
+  const handleSubscribe = () => {
+    const email = emailRef.current?.value?.trim();
+    if (!email) {
+      enqueueSnackbar("Please enter your email address.", { variant: "warning" });
+      return;
+    }
+    enqueueSnackbar("Thanks for subscribing!", { variant: "success" });
+    handleClose();
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -73,27 +87,39 @@ export default function Newsletter({ image = "/assets/images/newsletter/bg-1.png
                     span: { color: "primary.main" }
                   }}
                 >
-                  Sign up to <span>Seoulé</span>
+                  Sign up to <span>BAZAAR</span>
                 </Typography>
 
                 <Typography variant="body1" sx={{ color: "grey.600", mb: 5 }}>
-                  Subscribe to the BAZAR eCommerce newsletter to receive timely updates from your
-                  favorite products.
+                  Subscribe to the BAZAAR newsletter to receive timely updates from your
+                  favorite brands and products.
                 </Typography>
 
                 <TextField
                   fullWidth
                   className="emailInput"
                   placeholder="Enter your email address"
+                  inputRef={emailRef}
+                  type="email"
                 />
 
-                <Button variant="contained" fullWidth color="primary" sx={{ p: 1.5 }}>
-                  SUBMIT
+                <Button
+                  variant="contained"
+                  fullWidth
+                  color="primary"
+                  sx={{ p: 1.5 }}
+                  onClick={handleSubscribe}
+                >
+                  SUBSCRIBE
                 </Button>
 
                 <SocialIcons />
 
-                <FormControlLabel control={<Checkbox defaultChecked />} label="No, Thanks" />
+                <FormControlLabel
+                  control={<Checkbox defaultChecked />}
+                  label="No, Thanks"
+                  onChange={(_, checked) => { if (checked) handleClose(); }}
+                />
               </div>
             </Grid>
           </Grid>

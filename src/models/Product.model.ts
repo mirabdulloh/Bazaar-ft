@@ -20,4 +20,6 @@ export default interface Product {
   categories: any[];
   reviews?: Review[];
   published?: boolean;
+  productLikes?: number;
+  productViews?: number;
 }
