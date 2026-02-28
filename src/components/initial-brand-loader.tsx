@@ -12,9 +12,13 @@ interface InitialBrandLoaderProps {
 
 export default function InitialBrandLoader({ children, duration = 1800 }: InitialBrandLoaderProps) {
   const [loading, setLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), duration);
+    const timer = window.setTimeout(() => {
+      setLoading(false);
+      setShowContent(true);
+    }, duration);
     return () => window.clearTimeout(timer);
   }, [duration]);
 
@@ -103,16 +107,18 @@ export default function InitialBrandLoader({ children, duration = 1800 }: Initia
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          opacity: loading ? 0 : 1,
-          transform: loading ? "translateY(10px)" : "translateY(0)",
-          filter: loading ? "blur(3px)" : "blur(0)",
-          transition: "opacity 520ms ease, transform 520ms ease, filter 520ms ease"
-        }}
-      >
-        {children}
-      </Box>
+      {showContent ? (
+        <Box
+          sx={{
+            opacity: loading ? 0 : 1,
+            transform: loading ? "translateY(10px)" : "translateY(0)",
+            filter: loading ? "blur(3px)" : "blur(0)",
+            transition: "opacity 520ms ease, transform 520ms ease, filter 520ms ease"
+          }}
+        >
+          {children}
+        </Box>
+      ) : null}
     </>
   );
 }

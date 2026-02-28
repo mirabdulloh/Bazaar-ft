@@ -9,13 +9,14 @@ interface Props {
   body: string;
   title: string;
   imgUrl: string;
+  delay?: number;
 }
 // ==========================================================
 
-export default function CardTwo({ body, title, imgUrl, badge }: Props) {
+export default function CardTwo({ body, title, imgUrl, badge, delay = 0 }: Props) {
   return (
     <Link href="/products/search?sale=true">
-      <Wrapper>
+      <Wrapper delay={delay}>
         <Image fill alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
 
         <div className="content">

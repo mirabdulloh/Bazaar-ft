@@ -1,26 +1,18 @@
 import type { Metadata } from "next";
-import { ShopDetailsPageView } from "pages-sections/brands/page-view";
-import { getProductsBySlug } from "utils/__api__/brands";
-import { getFilters } from "utils/__api__/product-search";
+import BrandDetailsPageView from "pages-sections/brands/page-view/brand-details";
 
 // ============================================================
 type Props = { params: Promise<{ slug: string }> };
 // ============================================================
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
   return {
-    title: `${slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} - Seoulé`,
-    description: `Shop products from this brand on Seoulé.`,
+    title: "Brand - BAZAAR",
+    description: "Shop products from this brand on BAZAAR.",
   };
 }
 
 export default async function BrandDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [shop, filters] = await Promise.all([
-    getProductsBySlug(slug),
-    getFilters()
-  ]);
-
-  return <ShopDetailsPageView shop={shop} filters={filters} />;
+  return <BrandDetailsPageView brandId={slug} />;
 }
