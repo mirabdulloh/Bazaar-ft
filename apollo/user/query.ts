@@ -271,6 +271,11 @@ export const GET_PRODUCTS = gql`
           myFavorite
         }
       }
+      metaData {
+        total
+        page
+        limit
+      }
     }
   }
 `;

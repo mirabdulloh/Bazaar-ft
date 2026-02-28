@@ -26,9 +26,9 @@ import { T } from "../../../lib/types/common";
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Product {
 	_id: string;
-	productName: string;
+	productTitle: string;
 	productPrice: number;
-	productSalePrice: number;
+	productDiscountPrice: number;
 	productImages: string[];
 	productType: string;
 	productStatus: string;
@@ -169,7 +169,7 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 												product.productImages?.[0] ??
 												"/assets/images/products/product-1.png"
 											}
-											alt={product.productName}
+											alt={product.productTitle}
 											sx={{ objectFit: "cover" }}
 										/>
 										<CardContent>
@@ -179,10 +179,10 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 												noWrap
 												mb={0.5}
 											>
-												{product.productName}
+												{product.productTitle}
 											</Typography>
 											<Stack direction="row" alignItems="center" gap={1}>
-												{product.productSalePrice < product.productPrice && (
+												{product.productDiscountPrice < product.productPrice && (
 													<Typography
 														variant="body2"
 														color="text.disabled"
@@ -192,7 +192,7 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 													</Typography>
 												)}
 												<Typography variant="body1" fontWeight={700} color="primary.main">
-													${product.productSalePrice ?? product.productPrice}
+													${product.productDiscountPrice ?? product.productPrice}
 												</Typography>
 											</Stack>
 										</CardContent>
