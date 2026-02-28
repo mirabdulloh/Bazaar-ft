@@ -468,8 +468,8 @@ export const GET_BRAND = gql`
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export const GET_ORDER = gql`
-  query GetOrder($orderId: String!) {
-    getOrder(orderId: $orderId) {
+  query GetOrder($input: String!) {
+    getOrder(orderId: $input) {
       _id
       memberId
       orderStatus
@@ -478,31 +478,67 @@ export const GET_ORDER = gql`
       orderFinalPrice
       orderPaymentMethod
       orderPaymentStatus
+      orderDeliveryAddressId
       orderDeliveryStatus
       createdAt
       updatedAt
       deliveryAddress {
         _id
+        memberId
         addressName
+        addressPhone
+        addressCountry
+        addressCity
+        addressZipCode
         addressLine1
         addressLine2
-        addressCity
-        addressCountry
-        addressZipCode
-        addressPhone
+        isDefault
+        createdAt
+        updatedAt
       }
       orderItems {
         _id
+        orderId
         productId
         priceAtPurchase
         itemQuantity
         subtotal
-        product {
-          _id
-          productTitle
-          productImages
-          productPrice
-        }
+        createdAt
+        updatedAt
+      }
+      member {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
       }
     }
   }
@@ -511,26 +547,19 @@ export const GET_ORDER = gql`
 export const GET_MY_ORDERS = gql`
   query GetMyOrders($input: MyOrdersInquiry!) {
     getMyOrders(input: $input) {
-      list {
+      orders {
         _id
+        memberId
         orderStatus
         orderTotalPrice
+        orderTotalDiscountPrice
         orderFinalPrice
         orderPaymentMethod
         orderPaymentStatus
+        orderDeliveryAddressId
         orderDeliveryStatus
         createdAt
-        orderItems {
-          _id
-          productId
-          itemQuantity
-          subtotal
-          product {
-            _id
-            productTitle
-            productImages
-          }
-        }
+        updatedAt
       }
       metaData {
         total
@@ -550,22 +579,17 @@ export const GET_REVIEWS = gql`
         _id
         productId
         memberId
+        orderItemId
         reviewRating
         reviewComment
         reviewImages
         reviewStatus
         reviewLikes
         createdAt
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -586,7 +610,6 @@ export const GET_ADDRESSES = gql`
       addressLine1
       addressLine2
       isDefault
-      addressStatus
       createdAt
       updatedAt
     }
@@ -600,24 +623,22 @@ export const GET_MY_NOTIFICATIONS = gql`
     getMyNotifications(input: $input) {
       list {
         _id
+        memberId
+        authorId
+        receiverId
         notificationType
         notificationStatus
         notificationGroup
         targetId
         notificationTitle
         notificationContent
+        deletedAt
         readAt
         createdAt
-        authorData {
-          _id
-          memberNick
-          memberImage
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -633,23 +654,10 @@ export const GET_MEMBER_FOLLOWINGS = gql`
         followingId
         followerId
         createdAt
-        followingData {
-          _id
-          memberNick
-          memberImage
-          memberType
-          memberFollowers
-        }
-        meFollowed {
-          followerId
-          followingId
-          myFollowing
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -663,22 +671,10 @@ export const GET_MEMBER_FOLLOWERS = gql`
         followingId
         followerId
         createdAt
-        followerData {
-          _id
-          memberNick
-          memberImage
-          memberType
-        }
-        meFollowed {
-          followerId
-          followingId
-          myFollowing
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -687,8 +683,8 @@ export const GET_MEMBER_FOLLOWERS = gql`
 // ─── Articles (Community) ─────────────────────────────────────────────────────
 
 export const GET_BOARD_ARTICLE = gql`
-  query GetBoardArticle($articleId: String!) {
-    getBoardArticle(articleId: $articleId) {
+  query GetBoardArticle($input: String!) {
+    getBoardArticle(articleId: $input) {
       _id
       memberId
       articleCategory
@@ -701,10 +697,40 @@ export const GET_BOARD_ARTICLE = gql`
       articleComments
       publishedAt
       createdAt
+      updatedAt
       memberData {
         _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
         memberNick
+        memberFullName
+        memberEmail
         memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
       }
       meLiked {
         memberId
@@ -724,22 +750,14 @@ export const GET_BOARD_ARTICLES = gql`
         articleCategory
         articleStatus
         articleTitle
+        articleContent
         articleImages
         articleViews
         articleLikes
         articleComments
         publishedAt
         createdAt
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
-        meLiked {
-          memberId
-          likeRefId
-          myFavorite
-        }
+        updatedAt
       }
       metaCounter {
         total
@@ -755,28 +773,19 @@ export const GET_COMMENTS = gql`
     getComments(input: $input) {
       list {
         _id
+        commentStatus
         commentGroup
         commentRefId
         memberId
         commentReplyId
         commentContent
         commentLikes
+        commentViews
         createdAt
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
-        parentCommentData {
-          _id
-          commentContent
-          memberId
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -790,14 +799,15 @@ export const GET_FAQS = gql`
       list {
         _id
         faqCategory
+        faqStatus
         faqQuestion
         faqAnswer
+        deletedAt
         createdAt
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -811,14 +821,15 @@ export const GET_NOTICES = gql`
       list {
         _id
         noticeCategory
+        noticeStatus
         noticeTitle
         noticeContent
+        deletedAt
         createdAt
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -834,12 +845,9 @@ export const GET_CATEGORIES = gql`
         categoryName
         parentCategoryId
         categoryStatus
+        deletedAt
         createdAt
-        subCategories {
-          _id
-          categoryName
-          categoryStatus
-        }
+        updatedAt
       }
       metaData {
         total
@@ -858,10 +866,17 @@ export const CHECK_COUPON = gql`
       _id
       couponCode
       couponType
+      brandId
       discountType
       discountValue
+      couponMaxUsage
+      couponUsageCount
+      minOrderCount
+      couponStartDate
       couponEndDate
       couponStatus
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -878,21 +893,10 @@ export const GET_MY_CHATS = gql`
         chatStatus
         chatSubject
         createdAt
-        brandData {
-          _id
-          brandName
-          brandLogo
-        }
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -909,25 +913,13 @@ export const GET_MESSAGES = gql`
         senderId
         message
         attachments
-        replyToId
         readAt
+        deletedAt
         createdAt
         updatedAt
-        senderData {
-          _id
-          memberNick
-          memberImage
-        }
-        parentMessageData {
-          _id
-          message
-          senderId
-        }
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }

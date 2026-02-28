@@ -87,11 +87,18 @@ export const CREATE_BRAND_COUPON = gql`
     createBrandCoupon(input: $input) {
       _id
       couponCode
+      couponType
+      brandId
       discountType
       discountValue
+      couponMaxUsage
+      couponUsageCount
+      minOrderCount
       couponStartDate
       couponEndDate
       couponStatus
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -101,9 +108,17 @@ export const UPDATE_BRAND_COUPON = gql`
     updateBrandCoupon(input: $input) {
       _id
       couponCode
+      couponType
+      brandId
       discountType
       discountValue
+      couponMaxUsage
+      couponUsageCount
+      minOrderCount
+      couponStartDate
+      couponEndDate
       couponStatus
+      createdAt
       updatedAt
     }
   }

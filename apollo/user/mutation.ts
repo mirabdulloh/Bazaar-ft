@@ -280,19 +280,81 @@ export const LIKE_TARGET_PRODUCT = gql`
   }
 `;
 
-
-
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export const CREATE_ORDER = gql`
   mutation CreateOrder($input: CreateOrderInput!) {
     createOrder(input: $input) {
       _id
+      memberId
       orderStatus
       orderTotalPrice
+      orderTotalDiscountPrice
       orderFinalPrice
       orderPaymentMethod
+      orderPaymentStatus
+      orderDeliveryAddressId
+      orderDeliveryStatus
       createdAt
+      updatedAt
+      member {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+      }
+      deliveryAddress {
+        _id
+        memberId
+        addressName
+        addressPhone
+        addressCountry
+        addressCity
+        addressZipCode
+        addressLine1
+        addressLine2
+        isDefault
+        createdAt
+        updatedAt
+      }
+      orderItems {
+        _id
+        orderId
+        productId
+        priceAtPurchase
+        itemQuantity
+        subtotal
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
@@ -301,7 +363,16 @@ export const CANCEL_ORDER = gql`
   mutation CancelOrder($orderId: String!) {
     cancelOrder(orderId: $orderId) {
       _id
+      memberId
       orderStatus
+      orderTotalPrice
+      orderTotalDiscountPrice
+      orderFinalPrice
+      orderPaymentMethod
+      orderPaymentStatus
+      orderDeliveryAddressId
+      orderDeliveryStatus
+      createdAt
       updatedAt
     }
   }
@@ -313,10 +384,84 @@ export const CREATE_REVIEW = gql`
   mutation CreateReview($input: ReviewInput!) {
     createReview(input: $input) {
       _id
+      productId
+      memberId
+      orderItemId
       reviewRating
       reviewComment
       reviewImages
+      reviewStatus
+      reviewLikes
       createdAt
+      updatedAt
+      productData {
+        _id
+        memberId
+        productType
+        productCategoryId
+        productStatus
+        productTitle
+        productPrice
+        productDiscountPrice
+        productViews
+        productLikes
+        productComments
+        productRank
+        productImages
+        productRatingAverage
+        productRatingCount
+        productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
+        createdAt
+        updatedAt
+      }
+      memberData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+      }
+      orderItemData {
+        _id
+        orderId
+        productId
+        priceAtPurchase
+        itemQuantity
+        subtotal
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
@@ -325,10 +470,84 @@ export const UPDATE_REVIEW = gql`
   mutation UpdateReview($input: ReviewUpdate!) {
     updateReview(input: $input) {
       _id
+      productId
+      memberId
+      orderItemId
       reviewRating
       reviewComment
       reviewImages
+      reviewStatus
+      reviewLikes
+      createdAt
       updatedAt
+      productData {
+        _id
+        memberId
+        productType
+        productCategoryId
+        productStatus
+        productTitle
+        productPrice
+        productDiscountPrice
+        productViews
+        productLikes
+        productComments
+        productRank
+        productImages
+        productRatingAverage
+        productRatingCount
+        productStockQuantity
+        productDesc
+        productSize
+        productColor
+        productMaterials
+        createdAt
+        updatedAt
+      }
+      memberData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+      }
+      orderItemData {
+        _id
+        orderId
+        productId
+        priceAtPurchase
+        itemQuantity
+        subtotal
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
@@ -339,6 +558,7 @@ export const CREATE_ADDRESS = gql`
   mutation CreateAddress($input: AddressInput!) {
     createAddress(input: $input) {
       _id
+      memberId
       addressName
       addressPhone
       addressCountry
@@ -348,7 +568,9 @@ export const CREATE_ADDRESS = gql`
       addressLine2
       isDefault
       addressStatus
+      deletedAt
       createdAt
+      updatedAt
     }
   }
 `;
@@ -357,6 +579,26 @@ export const UPDATE_ADDRESS = gql`
   mutation UpdateAddress($input: AddressUpdate!) {
     updateAddress(input: $input) {
       _id
+      memberId
+      addressName
+      addressPhone
+      addressCountry
+      addressCity
+      addressZipCode
+      addressLine1
+      addressLine2
+      isDefault
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const DELETE_ADDRESS = gql`
+  mutation DeleteAddress($input: String!) {
+    deleteAddress(addressId: $input) {
+      _id
+      memberId
       addressName
       addressPhone
       addressCountry
@@ -366,16 +608,9 @@ export const UPDATE_ADDRESS = gql`
       addressLine2
       isDefault
       addressStatus
+      deletedAt
+      createdAt
       updatedAt
-    }
-  }
-`;
-
-export const DELETE_ADDRESS = gql`
-  mutation DeleteAddress($addressId: String!) {
-    deleteAddress(addressId: $addressId) {
-      _id
-      addressStatus
     }
   }
 `;
@@ -386,8 +621,19 @@ export const MARK_NOTIFICATION_AS_READ = gql`
   mutation MarkNotificationAsRead($input: NotificationUpdate!) {
     markNotificationAsRead(input: $input) {
       _id
+      memberId
+      authorId
+      receiverId
+      notificationType
       notificationStatus
+      notificationGroup
+      targetId
+      notificationTitle
+      notificationContent
+      deletedAt
       readAt
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -407,6 +653,52 @@ export const SUBSCRIBE = gql`
       followingId
       followerId
       createdAt
+      updatedAt
+      followerData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+        refreshToken
+      }
+      meFollowed {
+        followerId
+        followingId
+        myFollowing
+      }
+      meLiked {
+        memberId
+        likeRefId
+        myFavorite
+      }
     }
   }
 `;
@@ -417,6 +709,53 @@ export const UNSUBSCRIBE = gql`
       _id
       followingId
       followerId
+      createdAt
+      updatedAt
+      followerData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+        refreshToken
+      }
+      meFollowed {
+        followerId
+        followingId
+        myFollowing
+      }
+      meLiked {
+        memberId
+        likeRefId
+        myFavorite
+      }
     }
   }
 `;
@@ -427,11 +766,18 @@ export const CREATE_BOARD_ARTICLE = gql`
   mutation CreateBoardArticle($input: ArticleInput!) {
     createBoardArticle(input: $input) {
       _id
+      memberId
       articleCategory
+      articleStatus
       articleTitle
       articleContent
       articleImages
+      articleViews
+      articleLikes
+      articleComments
+      publishedAt
       createdAt
+      updatedAt
     }
   }
 `;
@@ -440,26 +786,38 @@ export const UPDATE_BOARD_ARTICLE = gql`
   mutation UpdateBoardArticle($input: ArticleUpdate!) {
     updateBoardArticle(input: $input) {
       _id
+      memberId
       articleCategory
       articleStatus
       articleTitle
       articleContent
       articleImages
+      articleViews
+      articleLikes
+      articleComments
+      publishedAt
+      createdAt
       updatedAt
     }
   }
 `;
 
 export const LIKE_TARGET_BOARD_ARTICLE = gql`
-  mutation LikeTargetBoardArticle($articleId: String!) {
-    likeTargetBoardArticle(articleId: $articleId) {
+  mutation LikeTargetBoardArticle($input: String!) {
+    likeTargetBoardArticle(articleId: $input) {
       _id
+      memberId
+      articleCategory
+      articleStatus
+      articleTitle
+      articleContent
+      articleImages
+      articleViews
       articleLikes
-      meLiked {
-        memberId
-        likeRefId
-        myFavorite
-      }
+      articleComments
+      publishedAt
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -470,10 +828,16 @@ export const CREATE_COMMENT = gql`
   mutation CreateComment($input: CommentInput!) {
     createComment(input: $input) {
       _id
+      commentStatus
       commentGroup
       commentRefId
+      memberId
+      commentReplyId
       commentContent
+      commentLikes
+      commentViews
       createdAt
+      updatedAt
     }
   }
 `;
@@ -482,7 +846,15 @@ export const UPDATE_COMMENT = gql`
   mutation UpdateComment($input: CommentUpdate!) {
     updateComment(input: $input) {
       _id
+      commentStatus
+      commentGroup
+      commentRefId
+      memberId
+      commentReplyId
       commentContent
+      commentLikes
+      commentViews
+      createdAt
       updatedAt
     }
   }
@@ -494,9 +866,38 @@ export const CLAIM_COUPON = gql`
   mutation ClaimCoupon($couponCode: String!) {
     claimCoupon(couponCode: $couponCode) {
       _id
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
+      memberNick
+      memberFullName
+      memberEmail
+      memberImage
+      memberAddress
+      memberDesc
+      memberArticles
+      memberFollowers
+      memberFollowings
+      memberPoints
+      memberLikes
+      memberViews
+      memberComments
+      memberRank
+      memberWarnings
+      memberProducts
+      memberBlocks
       memberCouponId
       memberCouponStatus
+      memberCouponUsedAt
       memberCouponAssignedAt
+      lastLoginAt
+      lastActiveAt
+      deletedAt
+      createdAt
+      updatedAt
+      accessToken
+      refreshToken
     }
   }
 `;
@@ -512,15 +913,23 @@ export const OPEN_OR_GET_CHAT = gql`
       chatStatus
       chatSubject
       createdAt
+      updatedAt
     }
   }
 `;
 
 export const DELETE_CHAT = gql`
-  mutation DeleteChat($chatId: String!) {
-    deleteChat(chatId: $chatId) {
+  mutation DeleteChat($input: String!) {
+    deleteChat(chatId: $input) {
       _id
+      memberId
+      brandId
       chatStatus
+      chatSubject
+      memberDeletedAt
+      brandDeletedAt
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -535,8 +944,10 @@ export const SEND_MESSAGE = gql`
       senderId
       message
       attachments
-      replyToId
+      readAt
+      deletedAt
       createdAt
+      updatedAt
     }
   }
 `;
@@ -545,8 +956,61 @@ export const UPDATE_MESSAGE_CHAT = gql`
   mutation UpdateMessageChat($input: MessageChatUpdate!) {
     updateMessageChat(input: $input) {
       _id
+      conversationId
+      senderId
       message
+      attachments
+      replyToId
+      readAt
+      deletedAt
+      createdAt
       updatedAt
+      conversationData {
+        _id
+        memberId
+        brandId
+        chatStatus
+        chatSubject
+        memberDeletedAt
+        brandDeletedAt
+        createdAt
+        updatedAt
+      }
+      senderData {
+        _id
+        memberType
+        memberStatus
+        memberAuthType
+        memberPhone
+        memberNick
+        memberFullName
+        memberEmail
+        memberImage
+        memberAddress
+        memberDesc
+        memberArticles
+        memberFollowers
+        memberFollowings
+        memberPoints
+        memberLikes
+        memberViews
+        memberComments
+        memberRank
+        memberWarnings
+        memberProducts
+        memberBlocks
+        memberCouponId
+        memberCouponStatus
+        memberCouponUsedAt
+        memberCouponAssignedAt
+        lastLoginAt
+        lastActiveAt
+        deletedAt
+        createdAt
+        updatedAt
+        accessToken
+        refreshToken
+      }
     }
   }
 `;
@@ -555,7 +1019,17 @@ export const REMOVE_MESSAGE_CHAT = gql`
   mutation RemoveMessageChat($input: RemoveMessageInput!) {
     removeMessageChat(input: $input) {
       _id
+      conversationId
+      senderId
+      message
+      attachments
+      replyToId
+      readAt
+      memberDeletedAt
+      brandDeletedAt
       deletedAt
+      createdAt
+      updatedAt
     }
   }
 `;

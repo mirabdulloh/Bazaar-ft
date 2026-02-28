@@ -118,21 +118,19 @@ export const GET_ALL_PRODUCTS_BY_ADMIN = gql`
 export const GET_ALL_ORDERS_BY_ADMIN = gql`
   query GetAllOrdersByAdmin($input: AllOrdersInquiry!) {
     getAllOrdersByAdmin(input: $input) {
-      list {
+      orders {
         _id
         memberId
         orderStatus
         orderTotalPrice
+        orderTotalDiscountPrice
         orderFinalPrice
         orderPaymentMethod
         orderPaymentStatus
+        orderDeliveryAddressId
         orderDeliveryStatus
         createdAt
-        member {
-          _id
-          memberNick
-          memberPhone
-        }
+        updatedAt
       }
       metaData {
         total
@@ -152,24 +150,17 @@ export const GET_ALL_REVIEWS_BY_ADMIN = gql`
         _id
         productId
         memberId
+        orderItemId
         reviewRating
         reviewComment
+        reviewImages
         reviewStatus
         reviewLikes
         createdAt
-        memberData {
-          _id
-          memberNick
-        }
-        productData {
-          _id
-          productTitle
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -185,17 +176,63 @@ export const GET_ALL_CATEGORIES_BY_ADMIN = gql`
         categoryName
         parentCategoryId
         categoryStatus
+        deletedAt
         createdAt
-        subCategories {
-          _id
-          categoryName
-          categoryStatus
-        }
+        updatedAt
       }
       metaData {
         total
         page
         limit
+      }
+    }
+  }
+`;
+
+// ─── Addresses ───────────────────────────────────────────────────────────────
+export const GET_ALL_ADDRESSES_BY_ADMIN = gql`
+  query GetAllAddressesByAdmin($input: AddressesInquiry!) {
+    getAllAddressesByAdmin(input: $input) {
+      list {
+        _id
+        memberId
+        addressName
+        addressPhone
+        addressCountry
+        addressCity
+        addressZipCode
+        addressLine1
+        addressLine2
+        isDefault
+        addressStatus
+        deletedAt
+        createdAt
+        updatedAt
+      }
+      metaData {
+        total
+        page
+        limit
+      }
+    }
+  }
+`;
+
+// ─── CHat ───────────────────────────────────────────────────────────────
+export const GET_ALL_CHATS_BY_ADMIN = gql`
+  query GetAllChatsByAdmin($input: ChatsInquiryByAdmin!) {
+    getAllChatsByAdmin(input: $input) {
+      list {
+        _id
+        memberId
+        brandId
+        chatStatus
+        chatSubject
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
       }
     }
   }
@@ -220,11 +257,10 @@ export const GET_ALL_COUPONS_BY_ADMIN = gql`
         couponEndDate
         couponStatus
         createdAt
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -241,13 +277,12 @@ export const GET_ALL_FAQS_BY_ADMIN = gql`
         faqStatus
         faqQuestion
         faqAnswer
+        deletedAt
         createdAt
         updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -264,13 +299,12 @@ export const GET_ALL_NOTICES_BY_ADMIN = gql`
         noticeStatus
         noticeTitle
         noticeContent
+        deletedAt
         createdAt
         updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -287,19 +321,17 @@ export const GET_ALL_BOARD_ARTICLES_BY_ADMIN = gql`
         articleCategory
         articleStatus
         articleTitle
+        articleContent
+        articleImages
         articleViews
         articleLikes
         articleComments
+        publishedAt
         createdAt
-        memberData {
-          _id
-          memberNick
-        }
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
@@ -313,16 +345,44 @@ export const GET_ALL_NOTIFICATIONS_BY_ADMIN = gql`
       list {
         _id
         memberId
+        authorId
+        receiverId
         notificationType
         notificationStatus
+        notificationGroup
+        targetId
         notificationTitle
         notificationContent
+        deletedAt
+        readAt
         createdAt
+        updatedAt
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
+      }
+    }
+  }
+`;
+
+// ─── Messages (Chat) ────────────────────────────────────────────────────────────
+export const GET_ALL_MESSAGES_BY_ADMIN = gql`
+  query GetAllMessagesByAdmin($input: MessagesInquiry!) {
+    getAllMessagesByAdmin(input: $input) {
+      list {
+        _id
+        conversationId
+        senderId
+        message
+        attachments
+        replyToId
+        readAt
+        deletedAt
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
       }
     }
   }

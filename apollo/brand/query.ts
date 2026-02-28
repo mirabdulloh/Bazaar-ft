@@ -35,16 +35,9 @@ export const GET_BRAND_CHATS = gql`
         chatSubject
         createdAt
         updatedAt
-        memberData {
-          _id
-          memberNick
-          memberImage
-        }
       }
-      metaData {
+      metaCounter {
         total
-        page
-        limit
       }
     }
   }
