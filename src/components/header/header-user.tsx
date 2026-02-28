@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
@@ -19,10 +19,13 @@ import { logOut } from "lib/auth";
 export function HeaderUser() {
   const user = useReactiveVar(userVar);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const isLoggedIn = !!user._id;
 
-  if (!isLoggedIn) {
+  if (!mounted || !isLoggedIn) {
     return (
       <Link href="/login">
         <IconButton>

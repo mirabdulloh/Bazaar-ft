@@ -758,6 +758,16 @@ export const GET_BOARD_ARTICLES = gql`
         publishedAt
         createdAt
         updatedAt
+        memberData {
+          _id
+          memberNick
+          memberImage
+        }
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
+        }
       }
       metaCounter {
         total

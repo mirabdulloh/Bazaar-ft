@@ -48,7 +48,7 @@ const CommunityPageView = ({ initialInput }: T) => {
 
 	const {
 		loading: getBoardArticlesLoading,
-		data: getBoardArticlesData,
+		data: _getBoardArticlesData,
 		error: getBoardArticlesError,
 		refetch: getBoardArticlesRefetch,
 	} = useQuery(GET_BOARD_ARTICLES, {
@@ -57,7 +57,7 @@ const CommunityPageView = ({ initialInput }: T) => {
 		notifyOnNetworkStatusChange: true,
 		onCompleted: (data: T) => {
 			setArticles(data?.getBoardArticles?.list ?? []);
-			setTotalCount(data?.getBoardArticles?.metaData?.total ?? 0);
+			setTotalCount(data?.getBoardArticles?.metaCounter?.[0]?.total ?? 0);
 		},
 	});
 
@@ -68,7 +68,7 @@ const CommunityPageView = ({ initialInput }: T) => {
 		setSearchArticles({ ...initialInput, search });
 	};
 
-	const paginationHandler = (e: T, value: number) => {
+	const paginationHandler = (_e: T, value: number) => {
 		setSearchArticles({ ...searchArticles, page: value });
 	};
 
