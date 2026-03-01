@@ -31,13 +31,23 @@ export const StyledRoot = styled("div")(({ theme }) => ({
   }
 }));
 
-export const ProductImageWrapper = styled("div")(({ theme }) => ({
+export const ProductImageWrapper = styled("div", {
+  shouldForwardProp: (prop) => prop !== "zoomed"
+})<{ zoomed: boolean }>(({ theme, zoomed }) => ({
   height: 500,
   display: "flex",
   overflow: "hidden",
   position: "relative",
   justifyContent: "center",
   marginBottom: theme.spacing(6),
+  cursor: zoomed ? "zoom-out" : "zoom-in",
+  "& .zoom-media": {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+    transform: zoomed ? "scale(1.9)" : "scale(1)",
+    transition: "transform 0.18s ease-out"
+  },
   "& img": { objectFit: "cover" },
   [theme.breakpoints.down("sm")]: { height: 300 },
   "& + .preview-images": {
