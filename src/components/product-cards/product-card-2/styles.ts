@@ -7,11 +7,14 @@ export const StyledRoot = styled("div")<{ hasSecondImage?: boolean }>(({ hasSeco
   margin: "auto",
   position: "relative",
   minWidth: 0, // prevents overflow in flex/grid containers on mobile
-  "& .img-secondary": { opacity: 0 }, // hide secondary image by default (CSS so hover can override)
-  "&:hover .card-img-box": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" },
-  "&:hover .img-primary": { opacity: hasSecondImage ? 0 : 1 },
-  "&:hover .img-secondary": { opacity: 1 },
-  "&:hover .cart-overlay": { transform: "translateY(0)" },
+  "& .img-secondary": { opacity: 0 }, // hide secondary image by default
+  // Hover effects only on devices that support real hover (mouse/trackpad)
+  "@media (hover: hover)": {
+    "&:hover .card-img-box": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" },
+    "&:hover .img-primary": { opacity: hasSecondImage ? 0 : 1 },
+    "&:hover .img-secondary": { opacity: 1 },
+    "&:hover .cart-overlay": { transform: "translateY(0)" },
+  },
 }));
 
 export const ImageBox = styled("div")<{ imageHeight?: number }>(({ theme, imageHeight = 370 }) => ({
@@ -73,8 +76,11 @@ export const CartOverlay = styled("div")({
   left: 0,
   right: 0,
   padding: 12,
-  transform: "translateY(110%)",
-  transition: "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+  // On pointer devices: start hidden below, slide up on hover
+  "@media (hover: hover)": {
+    transform: "translateY(110%)",
+    transition: "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+  },
 });
 
 export const ContentWrapper = styled("div")(({ theme }) => ({
