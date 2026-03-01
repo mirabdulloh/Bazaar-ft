@@ -24,8 +24,7 @@ import { GET_BOARD_ARTICLES } from "../../../../apollo/user/query";
 import { LIKE_TARGET_BOARD_ARTICLE } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { Article, ArticleCategory } from "../../../lib/types/Article";
-import { T, Message } from "../../../lib/types/common";
-import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "../../../lib/sweetAlert";
+import { T } from "../../../lib/types/common";
 
 const CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
 	{ value: "", label: "All" },
@@ -76,16 +75,42 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 		try {
 			e.preventDefault();
 			if (!articleId) return;
-			if (!user._id) throw new Error(Message.NOT_AUTHENTICATED);
+			if (!user._id) return;
+
+			// Optimistic UI update to prevent card flicker while refetching
+			const currentArticle = articles.find((article) => article._id === articleId);
+			const currentlyLiked = currentArticle?.meLiked?.[0]?.myFavorite ?? false;
+
+			setArticles((prev) =>
+				prev.map((article) =>
+					article._id === articleId
+						? {
+								...article,
+								articleLikes: Math.max(
+									0,
+									article.articleLikes + (currentlyLiked ? -1 : 1)
+								),
+								meLiked: [
+									{
+										memberId: user._id,
+										likeRefId: articleId,
+										myFavorite: !currentlyLiked,
+									},
+								],
+						  }
+						: article
+				)
+			);
 
 			await likeTargetBoardArticle({ variables: { input: articleId } });
-			await getBoardArticlesRefetch();
-			await sweetTopSmallSuccessAlert("Liked!", 800);
+			await getBoardArticlesRefetch({ input: searchArticles });
 		} catch (err: any) {
 			console.log("Error on likeArticleHandler:", err);
-			sweetMixinErrorAlert(err.message).then();
+			await getBoardArticlesRefetch({ input: searchArticles });
 		}
 	};
+
+	const isInitialLoading = getBoardArticlesLoading && articles.length === 0;
 
 	return (
 		<Container sx={{ py: 6 }}>
@@ -110,7 +135,7 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 				))}
 			</Stack>
 
-			{getBoardArticlesLoading ? (
+			{isInitialLoading ? (
 				<Box display="flex" justifyContent="center" py={8}>
 					<CircularProgress />
 				</Box>

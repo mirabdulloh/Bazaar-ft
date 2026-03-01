@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client/react";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
@@ -19,9 +19,9 @@ import { useRouter } from "next/navigation";
 import { GET_BOARD_ARTICLE } from "../../../../apollo/user/query";
 import { LIKE_TARGET_BOARD_ARTICLE } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
+import { useQuery } from "lib/hooks/useQuery";
 import { Article } from "../../../lib/types/Article";
-import { T, Message } from "../../../lib/types/common";
-import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "../../../lib/sweetAlert";
+import { T } from "../../../lib/types/common";
 
 const CATEGORY_LABELS: Record<string, string> = {
 	FASHIONGUIDES: "Fashion Guides",
@@ -41,12 +41,12 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 	const {
 		loading: getBoardArticleLoading,
-		data: getBoardArticleData,
+		data: _getBoardArticleData,
 		error: getBoardArticleError,
 		refetch: getBoardArticleRefetch,
 	} = useQuery(GET_BOARD_ARTICLE, {
 		fetchPolicy: "cache-and-network",
-		variables: { articleId: initialInput.articleId },
+		variables: { input: initialInput.articleId },
 		notifyOnNetworkStatusChange: true,
 		onCompleted: (data: T) => {
 			setArticle(data?.getBoardArticle ?? null);
@@ -58,18 +58,37 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 		try {
 			e.preventDefault();
 			if (!article?._id) return;
-			if (!user._id) throw new Error(Message.NOT_AUTHENTICATED);
+			if (!user._id) return;
+
+			const currentlyLiked = article.meLiked?.[0]?.myFavorite ?? false;
+			setArticle((prev) =>
+				prev
+					? {
+							...prev,
+							articleLikes: Math.max(
+								0,
+								prev.articleLikes + (currentlyLiked ? -1 : 1)
+							),
+							meLiked: [
+								{
+									memberId: user._id,
+									likeRefId: prev._id,
+									myFavorite: !currentlyLiked,
+								},
+							],
+					  }
+					: prev
+			);
 
 			await likeTargetBoardArticle({ variables: { input: article._id } });
-			await getBoardArticleRefetch();
-			await sweetTopSmallSuccessAlert("Liked!", 800);
+			await getBoardArticleRefetch({ input: initialInput.articleId });
 		} catch (err: any) {
 			console.log("Error on likeArticleHandler:", err);
-			sweetMixinErrorAlert(err.message).then();
+			await getBoardArticleRefetch({ input: initialInput.articleId });
 		}
 	};
 
-	if (getBoardArticleLoading) {
+	if (getBoardArticleLoading && !article) {
 		return (
 			<Box display="flex" justifyContent="center" py={10}>
 				<CircularProgress />
