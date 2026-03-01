@@ -3,6 +3,7 @@
 import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import { useTranslation } from "../../../node_modules/react-i18next";
 // GLOBAL CUSTOM COMPONENTS
 import { NavLink } from "components/nav-link";
 import FlexBox from "components/flex-box/flex-box";
@@ -20,6 +21,7 @@ type Props = { navigation: Menu[] };
 // ==============================================================
 
 export function NavigationList({ navigation }: Props) {
+  const { t } = useTranslation();
   const withCustomerSupport = (list: Menu[]): Menu[] => {
     const normalized = list.map((item) => {
       if (item.title.trim().toLowerCase() !== "cs") return item;
@@ -51,7 +53,7 @@ export function NavigationList({ navigation }: Props) {
     return children.map((nav) => {
       if (nav.child) {
         return (
-          <NavItemChild nav={nav} key={nav.title}>
+          <NavItemChild nav={{ ...nav, title: t(nav.title, { defaultValue: nav.title }) }} key={nav.title}>
             {renderNestLevel(nav.child)}
           </NavItemChild>
         );
@@ -59,7 +61,7 @@ export function NavigationList({ navigation }: Props) {
 
       return (
         <NavLink href={nav.url!} key={nav.title}>
-          <MenuItem>{nav.title}</MenuItem>
+          <MenuItem>{t(nav.title, { defaultValue: nav.title })}</MenuItem>
         </NavLink>
       );
     });
@@ -69,19 +71,31 @@ export function NavigationList({ navigation }: Props) {
     return list.map((nav) => {
       // SHOW GRID MEGA MENU
       if (nav.megaMenu) {
-        return <MegaMenu key={nav.title} title={nav.title} menuList={nav.child} />;
+        return (
+          <MegaMenu
+            key={nav.title}
+            title={t(nav.title, { defaultValue: nav.title })}
+            menuList={nav.child}
+          />
+        );
       }
 
       // SHOW CATEGORY BASED MEGA MENU WITH SUB ITEMS
       if (nav.megaMenuWithSub) {
-        return <CategoryBasedMenu key={nav.title} title={nav.title} menuList={nav.child} />;
+        return (
+          <CategoryBasedMenu
+            key={nav.title}
+            title={t(nav.title, { defaultValue: nav.title })}
+            menuList={nav.child}
+          />
+        );
       }
 
       // SHOW DIRECT LINK (no children)
       if (nav.megaMenu === false && nav.megaMenuWithSub === false && nav.child.length === 0 && nav.url) {
         return (
           <StyledNavLink href={nav.url} key={nav.title}>
-            {nav.title}
+            {t(nav.title, { defaultValue: nav.title })}
           </StyledNavLink>
         );
       }
@@ -103,7 +117,7 @@ export function NavigationList({ navigation }: Props) {
             }}
           >
             <FlexBox alignItems="flex-end" gap={0.3} sx={NAV_LINK_STYLES}>
-              {nav.title}{" "}
+              {t(nav.title, { defaultValue: nav.title })}{" "}
               <KeyboardArrowDown
                 sx={{
                   color: "grey.500",

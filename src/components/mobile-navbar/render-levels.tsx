@@ -22,16 +22,16 @@ const ACCORDION_SUMMARY_STYLES = {
   }
 };
 
-export const renderLevels = (data: any[], handleClose: () => void) => {
+export const renderLevels = (data: any[], handleClose: () => void, t: (key: string, options?: any) => string) => {
   return data.map((item: any, index: number) => {
     if (Array.isArray(item.child) && item.child.length > 0) {
       return (
         <Accordion square key={index} elevation={0} disableGutters sx={ACCORDION_STYLES}>
           <AccordionSummary expandIcon={<ExpandMore />} sx={ACCORDION_SUMMARY_STYLES}>
-            <Typography variant="h6">{item.title}</Typography>
+            <Typography variant="h6">{t(item.title, { defaultValue: item.title })}</Typography>
           </AccordionSummary>
 
-          <Box mx={2}>{renderLevels(item.child, handleClose)}</Box>
+          <Box mx={2}>{renderLevels(item.child, handleClose, t)}</Box>
         </Accordion>
       );
     }
@@ -40,7 +40,7 @@ export const renderLevels = (data: any[], handleClose: () => void) => {
       return (
         <Box key={index} py={1}>
           <NavLink href={item.url} onClick={handleClose}>
-            {item.title}
+            {t(item.title, { defaultValue: item.title })}
           </NavLink>
         </Box>
       );
@@ -49,14 +49,14 @@ export const renderLevels = (data: any[], handleClose: () => void) => {
     if (item.extLink) {
       return (
         <Typography variant="h6" sx={{ py: 1 }} key={index}>
-          <NavLink href={item.url}>{item.title}</NavLink>
+          <NavLink href={item.url}>{t(item.title, { defaultValue: item.title })}</NavLink>
         </Typography>
       );
     }
 
     return (
       <Typography key={index} variant="h6" sx={{ py: 1, color: "text.secondary" }}>
-        {item.title}
+        {t(item.title, { defaultValue: item.title })}
       </Typography>
     );
   });

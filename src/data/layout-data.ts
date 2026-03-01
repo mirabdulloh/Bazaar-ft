@@ -14,7 +14,9 @@ export const topbarSocialLinks = {
 // TOP BAR LANGUAGE OPTIONS
 export const languageOptions = {
   en: { title: "EN", value: "en" },
-  es: { title: "DE", value: "de" }
+  ru: { title: "RU", value: "ru" },
+  uz: { title: "UZ", value: "uz" },
+  ko: { title: "KO", value: "ko" }
 };
 
 // MOBILE NAVIGATION LIST

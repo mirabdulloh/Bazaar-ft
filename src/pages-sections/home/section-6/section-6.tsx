@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
 import LongProductCard from "./long-product-card";
@@ -57,6 +58,7 @@ const initialInput = {
 };
 
 export default function Section6() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const user = useReactiveVar(userVar);
 
@@ -103,7 +105,7 @@ export default function Section6() {
 
   if (getTrendingLoading) {
     return (
-      <SectionCreator title="Trending Now" seeMoreLink="/products/search?sort=popular">
+      <SectionCreator title={t("Trending Now", { defaultValue: "Trending Now" })} seeMoreLink="/products/search?sort=popular">
         <Grid container spacing={4}>
           <Grid size={{ md: 3, xs: 12 }}>
             <Skeleton variant="rectangular" height={700} sx={{ borderRadius: 3 }} />
@@ -129,7 +131,7 @@ export default function Section6() {
   const TRENDING_ITEMS = products.slice(1);
 
   return (
-    <SectionCreator title="Trending Now" seeMoreLink="/products/search?sort=popular">
+    <SectionCreator title={t("Trending Now", { defaultValue: "Trending Now" })} seeMoreLink="/products/search?sort=popular">
       <Grid container spacing={4}>
         <Grid size={{ md: 3, xs: 12 }}>
           <LongProductCard

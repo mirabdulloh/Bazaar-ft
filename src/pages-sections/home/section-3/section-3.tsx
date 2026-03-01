@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 import { SectionCreator } from "components/section-header";
 import ProductCard2 from "components/product-cards/product-card-2";
 import ProductsCarousel from "./products-carousel";
@@ -57,6 +58,7 @@ const initialInput = {
 };
 
 export default function Section3() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const user = useReactiveVar(userVar);
 
@@ -103,7 +105,7 @@ export default function Section3() {
 
   if (getNewArrivalsLoading) {
     return (
-      <SectionCreator title="New Arrivals" seeMoreLink="/products/search?sort=newest">
+      <SectionCreator title={t("New Arrivals", { defaultValue: "New Arrivals" })} seeMoreLink="/products/search?sort=newest">
         <Box display="flex" gap={2} overflow="hidden">
           {Array.from({ length: 4 }).map((_, i) => (
             <Box key={i} sx={{ minWidth: { xs: "75vw", sm: 260 }, flex: "0 0 auto" }}>
@@ -120,7 +122,7 @@ export default function Section3() {
   if (!products.length) return null;
 
   return (
-    <SectionCreator title="New Arrivals" seeMoreLink="/products/search?sort=newest">
+    <SectionCreator title={t("New Arrivals", { defaultValue: "New Arrivals" })} seeMoreLink="/products/search?sort=newest">
       <ProductsCarousel>
         {products.map((product) => (
           <ProductCard2

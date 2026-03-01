@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 import Link from "next/link";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -24,6 +25,7 @@ import { FadeInCard } from "../../../components/scroll-reveal";
 
 export default function FeaturedBrandsSection() {
   const [brands, setBrands] = useState<Brand[]>([]);
+  const { t } = useTranslation();
 
   /** APOLLO REQUESTS **/
   const {
@@ -46,7 +48,7 @@ export default function FeaturedBrandsSection() {
     <Container sx={{ mb: 6 }}>
       <FlexBetween mb={3}>
         <Typography variant="h4" fontWeight={700}>
-          Featured Brands
+          {t("Featured Brands", { defaultValue: "Featured Brands" })}
         </Typography>
         <Link href="/brands" style={{ textDecoration: "none" }}>
           <Button endIcon={<East />} sx={{ fontWeight: 600, textTransform: "none" }}>

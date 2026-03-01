@@ -7,6 +7,7 @@ import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import Clear from "@mui/icons-material/Clear";
+import { useTranslation } from "../../../node_modules/react-i18next";
 // GLOBAL CUSTOM COMPONENT
 import OverlayScrollbar from "components/overlay-scrollbar";
 // RENDER MENU LEVEL FUNCTION
@@ -22,6 +23,7 @@ type Props = { navigation: Menu[] };
 
 export function MobileMenu({ navigation }: Props) {
   const [openDrawer, setOpenDrawer] = useState(false);
+  const { t } = useTranslation();
   const handleClose = useCallback(() => setOpenDrawer(false), []);
   const handleOpen = useCallback(() => setOpenDrawer(true), []);
 
@@ -56,7 +58,7 @@ export function MobileMenu({ navigation }: Props) {
                 <Clear fontSize="small" />
               </IconButton>
 
-              {renderLevels(updateNavigation(navigation), handleClose)}
+              {renderLevels(updateNavigation(navigation), handleClose, t)}
             </Box>
           </OverlayScrollbar>
         </Box>

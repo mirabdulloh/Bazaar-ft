@@ -1,4 +1,7 @@
+"use client";
+
 import Container from "@mui/material/Container";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 import ServiceCard2 from "components/service-cards/service-card-2";
 import { Wrapper } from "./styles";
 
@@ -11,11 +14,18 @@ const SERVICE_ITEMS = [
 ];
 
 export default function Section7() {
+  const { t } = useTranslation();
+
   return (
     <Container className="mb-4">
       <Wrapper>
         {SERVICE_ITEMS.map(({ icon, id, title, description }) => (
-          <ServiceCard2 key={id} title={title} description={description} icon={icon} />
+          <ServiceCard2
+            key={id}
+            title={t(title, { defaultValue: title })}
+            description={t(description, { defaultValue: description })}
+            icon={icon}
+          />
         ))}
       </Wrapper>
     </Container>

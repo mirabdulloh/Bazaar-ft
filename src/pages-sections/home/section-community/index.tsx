@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 import Link from "next/link";
 import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
@@ -32,6 +33,7 @@ interface GqlArticle {
 
 export default function SectionCommunity() {
   const [articles, setArticles] = useState<GqlArticle[]>([]);
+  const { t } = useTranslation();
 
   /** APOLLO REQUESTS **/
   const {
@@ -60,7 +62,7 @@ export default function SectionCommunity() {
     <Container sx={{ py: 5 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" fontWeight={700}>
-          Latest from Community
+          {t("Latest from Community", { defaultValue: "Latest from Community" })}
         </Typography>
         <Link href="/community" style={{ textDecoration: "none" }}>
           <Typography variant="body2" color="primary" fontWeight={600}>

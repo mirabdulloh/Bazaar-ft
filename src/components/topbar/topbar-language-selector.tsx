@@ -19,7 +19,8 @@ export function TopbarLanguageSelector({ languages }: { languages: LanguageOptio
     i18n.changeLanguage(lang);
   };
 
-  const selectedLanguage = languages[i18n.language];
+  const normalizedLang = i18n.language?.split("-")[0];
+  const selectedLanguage = languages[normalizedLang] ?? languages.en ?? Object.values(languages)[0];
 
   return (
     <BazaarMenu
