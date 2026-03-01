@@ -33,13 +33,13 @@ export const HeroSection = styled(Box)(({ theme }) => ({
 
 export const HeroTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: 34,
+  fontSize: 26,
   lineHeight: 1.2,
   [theme.breakpoints.up("sm")]: {
-    fontSize: 42
+    fontSize: 36
   },
   [theme.breakpoints.up("md")]: {
-    fontSize: 52
+    fontSize: 46
   }
 }));
 
@@ -103,14 +103,14 @@ export const SectionHeader = styled(Box)(({ theme }) => ({
 
 export const SectionTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
-  fontSize: 30,
+  fontSize: 20,
   marginBottom: theme.spacing(0.8),
   lineHeight: 1.2,
   [theme.breakpoints.up("sm")]: {
-    fontSize: 38
+    fontSize: 26
   },
   [theme.breakpoints.up("md")]: {
-    fontSize: 44
+    fontSize: 32
   }
 }));
 
@@ -124,7 +124,7 @@ export const CenterStateBox = styled(Box)(({ theme }) => ({
   paddingBlock: theme.spacing(7)
 }));
 
-export const StateText = styled(Typography)(({ theme }) => ({
+export const StateText = styled(Typography)(() => ({
   textAlign: "center"
 }));
 
@@ -223,4 +223,32 @@ export const FaqAnswer = styled(Typography)(({ theme }) => ({
   lineHeight: 1.7,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word"
+}));
+
+export const PaginationWrap = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  paddingTop: theme.spacing(4)
+}));
+
+export const SearchBox = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 40,
+  padding: theme.spacing(0.9, 2),
+  backgroundColor: theme.palette.common.white,
+  marginBottom: theme.spacing(1.5),
+  transition: "border-color 0.2s",
+  "&:focus-within": {
+    borderColor: theme.palette.primary.main,
+  }
+}));
+
+export const CategoryFilterRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing(0.75),
+  flexWrap: "wrap",
+  marginBottom: theme.spacing(2.5),
 }));

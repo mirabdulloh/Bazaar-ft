@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useTranslation } from "../../../../node_modules/react-i18next";
+import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
 import LongProductCard from "./long-product-card";
 import { SectionCreator } from "components/section-header";
 import ProductCard2 from "components/product-cards/product-card-2";
+import ProductsCarousel from "../section-3/products-carousel";
 import Product from "models/Product.model";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
@@ -106,22 +108,38 @@ export default function Section6() {
   if (getTrendingLoading) {
     return (
       <SectionCreator title={t("Trending Now", { defaultValue: "Trending Now" })} seeMoreLink="/products/search?sort=popular">
-        <Grid container spacing={4}>
-          <Grid size={{ md: 3, xs: 12 }}>
-            <Skeleton variant="rectangular" height={700} sx={{ borderRadius: 3 }} />
-            <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
-            <Skeleton variant="text" width="50%" />
-          </Grid>
-          <Grid container spacing={4} size={{ md: 9, xs: 12 }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Grid size={{ sm: 4, xs: 12 }} key={i}>
-                <Skeleton variant="rectangular" height={460} sx={{ borderRadius: 2 }} />
+        {/* Mobile loading skeleton */}
+        <Box sx={{ display: { xs: "block", md: "none" } }}>
+          <Box display="flex" gap={2} overflow="hidden">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Box key={i} sx={{ minWidth: "75vw", flex: "0 0 auto" }}>
+                <Skeleton variant="rectangular" height={340} sx={{ borderRadius: 2 }} />
                 <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
                 <Skeleton variant="text" width="50%" />
-              </Grid>
+              </Box>
             ))}
+          </Box>
+        </Box>
+
+        {/* Desktop loading skeleton */}
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <Grid container spacing={4}>
+            <Grid size={{ md: 3 }}>
+              <Skeleton variant="rectangular" height={700} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
+              <Skeleton variant="text" width="50%" />
+            </Grid>
+            <Grid container spacing={4} size={{ md: 9 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Grid size={{ sm: 4 }} key={i}>
+                  <Skeleton variant="rectangular" height={460} sx={{ borderRadius: 2 }} />
+                  <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
+                  <Skeleton variant="text" width="50%" />
+                </Grid>
+              ))}
+            </Grid>
           </Grid>
-        </Grid>
+        </Box>
       </SectionCreator>
     );
   }
@@ -132,25 +150,41 @@ export default function Section6() {
 
   return (
     <SectionCreator title={t("Trending Now", { defaultValue: "Trending Now" })} seeMoreLink="/products/search?sort=popular">
-      <Grid container spacing={4}>
-        <Grid size={{ md: 3, xs: 12 }}>
-          <LongProductCard
-            product={products[0]}
-            likeProductHandler={(productId) => likeProductHandler(user, productId)}
-          />
-        </Grid>
-
-        <Grid container spacing={4} size={{ md: 9, xs: 12 }}>
-          {TRENDING_ITEMS.map((product) => (
-            <Grid size={{ sm: 4, xs: 12 }} key={product.id}>
-              <ProductCard2
-                product={product}
-                likeProductHandler={(productId) => likeProductHandler(user, productId)}
-              />
-            </Grid>
+      {/* Mobile: all products in a carousel */}
+      <Box sx={{ display: { xs: "block", md: "none" } }}>
+        <ProductsCarousel>
+          {products.map((product) => (
+            <ProductCard2
+              key={product.id}
+              product={product}
+              likeProductHandler={(productId) => likeProductHandler(user, productId)}
+            />
           ))}
+        </ProductsCarousel>
+      </Box>
+
+      {/* Desktop: tall solo card left + grid right */}
+      <Box sx={{ display: { xs: "none", md: "block" } }}>
+        <Grid container spacing={4}>
+          <Grid size={{ md: 3 }}>
+            <LongProductCard
+              product={products[0]}
+              likeProductHandler={(productId) => likeProductHandler(user, productId)}
+            />
+          </Grid>
+
+          <Grid container spacing={4} size={{ md: 9 }}>
+            {TRENDING_ITEMS.map((product) => (
+              <Grid size={{ sm: 4 }} key={product.id}>
+                <ProductCard2
+                  product={product}
+                  likeProductHandler={(productId) => likeProductHandler(user, productId)}
+                />
+              </Grid>
+            ))}
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
     </SectionCreator>
   );
 }

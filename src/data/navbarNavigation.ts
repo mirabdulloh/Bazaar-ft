@@ -79,6 +79,15 @@ const navbarNavigation: Menu[] = [
     megaMenuWithSub: false,
     url: "/community",
     child: []
+  },
+  {
+    title: "CS",
+    megaMenu: false,
+    megaMenuWithSub: false,
+    child: [
+      { title: "FAQ", url: "/faq" },
+      { title: "Notices", url: "/notices" }
+    ]
   }
 ];
 
