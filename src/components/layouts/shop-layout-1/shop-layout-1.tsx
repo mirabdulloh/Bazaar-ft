@@ -13,7 +13,6 @@ import {
 } from "components/footer";
 import Sticky from "components/sticky";
 import { NavigationList } from "components/navbar";
-import { CategoryList } from "components/categories";
 import { MobileMenu } from "components/mobile-navbar";
 import { SecondaryHeader } from "components/secondary-header";
 import { MobileNavigationBar } from "components/mobile-navigation";
@@ -80,10 +79,6 @@ export default function ShopLayout1({ children, data }: Props) {
       </Sticky>
 
       <SecondaryHeader elevation={0}>
-        <SecondaryHeader.Left>
-          <CategoryList categories={header.categoryMenus} />
-        </SecondaryHeader.Left>
-
         <SecondaryHeader.Right>
           <SearchInput1 categories={header.categories} />
         </SecondaryHeader.Right>

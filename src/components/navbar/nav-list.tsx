@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
@@ -14,7 +15,17 @@ import { CategoryBasedMenu } from "./category-based-menu";
 // STYLED COMPONENTS
 import { NAV_LINK_STYLES, ChildNavListWrapper, StyledNavLink } from "./styles";
 // DATA TYPES
-import { Menu, MenuItemWithChild } from "models/Navigation.model";
+import { Menu, MenuItemWithChild, MenuItem as NavMenuItem } from "models/Navigation.model";
+// LIVE CATEGORIES
+import { useQuery } from "lib/hooks/useQuery";
+import { GET_CATEGORIES } from "../../../apollo/user/query";
+import { T } from "lib/types/common";
+
+interface GqlCategory {
+  _id: string;
+  categoryName: string;
+  parentCategoryId: string | null;
+}
 
 // ==============================================================
 type Props = { navigation: Menu[] };
@@ -22,6 +33,36 @@ type Props = { navigation: Menu[] };
 
 export function NavigationList({ navigation }: Props) {
   const { t } = useTranslation();
+  const [liveCategoryChildren, setLiveCategoryChildren] = useState<MenuItemWithChild[]>([]);
+
+  /** APOLLO REQUESTS — fetch real categories for the "Categories" nav item **/
+  useQuery(GET_CATEGORIES, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 50, search: {} } },
+    notifyOnNetworkStatusChange: true,
+    onCompleted: (data: T) => {
+      const all: GqlCategory[] = data?.getCategories?.list ?? [];
+      const topLevel = all.filter((c) => !c.parentCategoryId);
+      const childCategories = all.filter((c) => !!c.parentCategoryId);
+
+      const built: MenuItemWithChild[] = topLevel.map((parent) => {
+        const subs = childCategories.filter((c) => c.parentCategoryId === parent._id);
+        return {
+          title: parent.categoryName,
+          url: `/products/search?categoryId=${parent._id}`,
+          ...(subs.length > 0 && {
+            child: subs.map((c) => ({
+              title: c.categoryName,
+              url: `/products/search?categoryId=${c._id}`,
+            })),
+          }),
+        };
+      });
+
+      if (built.length > 0) setLiveCategoryChildren(built);
+    },
+  });
+
   const withCustomerSupport = (list: Menu[]): Menu[] => {
     const normalized = list.map((item) => {
       if (item.title.trim().toLowerCase() !== "cs") return item;
@@ -29,21 +70,21 @@ export function NavigationList({ navigation }: Props) {
       return {
         title: "CS",
         url: "/notices",
-        megaMenu: false,
-        megaMenuWithSub: false,
-        child: []
+        megaMenu: false as const,
+        megaMenuWithSub: false as const,
+        child: [] as MenuItemWithChild[]
       };
     });
 
     const exists = normalized.some((item) => item.title.trim().toLowerCase() === "cs");
     if (exists) return normalized;
 
-    const csMenu: Menu = {
+    const csMenu: NavMenuItem = {
       title: "CS",
       url: "/notices",
       megaMenu: false,
       megaMenuWithSub: false,
-      child: []
+      child: [] as MenuItemWithChild[]
     };
 
     return [...normalized, csMenu];
@@ -69,6 +110,13 @@ export function NavigationList({ navigation }: Props) {
 
   const renderRootLevel = (list: Menu[]) => {
     return list.map((nav) => {
+      // For the "Categories" menu item — swap in live backend data when available
+      const isCategories = nav.title.trim().toLowerCase() === "categories";
+      const effectiveChildren: MenuItemWithChild[] =
+        isCategories && liveCategoryChildren.length > 0
+          ? liveCategoryChildren
+          : (nav.child as MenuItemWithChild[]);
+
       // SHOW GRID MEGA MENU
       if (nav.megaMenu) {
         return (
@@ -92,7 +140,7 @@ export function NavigationList({ navigation }: Props) {
       }
 
       // SHOW DIRECT LINK (no children)
-      if (nav.megaMenu === false && nav.megaMenuWithSub === false && nav.child.length === 0 && nav.url) {
+      if (nav.megaMenu === false && nav.megaMenuWithSub === false && effectiveChildren.length === 0 && nav.url) {
         return (
           <StyledNavLink href={nav.url} key={nav.title}>
             {t(nav.title, { defaultValue: nav.title })}
@@ -101,7 +149,7 @@ export function NavigationList({ navigation }: Props) {
       }
 
       // SHOW LIST MENU WITH CHILD
-      if (nav.child && nav.child.length > 0 && nav.megaMenu === false && nav.megaMenuWithSub === false) {
+      if (effectiveChildren && effectiveChildren.length > 0 && nav.megaMenu === false && nav.megaMenuWithSub === false) {
         return (
           <FlexBox
             key={nav.title}
@@ -136,7 +184,7 @@ export function NavigationList({ navigation }: Props) {
                   overflow: "unset"
                 }}
               >
-                {renderNestLevel(nav.child)}
+                {renderNestLevel(effectiveChildren)}
               </Card>
             </ChildNavListWrapper>
           </FlexBox>
