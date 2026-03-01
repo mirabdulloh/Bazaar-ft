@@ -42,7 +42,7 @@ export default function ProductCard2({ product, showReview = true, imageHeight, 
   const discountedPrice = calculateDiscount(price, discount);
   const originalPrice = currency(price);
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(product.meLiked ?? false);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();

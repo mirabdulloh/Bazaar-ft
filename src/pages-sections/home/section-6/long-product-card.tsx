@@ -30,7 +30,7 @@ export default function LongProductCard({ product, likeProductHandler }: Props) 
 
   const { slug, title, price, thumbnail, rating, discount, productLikes } = product;
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(product.meLiked ?? false);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();

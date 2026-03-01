@@ -24,6 +24,7 @@ interface GqlProduct {
   productRatingAverage: number;
   productLikes: number;
   productViews: number;
+  meLiked?: { myFavorite: boolean }[];
 }
 
 function toProductModel(p: GqlProduct): Product {
@@ -43,6 +44,7 @@ function toProductModel(p: GqlProduct): Product {
     categories: [],
     productLikes: p.productLikes,
     productViews: p.productViews,
+    meLiked: p.meLiked?.[0]?.myFavorite === true,
   };
 }
 
@@ -59,13 +61,13 @@ export default function Section3() {
   const user = useReactiveVar(userVar);
 
   /** APOLLO REQUESTS **/
-  const [likeTargetProduct] = useMutation(LIKE_TARGET_PRODUCT);
+  const [likeTargetProduct] = useMutation<{ likeTargetProduct: { _id: string; productLikes: number } }>(LIKE_TARGET_PRODUCT);
 
   const {
     loading: getNewArrivalsLoading,
     data: _getNewArrivalsData,
     error: _getNewArrivalsError,
-    refetch: getNewArrivalsRefetch,
+    refetch: _getNewArrivalsRefetch,
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     variables: { input: initialInput },
@@ -82,8 +84,16 @@ export default function Section3() {
       if (!productId) return;
       if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
 
-      await likeTargetProduct({ variables: { input: productId } });
-      await getNewArrivalsRefetch({ input: initialInput });
+      const { data } = await likeTargetProduct({ variables: { input: productId } });
+      const updated = data?.likeTargetProduct;
+
+      if (updated?._id) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === updated._id ? { ...p, productLikes: updated.productLikes } : p
+          )
+        );
+      }
       await sweetLikeSuccessAlert();
     } catch (err: any) {
       console.log('Err on likeProductHandler:', err);
