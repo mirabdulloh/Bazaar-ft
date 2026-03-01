@@ -202,7 +202,7 @@ export default function ProductDetailsPageView(props: Props) {
       <ProductIntro product={product} />
 
       {/* PRODUCT DESCRIPTION AND REVIEW */}
-      <ProductTabs description={<ProductDescription />} reviews={<ProductReviews />} />
+      <ProductTabs description={<ProductDescription />} reviews={<ProductReviews productId={props.productId} />} />
 
       {/* AVAILABLE SHOPS AREA */}
       <AvailableShops shops={availableBrands} />

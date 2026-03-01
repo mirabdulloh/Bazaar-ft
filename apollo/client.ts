@@ -10,7 +10,7 @@ let apolloClient: ApolloClient;
 function getHeaders() {
 	const headers = {} as HeadersInit;
 	const token = getJwtToken();
-	// @ts-ignore
+	// @ts-expect-error - HeadersInit index type depends on runtime implementation
 	if (token) headers['Authorization'] = `Bearer ${token}`;
 	return headers;
 }
@@ -36,7 +36,8 @@ function createIsomorphicLink(): ApolloLink {
 		if (CombinedGraphQLErrors.is(error)) {
 			error.errors.forEach(({ message, locations, path }) => {
 				console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`);
-				if (!message.includes('input')) sweetErrorAlert(message);
+				const lower = message.toLowerCase();
+				if (!lower.includes('input') && !lower.includes('no data found')) sweetErrorAlert(message);
 			});
 		} else {
 			console.log(`[Network error]: ${error}`);

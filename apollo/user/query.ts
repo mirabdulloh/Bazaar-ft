@@ -568,6 +568,11 @@ export const GET_REVIEWS = gql`
         reviewLikes
         createdAt
         updatedAt
+        memberData {
+          _id
+          memberNick
+          memberImage
+        }
       }
       metaCounter {
         total
