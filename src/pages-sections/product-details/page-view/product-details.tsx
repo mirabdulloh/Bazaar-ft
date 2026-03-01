@@ -11,10 +11,9 @@ import ProductIntro from "../product-intro";
 import ProductReviews from "../product-reviews";
 import AvailableShops from "../available-shops";
 import RelatedProducts from "../related-products";
-import FrequentlyBought from "../frequently-bought";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_CATEGORIES, GET_PRODUCT } from "../../../../apollo/user/query";
+import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS } from "../../../../apollo/user/query";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
@@ -22,13 +21,12 @@ import { T } from "../../../lib/types/common";
 // ==============================================================
 interface Props {
   productId: string;
-  relatedProducts: Product[];
-  frequentlyBought: Product[];
 }
 // ==============================================================
 
 interface GqlProduct {
   _id: string;
+  productType?: string;
   productTitle: string;
   productPrice: number;
   productDiscountPrice: number;
@@ -48,6 +46,13 @@ interface GqlProduct {
 interface GqlCategory {
   _id: string;
   categoryName: string;
+}
+
+interface AvailableBrand {
+  id: string;
+  name: string;
+  image: string;
+  url: string;
 }
 
 const parseVariantValues = (value?: string[] | string): string[] => {
@@ -111,6 +116,68 @@ export default function ProductDetailsPageView(props: Props) {
     return gqlProduct ? toProductModel(gqlProduct, categoryById) : null;
   }, [data, categoryById]);
 
+  const currentRawProduct: GqlProduct | undefined = (data as T)?.getProduct;
+  const productCategoryId = currentRawProduct?.productCategoryId;
+  const currentBrandId = currentRawProduct?.memberData?._id;
+  const currentType = currentRawProduct?.productType;
+
+  const { data: categoryProductsData } = useQuery(GET_PRODUCTS, {
+    fetchPolicy: "cache-and-network",
+    skip: !productCategoryId,
+    variables: {
+      input: {
+        page: 1,
+        limit: 24,
+        search: { productCategoryId }
+      }
+    },
+    notifyOnNetworkStatusChange: true
+  });
+
+  const categoryProductsRaw: GqlProduct[] = useMemo(
+    () => ((categoryProductsData as T)?.getProducts?.products ?? []) as GqlProduct[],
+    [categoryProductsData]
+  );
+
+  const relatedProducts: Product[] = useMemo(() => {
+    if (!currentRawProduct) return [];
+
+    const withoutCurrent = categoryProductsRaw.filter((item) => item._id !== currentRawProduct._id);
+    const sameBrand = withoutCurrent.filter((item) => item.memberData?._id === currentBrandId);
+    const sameTypeOtherBrands = withoutCurrent.filter(
+      (item) => item.memberData?._id !== currentBrandId && (!currentType || item.productType === currentType)
+    );
+
+    const selected = [...sameBrand];
+    for (const candidate of sameTypeOtherBrands) {
+      if (selected.length >= 8) break;
+      if (!selected.some((item) => item._id === candidate._id)) selected.push(candidate);
+    }
+
+    return selected.slice(0, 8).map((item) => toProductModel(item, categoryById));
+  }, [categoryProductsRaw, categoryById, currentRawProduct, currentBrandId, currentType]);
+
+  const availableBrands: AvailableBrand[] = useMemo(() => {
+    if (!currentRawProduct) return [];
+
+    const grouped = new Map<string, AvailableBrand>();
+
+    for (const item of categoryProductsRaw) {
+      const brandId = item.memberData?._id;
+      if (!brandId || brandId === currentBrandId) continue;
+      if (grouped.has(brandId)) continue;
+
+      grouped.set(brandId, {
+        id: brandId,
+        name: item.memberData?.memberNick || "Brand",
+        image: item.memberData?.memberImage || "/assets/images/faces/propic.png",
+        url: `/brands/${brandId}`
+      });
+    }
+
+    return Array.from(grouped.values()).slice(0, 6);
+  }, [categoryProductsRaw, currentRawProduct, currentBrandId]);
+
   if (loading && !product) {
     return (
       <Container className="mt-2 mb-2">
@@ -137,14 +204,11 @@ export default function ProductDetailsPageView(props: Props) {
       {/* PRODUCT DESCRIPTION AND REVIEW */}
       <ProductTabs description={<ProductDescription />} reviews={<ProductReviews />} />
 
-      {/* FREQUENTLY BOUGHT PRODUCTS AREA */}
-      <FrequentlyBought products={props.frequentlyBought} />
-
       {/* AVAILABLE SHOPS AREA */}
-      <AvailableShops />
+      <AvailableShops shops={availableBrands} />
 
       {/* RELATED PRODUCTS AREA */}
-      <RelatedProducts products={props.relatedProducts} />
+      <RelatedProducts products={relatedProducts} />
     </Container>
   );
 }

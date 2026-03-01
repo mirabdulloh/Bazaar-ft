@@ -20,10 +20,16 @@ interface Props {
   product: Product;
   showRating?: boolean;
   showProductSize?: boolean;
+  showActions?: boolean;
 }
 // ========================================================
 
-export default function ProductCard1({ product, showProductSize, showRating = true }: Props) {
+export default function ProductCard1({
+  product,
+  showProductSize,
+  showRating = true,
+  showActions = true
+}: Props) {
   const { slug, title, price, thumbnail, rating, discount } = product;
 
   return (
@@ -33,15 +39,17 @@ export default function ProductCard1({ product, showProductSize, showRating = tr
         <DiscountChip discount={discount} />
 
         {/* HOVER ACTION ICONS */}
-        <HoverIconWrapper className="hover-box">
-          <Link href={`/products/${slug}/view`} scroll={false}>
-            <IconButton color="inherit">
-              <RemoveRedEye fontSize="small" color="inherit" />
-            </IconButton>
-          </Link>
+        {showActions && (
+          <HoverIconWrapper className="hover-box">
+            <Link href={`/products/${slug}/view`} scroll={false}>
+              <IconButton color="inherit">
+                <RemoveRedEye fontSize="small" color="inherit" />
+              </IconButton>
+            </Link>
 
-          <FavoriteButton />
-        </HoverIconWrapper>
+            <FavoriteButton />
+          </HoverIconWrapper>
+        )}
 
         {/* PRODUCT IMAGE / THUMBNAIL */}
         <Link href={`/products/${slug}`}>
