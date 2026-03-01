@@ -43,6 +43,14 @@ export const resources = {
       "Limited Deals": "Limited Deals",
       "Shop sale items before they’re gone.": "Shop sale items before they’re gone.",
       "Up to 50% off selected brands": "Up to 50% off selected brands"
+      ,
+      "Accessories to elevate every outfit.": "Accessories to elevate every outfit.",
+      "BAGS & BACKPACKS": "BAGS & BACKPACKS",
+      "Carry your style everywhere.": "Carry your style everywhere.",
+      "TOPS & SHIRTS": "TOPS & SHIRTS",
+      "Fresh styles from top brands.": "Fresh styles from top brands.",
+      "OUTERWEAR": "OUTERWEAR",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands."
     }
   },
   ru: {
@@ -89,6 +97,14 @@ export const resources = {
       "Limited Deals": "Ограниченные предложения",
       "Shop sale items before they’re gone.": "Успейте купить товары со скидкой.",
       "Up to 50% off selected brands": "До 50% на выбранные бренды"
+      ,
+      "Accessories to elevate every outfit.": "Аксессуары, которые дополнят любой образ.",
+      "BAGS & BACKPACKS": "СУМКИ И РЮКЗАКИ",
+      "Carry your style everywhere.": "Носите свой стиль везде.",
+      "TOPS & SHIRTS": "ТОПЫ И РУБАШКИ",
+      "Fresh styles from top brands.": "Свежие модели от лучших брендов.",
+      "OUTERWEAR": "ВЕРХНЯЯ ОДЕЖДА",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Утепляйтесь лучшими куртками и пальто сезона. Подборка верхней одежды от брендов Seoulé."
     }
   },
   uz: {
@@ -135,6 +151,14 @@ export const resources = {
       "Limited Deals": "Cheklangan takliflar",
       "Shop sale items before they’re gone.": "Chegirmadagi mahsulotlarni tugamasidan oling.",
       "Up to 50% off selected brands": "Tanlangan brendlarda 50% gacha chegirma"
+      ,
+      "Accessories to elevate every outfit.": "Har bir obrazni boyitadigan aksessuarlar.",
+      "BAGS & BACKPACKS": "SUMKALAR VA RYUKZAKLAR",
+      "Carry your style everywhere.": "Uslubingizni hamma joyga olib boring.",
+      "TOPS & SHIRTS": "TOPLAR VA KO‘YLAKLAR",
+      "Fresh styles from top brands.": "Eng yaxshi brendlardan yangi uslublar.",
+      "OUTERWEAR": "USTKI KIYIM",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Mavsumning eng yaxshi kurtka va paltolari bilan qatlamlang. Seoulé brendlaridan saralangan ustki kiyimlar."
     }
   },
   ko: {
@@ -181,6 +205,14 @@ export const resources = {
       "Limited Deals": "한정 특가",
       "Shop sale items before they’re gone.": "품절 전에 세일 상품을 만나보세요.",
       "Up to 50% off selected brands": "선정 브랜드 최대 50% 할인"
+      ,
+      "Accessories to elevate every outfit.": "모든 룩을 완성하는 액세서리.",
+      "BAGS & BACKPACKS": "가방 & 백팩",
+      "Carry your style everywhere.": "어디서나 스타일을 담아보세요.",
+      "TOPS & SHIRTS": "탑 & 셔츠",
+      "Fresh styles from top brands.": "인기 브랜드의 새로운 스타일.",
+      "OUTERWEAR": "아우터웨어",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "이번 시즌 최고의 재킷과 코트로 레이어링하세요. Seoulé 브랜드의 엄선된 아우터를 만나보세요."
     }
   }
 };

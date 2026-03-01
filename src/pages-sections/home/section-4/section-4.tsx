@@ -1,34 +1,41 @@
+"use client";
+
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
+import { useTranslation } from "../../../../node_modules/react-i18next";
 // LOCAL CUSTOM COMPONENT
 import Card from "./card";
 import CardTwo from "./card-2";
 import CardThree from "./card-3";
 
 export default function Section4() {
+  const { t } = useTranslation();
+
   return (
     <Container className="mb-5">
       <Grid container spacing={3}>
         <Grid container spacing={3} size={{ md: 6, xs: 12 }}>
           <Grid size={12}>
             <Card
-              title="Accessories to elevate every outfit."
+              title={t("Accessories to elevate every outfit.", {
+                defaultValue: "Accessories to elevate every outfit."
+              })}
               imgUrl="/assets/images/banners/banner-71.jpg"
             />
           </Grid>
 
           <Grid size={{ sm: 6, xs: 12 }}>
             <CardTwo
-              title="BAGS & BACKPACKS"
-              body="Carry your style everywhere."
+              title={t("BAGS & BACKPACKS", { defaultValue: "BAGS & BACKPACKS" })}
+              body={t("Carry your style everywhere.", { defaultValue: "Carry your style everywhere." })}
               imgUrl="/assets/images/banners/banner-72.jpg"
             />
           </Grid>
 
           <Grid size={{ sm: 6, xs: 12 }}>
             <CardTwo
-              title="TOPS & SHIRTS"
-              body="Fresh styles from top brands."
+              title={t("TOPS & SHIRTS", { defaultValue: "TOPS & SHIRTS" })}
+              body={t("Fresh styles from top brands.", { defaultValue: "Fresh styles from top brands." })}
               imgUrl="/assets/images/banners/banner-73.jpg"
             />
           </Grid>
@@ -36,9 +43,15 @@ export default function Section4() {
 
         <Grid size={{ md: 6, xs: 12 }}>
           <CardThree
-            title="OUTERWEAR"
+            title={t("OUTERWEAR", { defaultValue: "OUTERWEAR" })}
             imgUrl="/assets/images/banners/banner-74.jpg"
-            body="Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands."
+            body={t(
+              "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.",
+              {
+                defaultValue:
+                  "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands."
+              }
+            )}
           />
         </Grid>
       </Grid>
