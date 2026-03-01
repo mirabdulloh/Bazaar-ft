@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { isAxiosError } from "axios";
 import axios from "utils/axiosInstance";
 // CUSTOM DATA MODEL
 import { SlugParams } from "models/Common";
@@ -12,8 +13,16 @@ const getSlugs = cache(async () => {
 
 // get product based on slug
 const getProduct = cache(async (slug: string) => {
-  const response = await axios.get<Product>("/api/products/slug", { params: { slug } });
-  return response.data;
+  try {
+    const response = await axios.get<Product>("/api/products/slug", { params: { slug } });
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 });
 
 // search products

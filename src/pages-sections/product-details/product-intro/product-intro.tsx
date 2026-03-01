@@ -8,7 +8,7 @@ import AddToCart from "./add-to-cart";
 import ProductGallery from "./product-gallery";
 import ProductVariantSelector from "./product-variant-selector";
 // CUSTOM UTILS LIBRARY FUNCTION
-import { currency } from "lib";
+import { calculateDiscount, currency } from "lib";
 // STYLED COMPONENTS
 import { StyledRoot } from "./styles";
 // CUSTOM DATA MODEL
@@ -19,6 +19,10 @@ type Props = { product: Product };
 // ================================================================
 
 export default function ProductIntro({ product }: Props) {
+  const category = product.categories?.[0] ? String(product.categories[0]) : "N/A";
+  const hasDiscount = product.discount > 0;
+  const currentPrice = hasDiscount ? calculateDiscount(product.price, product.discount) : currency(product.price);
+
   return (
     <StyledRoot>
       <Grid container spacing={3} justifyContent="space-around">
@@ -31,26 +35,28 @@ export default function ProductIntro({ product }: Props) {
           <Typography variant="h1">{product.title}</Typography>
 
           <Typography variant="body1">
-            Category: <strong>Bag</strong>
+            Category: <strong>{category}</strong>
           </Typography>
 
           <Typography variant="body1">
-            Product Code: <strong>ERE238</strong>
+            Product Code: <strong>{product.id}</strong>
           </Typography>
 
           <Typography variant="body1" fontSize={30} fontWeight={700} sx={{ my: 1 }}>
-            $484.00{" "}
-            <Typography
-              component="span"
-              sx={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: "text.secondary",
-                textDecoration: "line-through"
-              }}
-            >
-              $550.00
-            </Typography>
+            {currentPrice}{" "}
+            {hasDiscount && (
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: 20,
+                  fontWeight: 600,
+                  color: "text.secondary",
+                  textDecoration: "line-through"
+                }}
+              >
+                {currency(product.price)}
+              </Typography>
+            )}
           </Typography>
 
           {/* PRODUCT BRAND */}
@@ -68,12 +74,12 @@ export default function ProductIntro({ product }: Props) {
           </div>
 
           {/* PRODUCT VARIANTS */}
-          <ProductVariantSelector />
+          <ProductVariantSelector sizes={product.size} colors={product.colors} />
 
           {/* PRICE & STOCK */}
           <div className="price">
             <Typography variant="h2" sx={{ color: "primary.main", mb: 0.5, lineHeight: 1 }}>
-              {currency(product.price)}
+              {currentPrice}
             </Typography>
 
             <p>Stock Available</p>

@@ -14,6 +14,7 @@ import {
 import Sticky from "components/sticky";
 import { NavigationList } from "components/navbar";
 import { MobileMenu } from "components/mobile-navbar";
+import LiveCategoryList from "components/secondary-header/live-category-list";
 import { SecondaryHeader } from "components/secondary-header";
 import { MobileNavigationBar } from "components/mobile-navigation";
 import { SearchInput1, SearchInput2 } from "components/search-box";
@@ -79,6 +80,10 @@ export default function ShopLayout1({ children, data }: Props) {
       </Sticky>
 
       <SecondaryHeader elevation={0}>
+        <SecondaryHeader.Left>
+          <LiveCategoryList />
+        </SecondaryHeader.Left>
+
         <SecondaryHeader.Right>
           <SearchInput1 categories={header.categories} />
         </SecondaryHeader.Right>

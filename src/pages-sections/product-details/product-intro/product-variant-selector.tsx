@@ -3,22 +3,37 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
-// DUMMY DATA
-import productVariants from "data/product-variants";
 
-export default function ProductVariantSelector() {
+type Props = {
+  sizes?: string[];
+  colors?: string[];
+};
+
+type VariantGroup = {
+  title: string;
+  values: string[];
+};
+
+export default function ProductVariantSelector({ sizes = [], colors = [] }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  return productVariants.map((variant) => (
-    <div className="mb-1" key={variant.id}>
+  const groups: VariantGroup[] = [
+    { title: "Size", values: sizes },
+    { title: "Color", values: colors }
+  ].filter((group) => group.values.length > 0);
+
+  if (groups.length === 0) return null;
+
+  return groups.map((variant) => (
+    <div className="mb-1" key={variant.title}>
       <Typography variant="h6" sx={{ mb: 1 }}>
         {variant.title}
       </Typography>
 
       <div className="variant-group">
-        {variant.values.map(({ id, value }) => {
+        {variant.values.map((value) => {
           const variantNameLowerCase = variant.title.toLowerCase();
 
           // Base variant params on current params so we can preserve any other param state in the url.
@@ -37,7 +52,7 @@ export default function ProductVariantSelector() {
 
           return (
             <Chip
-              key={id}
+              key={`${variant.title}-${value}`}
               label={value}
               size="small"
               color="primary"
