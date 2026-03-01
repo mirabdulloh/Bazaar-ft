@@ -178,7 +178,13 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 											/>
 										</Link>
 
-										<CardContent sx={{ flexGrow: 1 }}>
+										<CardContent
+											sx={{
+												flexGrow: 1,
+												display: "flex",
+												flexDirection: "column",
+											}}
+										>
 											<Chip
 												label={
 													CATEGORIES.find(
@@ -188,7 +194,7 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 												size="small"
 												color="primary"
 												variant="outlined"
-												sx={{ mb: 1 }}
+												sx={{ mb: 1, alignSelf: "flex-start" }}
 											/>
 
 											<Link
@@ -200,6 +206,8 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 													fontWeight={600}
 													mb={1}
 													sx={{
+														lineHeight: 1.35,
+														minHeight: "2.7em",
 														display: "-webkit-box",
 														WebkitLineClamp: 2,
 														WebkitBoxOrient: "vertical",
