@@ -47,13 +47,26 @@ export const sweetTopSmallErrorAlert = async (
 	});
 };
 
-// ─── Heart like toast ─────────────────────────────────────────────────────────
+// ─── Heart like / unlike toasts ───────────────────────────────────────────────
 export const sweetLikeSuccessAlert = async (): Promise<void> => {
 	await Toast.fire({
 		html: `
 			<div style="display:flex;align-items:center;gap:10px;">
 				<span style="font-size:20px;line-height:1;">❤️</span>
 				<span style="font-size:14px;font-weight:600;color:#e2e8f0;">Added to your likes!</span>
+			</div>
+		`,
+		timer: 1800,
+		background: '#1e1e2e',
+	});
+};
+
+export const sweetUnlikeAlert = async (): Promise<void> => {
+	await Toast.fire({
+		html: `
+			<div style="display:flex;align-items:center;gap:10px;">
+				<span style="font-size:20px;line-height:1;">🤍</span>
+				<span style="font-size:14px;font-weight:600;color:#94a3b8;">Removed from likes</span>
 			</div>
 		`,
 		timer: 1800,

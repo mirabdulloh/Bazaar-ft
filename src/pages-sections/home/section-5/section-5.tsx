@@ -8,8 +8,12 @@ import Skeleton from "@mui/material/Skeleton";
 import Box from "@mui/material/Box";
 import Product from "models/Product.model";
 import { useQuery } from "../../../lib/hooks/useQuery";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { GET_PRODUCTS } from "../../../../apollo/user/query";
-import { T } from "../../../lib/types/common";
+import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
+import { userVar } from "../../../../apollo/store";
+import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { T, Message } from "../../../lib/types/common";
 
 interface GqlProduct {
   _id: string;
@@ -42,10 +46,21 @@ function toProductModel(p: GqlProduct): Product {
   };
 }
 
+const initialInput = {
+  page: 1,
+  limit: 8,
+  sort: "productRank",
+  direction: "DESC",
+  search: {},
+};
+
 export default function Section5() {
   const [products, setProducts] = useState<Product[]>([]);
+  const user = useReactiveVar(userVar);
 
   /** APOLLO REQUESTS **/
+  const [likeTargetProduct] = useMutation(LIKE_TARGET_PRODUCT);
+
   const {
     loading: getBestSellersLoading,
     data: _getBestSellersData,
@@ -53,21 +68,28 @@ export default function Section5() {
     refetch: getBestSellersRefetch,
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
-    variables: {
-      input: {
-        page: 1,
-        limit: 8,
-        sort: "productRank",
-        direction: "DESC",
-        search: {},
-      },
-    },
+    variables: { input: initialInput },
     notifyOnNetworkStatusChange: true,
     onCompleted: (data: T) => {
       const raw: GqlProduct[] = data?.getProducts?.products ?? [];
       setProducts(raw.map(toProductModel));
     },
   });
+
+  /** HANDLERS **/
+  const likeProductHandler = async (user: T, productId: string) => {
+    try {
+      if (!productId) return;
+      if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
+
+      await likeTargetProduct({ variables: { input: productId } });
+      await getBestSellersRefetch({ input: initialInput });
+      await sweetLikeSuccessAlert();
+    } catch (err: any) {
+      console.log('Err on likeProductHandler:', err);
+      sweetMixinErrorAlert(err.message).then();
+    }
+  };
 
   if (getBestSellersLoading) {
     return (
@@ -91,7 +113,11 @@ export default function Section5() {
     <SectionCreator title="Best Sellers" seeMoreLink="/products/search?sort=best-sellers">
       <ProductsCarousel>
         {products.map((product) => (
-          <ProductCard2 key={product.id} product={product} />
+          <ProductCard2
+            key={product.id}
+            product={product}
+            likeProductHandler={(productId) => likeProductHandler(user, productId)}
+          />
         ))}
       </ProductsCarousel>
     </SectionCreator>

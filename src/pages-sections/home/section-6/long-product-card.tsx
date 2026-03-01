@@ -11,9 +11,6 @@ import IconButton from "@mui/material/IconButton";
 // MUI ICON COMPONENTS
 import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-// APOLLO
-import { useMutation } from "@apollo/client/react";
-import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 // CUSTOM UTILS LIBRARY FUNCTIONS
@@ -22,36 +19,24 @@ import { calculateDiscount, currency } from "lib";
 import Product from "models/Product.model";
 
 // ===========================================================
-type Props = { product: Product };
+type Props = {
+  product: Product;
+  likeProductHandler?: (productId: string) => void;
+};
 // ===========================================================
 
-export default function LongProductCard({ product }: Props) {
+export default function LongProductCard({ product, likeProductHandler }: Props) {
   if (!product) return null;
 
   const { slug, title, price, thumbnail, rating, discount, productLikes } = product;
 
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(productLikes ?? 0);
 
-  /** APOLLO REQUESTS **/
-  const [likeTargetProduct, { loading: likeLoading }] = useMutation(LIKE_TARGET_PRODUCT);
-
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (likeLoading) return;
-    try {
-      const { data } = await likeTargetProduct({ variables: { input: product.id } });
-      const updated = data?.likeTargetProduct;
-      if (updated?.productLikes !== undefined) {
-        setLikeCount(updated.productLikes);
-      } else {
-        setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
-      }
-      setLiked((prev) => !prev);
-    } catch {
-      // silently ignore
-    }
+    setLiked((prev) => !prev);
+    likeProductHandler?.(product.id);
   };
 
   return (
@@ -109,18 +94,14 @@ export default function LongProductCard({ product }: Props) {
         </Box>
 
         <IconButton
-          onClick={handleLike}
-          disableRipple={false}
+          onClick={handleLikeClick}
           size="small"
           sx={{ mt: 0.5, color: liked ? "error.main" : "grey.500" }}
         >
-          {liked
-            ? <FavoriteIcon fontSize="medium" />
-            : <FavoriteBorder fontSize="medium" />
-          }
-          {likeCount > 0 && (
+          {liked ? <FavoriteIcon fontSize="medium" /> : <FavoriteBorder fontSize="medium" />}
+          {productLikes !== undefined && productLikes > 0 && (
             <Typography component="span" variant="caption" sx={{ ml: 0.5, fontWeight: 500 }}>
-              {likeCount}
+              {productLikes}
             </Typography>
           )}
         </IconButton>

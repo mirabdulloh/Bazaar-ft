@@ -9,14 +9,8 @@ import Typography from "@mui/material/Typography";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-// APOLLO
-import { useMutation, useReactiveVar } from "@apollo/client/react";
-import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
-import { userVar } from "../../../../apollo/store";
 // UTILS
 import { calculateDiscount, currency } from "lib";
-import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
-import { Message } from "lib/types/common";
 // LOCAL CUSTOM COMPONENTS
 import HoverActions from "./hover-actions";
 // STYLED COMPONENTS
@@ -27,7 +21,7 @@ import {
   ImageBox,
   ImageLayer,
   StyledRoot,
-  ViewBadge
+  ViewBadge,
 } from "./styles";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
@@ -37,10 +31,11 @@ interface Props {
   product: Product;
   showReview?: boolean;
   imageHeight?: number;
+  likeProductHandler?: (productId: string) => void;
 }
 // ========================================================
 
-export default function ProductCard2({ product, showReview = true, imageHeight }: Props) {
+export default function ProductCard2({ product, showReview = true, imageHeight, likeProductHandler }: Props) {
   const { slug, title, price, thumbnail, rating, discount, images, productLikes, productViews } =
     product;
   const secondImage = images?.[1];
@@ -48,30 +43,12 @@ export default function ProductCard2({ product, showReview = true, imageHeight }
   const originalPrice = currency(price);
 
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(productLikes ?? 0);
 
-  /** APOLLO REQUESTS **/
-  const [likeTargetProduct, { loading: likeLoading }] = useMutation<{
-    likeTargetProduct: { productLikes: number };
-  }>(LIKE_TARGET_PRODUCT);
-
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (likeLoading) return;
-    try {
-      const { data } = await likeTargetProduct({ variables: { input: product.id } });
-      const updated = data?.likeTargetProduct;
-      if (updated?.productLikes !== undefined) {
-        setLikeCount(updated.productLikes);
-      } else {
-        // Optimistic toggle
-        setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
-      }
-      setLiked((prev) => !prev);
-    } catch {
-      // silently ignore (e.g. not logged in)
-    }
+    setLiked((prev) => !prev);
+    likeProductHandler?.(product.id);
   };
 
   return (
@@ -88,7 +65,7 @@ export default function ProductCard2({ product, showReview = true, imageHeight }
             />
           </ImageLayer>
 
-          {/* Secondary image — shown on hover (opacity controlled by CSS class, not inline style) */}
+          {/* Secondary image — shown on hover */}
           {secondImage && (
             <ImageLayer className="img-secondary">
               <Image
@@ -140,11 +117,11 @@ export default function ProductCard2({ product, showReview = true, imageHeight }
             {discount > 0 && <span className="original-price">{originalPrice}</span>}
           </div>
 
-          {/* Likes — interactive */}
+          {/* Likes */}
           {productLikes !== undefined && (
-            <div className="likes" onClick={handleLike} role="button" aria-label="Like product">
+            <div className="likes" onClick={handleLikeClick} role="button" aria-label="Like product">
               {liked ? <FavoriteIcon sx={{ color: "error.main" }} /> : <FavoriteBorderIcon />}
-              <span>{likeCount}</span>
+              <span>{productLikes}</span>
             </div>
           )}
         </div>
