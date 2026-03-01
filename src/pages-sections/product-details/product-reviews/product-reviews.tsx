@@ -1,17 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import IconButton from "@mui/material/IconButton";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { getDateDifference } from "lib";
 // STYLED COMPONENTS
 import { ReviewRoot } from "./styles";
 import { useQuery } from "lib/hooks/useQuery";
 import { GET_REVIEWS } from "../../../../apollo/user/query";
-import { T } from "lib/types/common";
+import { Message, T } from "lib/types/common";
+import { LIKE_TARGET_REVIEW } from "../../../../apollo/user/mutation";
+import { userVar } from "../../../../apollo/store";
+import { sweetMixinErrorAlert } from "../../../lib/sweetAlert";
 
 type Props = {
   productId: string;
@@ -21,7 +29,9 @@ interface GqlReview {
   _id: string;
   reviewRating: number;
   reviewComment: string;
+  reviewLikes: number;
   createdAt: string;
+  meLiked?: { myFavorite: boolean }[];
   memberData?: {
     _id: string;
     memberNick?: string;
@@ -50,8 +60,17 @@ const resolveMemberImage = (memberImage?: string): string => {
   return normalizedPath;
 };
 
-export default function ProductReviews({ productId }: Props) {
-  const { loading, data, error } = useQuery(GET_REVIEWS, {
+export default function ProductReviews(props: Props) {
+  const { productId } = props;
+  const user = useReactiveVar(userVar);
+  const [reviews, setReviews] = useState<GqlReview[]>([]);
+  const [likeTargetReview] = useMutation(LIKE_TARGET_REVIEW);
+  const {
+    loading: getReviewsLoading,
+    data: getReviewsData,
+    error: getReviewsError,
+    refetch: getReviewsRefetch
+  } = useQuery(GET_REVIEWS, {
     fetchPolicy: "cache-and-network",
     variables: {
       input: {
@@ -62,13 +81,26 @@ export default function ProductReviews({ productId }: Props) {
         search: { productId }
       }
     },
-    notifyOnNetworkStatusChange: true
+    notifyOnNetworkStatusChange: true,
+    onCompleted: (data: T) => {
+      setReviews(data?.getReviews?.list ?? []);
+    }
   });
+  void getReviewsData;
 
-  const reviews: GqlReview[] = (data as T)?.getReviews?.list ?? [];
-  const noDataError = error?.message?.toLowerCase().includes("no data found");
+  const noDataError = getReviewsError?.message?.toLowerCase().includes("no data found");
 
-  if (loading && reviews.length === 0) {
+  const likeReviewHandler = async (user: T, reviewId: string) => {
+    try {
+      if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
+      await likeTargetReview({ variables: { input: reviewId } });
+      await getReviewsRefetch();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
+    }
+  };
+
+  if (getReviewsLoading && reviews.length === 0) {
     return (
       <Box py={4} display="flex" justifyContent="center">
         <CircularProgress />
@@ -76,7 +108,7 @@ export default function ProductReviews({ productId }: Props) {
     );
   }
 
-  if (error && !noDataError) {
+  if (getReviewsError && !noDataError) {
     return (
       <Typography color="error.main" sx={{ mt: 2 }}>
         Failed to load reviews.
@@ -114,6 +146,18 @@ export default function ProductReviews({ productId }: Props) {
                 <Rating size="small" value={review.reviewRating} color="warn" readOnly />
                 <Typography variant="h6">{review.reviewRating}</Typography>
                 <Typography component="span">{getDateDifference(review.createdAt)}</Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => likeReviewHandler(user, review._id)}
+                  sx={{ color: review.meLiked?.[0]?.myFavorite ? "error.main" : "text.secondary" }}
+                >
+                  {review.meLiked?.[0]?.myFavorite ? (
+                    <FavoriteIcon sx={{ fontSize: 16 }} />
+                  ) : (
+                    <FavoriteBorderIcon sx={{ fontSize: 16 }} />
+                  )}
+                </IconButton>
+                <Typography component="span">{review.reviewLikes ?? 0}</Typography>
               </div>
             </div>
           </div>

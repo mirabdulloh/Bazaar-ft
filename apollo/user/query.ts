@@ -573,6 +573,11 @@ export const GET_REVIEWS = gql`
           memberNick
           memberImage
         }
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
+        }
       }
       metaCounter {
         total

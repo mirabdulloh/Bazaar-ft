@@ -552,6 +552,15 @@ export const UPDATE_REVIEW = gql`
   }
 `;
 
+export const LIKE_TARGET_REVIEW = gql`
+  mutation LikeTargetReview($input: String!) {
+    likeTargetReview(reviewId: $input) {
+      _id
+      reviewLikes
+    }
+  }
+`;
+
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const CREATE_ADDRESS = gql`

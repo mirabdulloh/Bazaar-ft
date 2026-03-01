@@ -23,10 +23,11 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
 interface Props {
   reviews: ReactNode;
   description: ReactNode;
+  reviewCount?: number;
 }
 // ==============================================================
 
-export default function ProductTabs({ reviews, description }: Props) {
+export default function ProductTabs({ reviews, description, reviewCount = 0 }: Props) {
   const [selectedOption, setSelectedOption] = useState(0);
   const handleChangeTab = (_: SyntheticEvent, value: number) => setSelectedOption(value);
 
@@ -39,7 +40,7 @@ export default function ProductTabs({ reviews, description }: Props) {
         onChange={handleChangeTab}
       >
         <Tab className="inner-tab" label="Description" />
-        <Tab className="inner-tab" label="Review (3)" />
+        <Tab className="inner-tab" label={`Review (${reviewCount})`} />
       </StyledTabs>
 
       <div className="mb-3">

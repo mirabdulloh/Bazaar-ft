@@ -13,7 +13,7 @@ import AvailableShops from "../available-shops";
 import RelatedProducts from "../related-products";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS } from "../../../../apollo/user/query";
+import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
@@ -32,6 +32,7 @@ interface GqlProduct {
   productDiscountPrice: number;
   productImages: string[];
   productRatingAverage: number;
+  productRatingCount?: number;
   productLikes: number;
   productViews: number;
   productDesc?: string;
@@ -121,6 +122,26 @@ export default function ProductDetailsPageView(props: Props) {
   const currentBrandId = currentRawProduct?.memberData?._id;
   const currentType = currentRawProduct?.productType;
 
+  const { data: getReviewsCountData, error: getReviewsCountError } = useQuery(GET_REVIEWS, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      input: {
+        page: 1,
+        limit: 1,
+        sort: "createdAt",
+        direction: "DESC",
+        search: { productId: props.productId }
+      }
+    },
+    notifyOnNetworkStatusChange: true
+  });
+
+  const reviewCountFromMeta = useMemo(() => {
+    const noDataError = getReviewsCountError?.message?.toLowerCase().includes("no data found");
+    if (noDataError) return 0;
+    return Number((getReviewsCountData as T)?.getReviews?.metaCounter?.[0]?.total ?? 0);
+  }, [getReviewsCountData, getReviewsCountError]);
+
   const { data: categoryProductsData } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     skip: !productCategoryId,
@@ -202,7 +223,11 @@ export default function ProductDetailsPageView(props: Props) {
       <ProductIntro product={product} />
 
       {/* PRODUCT DESCRIPTION AND REVIEW */}
-      <ProductTabs description={<ProductDescription />} reviews={<ProductReviews productId={props.productId} />} />
+      <ProductTabs
+        description={<ProductDescription description={product.description} />}
+        reviews={<ProductReviews productId={props.productId} />}
+        reviewCount={reviewCountFromMeta}
+      />
 
       {/* AVAILABLE SHOPS AREA */}
       <AvailableShops shops={availableBrands} />
