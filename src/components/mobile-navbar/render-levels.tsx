@@ -24,7 +24,7 @@ const ACCORDION_SUMMARY_STYLES = {
 
 export const renderLevels = (data: any[], handleClose: () => void) => {
   return data.map((item: any, index: number) => {
-    if (item.child) {
+    if (Array.isArray(item.child) && item.child.length > 0) {
       return (
         <Accordion square key={index} elevation={0} disableGutters sx={ACCORDION_STYLES}>
           <AccordionSummary expandIcon={<ExpandMore />} sx={ACCORDION_SUMMARY_STYLES}>
@@ -33,6 +33,16 @@ export const renderLevels = (data: any[], handleClose: () => void) => {
 
           <Box mx={2}>{renderLevels(item.child, handleClose)}</Box>
         </Accordion>
+      );
+    }
+
+    if (item.url) {
+      return (
+        <Box key={index} py={1}>
+          <NavLink href={item.url} onClick={handleClose}>
+            {item.title}
+          </NavLink>
+        </Box>
       );
     }
 
@@ -45,11 +55,9 @@ export const renderLevels = (data: any[], handleClose: () => void) => {
     }
 
     return (
-      <Box key={index} py={1}>
-        <NavLink href={item.url} onClick={handleClose}>
-          {item.title}
-        </NavLink>
-      </Box>
+      <Typography key={index} variant="h6" sx={{ py: 1, color: "text.secondary" }}>
+        {item.title}
+      </Typography>
     );
   });
 };

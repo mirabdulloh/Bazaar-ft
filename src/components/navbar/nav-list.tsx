@@ -20,6 +20,33 @@ type Props = { navigation: Menu[] };
 // ==============================================================
 
 export function NavigationList({ navigation }: Props) {
+  const withCustomerSupport = (list: Menu[]): Menu[] => {
+    const normalized = list.map((item) => {
+      if (item.title.trim().toLowerCase() !== "cs") return item;
+
+      return {
+        title: "CS",
+        url: "/notices",
+        megaMenu: false,
+        megaMenuWithSub: false,
+        child: []
+      };
+    });
+
+    const exists = normalized.some((item) => item.title.trim().toLowerCase() === "cs");
+    if (exists) return normalized;
+
+    const csMenu: Menu = {
+      title: "CS",
+      url: "/notices",
+      megaMenu: false,
+      megaMenuWithSub: false,
+      child: []
+    };
+
+    return [...normalized, csMenu];
+  };
+
   const renderNestLevel = (children: MenuItemWithChild[]) => {
     return children.map((nav) => {
       if (nav.child) {
@@ -104,5 +131,5 @@ export function NavigationList({ navigation }: Props) {
     });
   };
 
-  return <FlexBox gap={4}>{renderRootLevel(navigation)}</FlexBox>;
+  return <FlexBox gap={4}>{renderRootLevel(withCustomerSupport(navigation))}</FlexBox>;
 }

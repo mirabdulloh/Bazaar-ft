@@ -51,18 +51,18 @@ export default function ShopLayout4({ children, navigation, data }: Props) {
   const MOBILE_VERSION_HEADER = (
     <MobileHeader>
       <MobileHeader.Left>
-        <MobileMenu navigation={header.navigation} />
+        <MobileHeader.Logo logoUrl={mobileNavigation.logo} />
       </MobileHeader.Left>
 
-      <MobileHeader.Logo logoUrl={mobileNavigation.logo} />
-
       <MobileHeader.Right>
+        <HeaderLogin />
+
         <HeaderSearch>
           <SearchInput2 />
         </HeaderSearch>
 
-        <HeaderLogin />
         <HeaderCart />
+        <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
     </MobileHeader>
   );

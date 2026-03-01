@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import FaqPageView from "pages-sections/faq/page-view/faq";
+import CustomerSupportPageView from "pages-sections/customer-support/page-view";
 
 export const metadata: Metadata = {
-  title: "FAQ - BAZAAR",
-  description: "Frequently asked questions about shopping on BAZAAR.",
+  title: "Customer Support - FAQ - BAZAAR",
+  description: "Frequently asked questions about shopping on BAZAAR."
 };
 
 export default function FaqPage() {
-  return <FaqPageView />;
+  return <CustomerSupportPageView initialTab="faq" />;
 }
