@@ -16,7 +16,8 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useRouter } from "next/navigation";
-import { GET_BOARD_ARTICLE } from "../../../../apollo/user/query";
+import Link from "next/link";
+import { GET_BOARD_ARTICLE, GET_BOARD_ARTICLES } from "../../../../apollo/user/query";
 import { LIKE_TARGET_BOARD_ARTICLE } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { useQuery } from "lib/hooks/useQuery";
@@ -35,6 +36,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const router = useRouter();
 	const user = useReactiveVar(userVar);
 	const [article, setArticle] = useState<Article | null>(null);
+	const [moreArticles, setMoreArticles] = useState<Article[]>([]);
 
 	/** APOLLO REQUESTS **/
 	const [likeTargetBoardArticle] = useMutation(LIKE_TARGET_BOARD_ARTICLE);
@@ -50,6 +52,33 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 		notifyOnNetworkStatusChange: true,
 		onCompleted: (data: T) => {
 			setArticle(data?.getBoardArticle ?? null);
+		},
+	});
+
+	const {
+		loading: _getBoardArticlesLoading,
+		data: _getBoardArticlesData,
+		error: _getBoardArticlesError,
+		refetch: _getBoardArticlesRefetch,
+	} = useQuery(GET_BOARD_ARTICLES, {
+		fetchPolicy: "cache-and-network",
+		variables: {
+			input: {
+				page: 1,
+				limit: 6,
+				sort: "createdAt",
+				direction: "DESC",
+				search: {},
+			},
+		},
+		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			const list = data?.getBoardArticles?.list ?? [];
+			setMoreArticles(
+				list
+					.filter((item: Article) => item._id !== initialInput.articleId)
+					.slice(0, 2)
+			);
 		},
 	});
 
@@ -110,12 +139,10 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 	return (
 		<Container sx={{ py: 6, maxWidth: "md" }}>
-			{/* Back button */}
 			<IconButton onClick={() => router.back()} sx={{ mb: 2 }}>
 				<ArrowBackIcon />
 			</IconButton>
 
-			{/* Category chip */}
 			<Chip
 				label={CATEGORY_LABELS[article.articleCategory] ?? article.articleCategory}
 				color="primary"
@@ -123,12 +150,10 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 				sx={{ mb: 2 }}
 			/>
 
-			{/* Title */}
 			<Typography variant="h3" fontWeight={700} mb={2}>
 				{article.articleTitle}
 			</Typography>
 
-			{/* Author + meta */}
 			<Stack
 				direction="row"
 				alignItems="center"
@@ -181,7 +206,6 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 			<Divider sx={{ mb: 3 }} />
 
-			{/* Cover image */}
 			{coverImage && (
 				<Box
 					component="img"
@@ -197,14 +221,75 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 				/>
 			)}
 
-			{/* Content */}
 			<Typography
 				variant="body1"
 				color="text.primary"
-				sx={{ lineHeight: 1.9, whiteSpace: "pre-wrap" }}
+				sx={{ fontSize: { xs: 16.5, sm: 17 }, lineHeight: 1.9, whiteSpace: "pre-wrap" }}
 			>
 				{article.articleContent ?? "No content available."}
 			</Typography>
+
+			<Box sx={{ mt: 6 }}>
+				<Typography variant="h5" fontWeight={700} mb={2}>
+					More Articles
+				</Typography>
+
+				<Stack spacing={2}>
+					{moreArticles.map((item: Article) => (
+						<Box
+							component={Link}
+							href={`/community/${item._id}`}
+							key={item._id}
+							sx={{
+								display: "grid",
+								gridTemplateColumns: { xs: "1fr", sm: "140px 1fr" },
+								gap: 2,
+								p: 1.5,
+								border: "1px solid",
+								borderColor: "divider",
+								borderRadius: 2,
+								textDecoration: "none",
+								color: "inherit",
+								transition: "box-shadow 0.2s",
+								"&:hover": { boxShadow: 2 },
+							}}
+						>
+							<Box
+								component="img"
+								src={item.articleImages?.[0] ?? "/assets/images/products/product-1.png"}
+								alt={item.articleTitle}
+								sx={{
+									width: "100%",
+									height: { xs: 170, sm: 100 },
+									borderRadius: 1.5,
+									objectFit: "cover",
+								}}
+							/>
+
+							<Box>
+								<Chip
+									size="small"
+									label={CATEGORY_LABELS[item.articleCategory] ?? item.articleCategory}
+									variant="outlined"
+									sx={{ mb: 1 }}
+								/>
+								<Typography
+									variant="subtitle1"
+									fontWeight={700}
+									sx={{
+										display: "-webkit-box",
+										WebkitLineClamp: 2,
+										WebkitBoxOrient: "vertical",
+										overflow: "hidden",
+									}}
+								>
+									{item.articleTitle}
+								</Typography>
+							</Box>
+						</Box>
+					))}
+				</Stack>
+			</Box>
 		</Container>
 	);
 };
