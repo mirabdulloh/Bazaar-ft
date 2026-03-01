@@ -75,14 +75,14 @@ export default function Section6() {
       <SectionCreator title="Trending Now" seeMoreLink="/products/search?sort=popular">
         <Grid container spacing={4}>
           <Grid size={{ md: 3, xs: 12 }}>
-            <Skeleton variant="rectangular" height={300} />
+            <Skeleton variant="rectangular" height={700} sx={{ borderRadius: 3 }} />
             <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
             <Skeleton variant="text" width="50%" />
           </Grid>
           <Grid container spacing={4} size={{ md: 9, xs: 12 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <Grid size={{ sm: 4, xs: 12 }} key={i}>
-                <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 2 }} />
+                <Skeleton variant="rectangular" height={460} sx={{ borderRadius: 2 }} />
                 <Skeleton variant="text" width="80%" sx={{ mt: 1 }} />
                 <Skeleton variant="text" width="50%" />
               </Grid>

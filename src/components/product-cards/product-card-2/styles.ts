@@ -14,14 +14,14 @@ export const StyledRoot = styled("div")<{ hasSecondImage?: boolean }>(({ hasSeco
   "&:hover .cart-overlay": { transform: "translateY(0)" },
 }));
 
-export const ImageBox = styled("div")(({ theme }) => ({
+export const ImageBox = styled("div")<{ imageHeight?: number }>(({ theme, imageHeight = 370 }) => ({
   borderRadius: 12,
   overflow: "hidden",
   position: "relative",
-  height: 370,
+  height: imageHeight,
   backgroundColor: theme.palette.grey[100],
   transition: "box-shadow 0.35s ease",
-  [theme.breakpoints.down("sm")]: { height: 260 },
+  [theme.breakpoints.down("sm")]: { height: Math.round(imageHeight * 0.7) },
 }));
 
 export const ImageLayer = styled("div")({

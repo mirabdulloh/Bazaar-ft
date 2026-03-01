@@ -10,14 +10,25 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 // APOLLO
-import { useMutation } from "@apollo/client/react";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
+import { userVar } from "../../../../apollo/store";
 // UTILS
 import { calculateDiscount, currency } from "lib";
+import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { Message } from "lib/types/common";
 // LOCAL CUSTOM COMPONENTS
 import HoverActions from "./hover-actions";
 // STYLED COMPONENTS
-import { CartOverlay, ContentWrapper, DiscountBadge, ImageBox, ImageLayer, StyledRoot, ViewBadge } from "./styles";
+import {
+  CartOverlay,
+  ContentWrapper,
+  DiscountBadge,
+  ImageBox,
+  ImageLayer,
+  StyledRoot,
+  ViewBadge
+} from "./styles";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 
@@ -25,11 +36,13 @@ import Product from "models/Product.model";
 interface Props {
   product: Product;
   showReview?: boolean;
+  imageHeight?: number;
 }
 // ========================================================
 
-export default function ProductCard2({ product, showReview = true }: Props) {
-  const { slug, title, price, thumbnail, rating, discount, images, productLikes, productViews } = product;
+export default function ProductCard2({ product, showReview = true, imageHeight }: Props) {
+  const { slug, title, price, thumbnail, rating, discount, images, productLikes, productViews } =
+    product;
   const secondImage = images?.[1];
   const discountedPrice = calculateDiscount(price, discount);
   const originalPrice = currency(price);
@@ -38,7 +51,9 @@ export default function ProductCard2({ product, showReview = true }: Props) {
   const [likeCount, setLikeCount] = useState(productLikes ?? 0);
 
   /** APOLLO REQUESTS **/
-  const [likeTargetProduct, { loading: likeLoading }] = useMutation(LIKE_TARGET_PRODUCT);
+  const [likeTargetProduct, { loading: likeLoading }] = useMutation<{
+    likeTargetProduct: { productLikes: number };
+  }>(LIKE_TARGET_PRODUCT);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,8 +77,7 @@ export default function ProductCard2({ product, showReview = true }: Props) {
   return (
     <StyledRoot hasSecondImage={!!secondImage}>
       <Link href={`/products/${slug}`} style={{ textDecoration: "none" }}>
-        <ImageBox className="card-img-box">
-
+        <ImageBox className="card-img-box" imageHeight={imageHeight}>
           {/* Primary image */}
           <ImageLayer className="img-primary">
             <Image
@@ -87,9 +101,7 @@ export default function ProductCard2({ product, showReview = true }: Props) {
           )}
 
           {/* Discount badge — top left */}
-          {discount > 0 && (
-            <DiscountBadge>{discount}% OFF</DiscountBadge>
-          )}
+          {discount > 0 && <DiscountBadge>{discount}% OFF</DiscountBadge>}
 
           {/* Views badge — top right */}
           {productViews !== undefined && (
@@ -105,7 +117,6 @@ export default function ProductCard2({ product, showReview = true }: Props) {
           <CartOverlay className="cart-overlay">
             <HoverActions product={product} />
           </CartOverlay>
-
         </ImageBox>
       </Link>
 
@@ -126,18 +137,13 @@ export default function ProductCard2({ product, showReview = true }: Props) {
           {/* Price block */}
           <div>
             <span className="current-price">{discountedPrice}</span>
-            {discount > 0 && (
-              <span className="original-price">{originalPrice}</span>
-            )}
+            {discount > 0 && <span className="original-price">{originalPrice}</span>}
           </div>
 
           {/* Likes — interactive */}
           {productLikes !== undefined && (
             <div className="likes" onClick={handleLike} role="button" aria-label="Like product">
-              {liked
-                ? <FavoriteIcon sx={{ color: "error.main" }} />
-                : <FavoriteBorderIcon />
-              }
+              {liked ? <FavoriteIcon sx={{ color: "error.main" }} /> : <FavoriteBorderIcon />}
               <span>{likeCount}</span>
             </div>
           )}
