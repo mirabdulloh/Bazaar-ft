@@ -5,25 +5,68 @@ import { useState } from "react";
 import IconButton from "@mui/material/IconButton";
 import Favorite from "@mui/icons-material/Favorite";
 import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
+// APOLLO
+import { useMutation, useReactiveVar } from "@apollo/client/react";
+import { LIKE_TARGET_PRODUCT } from "../../../../../apollo/user/mutation";
+import { userVar } from "../../../../../apollo/store";
+// UTILS
+import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { Message } from "../../../../lib/types/common";
+// DATA MODEL
+import Product from "models/Product.model";
 
-export default function FavoriteButton() {
-  const [isFavorite, setFavorite] = useState(false);
+// ==============================================================
+type Props = { product: Product };
+// ==============================================================
 
-  const handleFavorite = () => {
-    setFavorite((state) => !state);
+export default function FavoriteButton({ product }: Props) {
+  const { id, meLiked } = product;
+  const user = useReactiveVar(userVar);
+  const [liked, setLiked] = useState<boolean>(meLiked ?? false);
+
+  /** APOLLO REQUESTS **/
+  const [likeTargetProduct] = useMutation<{ likeTargetProduct: { _id: string; productLikes: number } }>(LIKE_TARGET_PRODUCT);
+
+  /** HANDLER **/
+  const handleFavorite = async () => {
+    try {
+      if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
+
+      const { data } = await likeTargetProduct({ variables: { input: id } });
+      if (data?.likeTargetProduct?._id) {
+        if (liked) {
+          setLiked(false);
+          await sweetUnlikeAlert();
+        } else {
+          setLiked(true);
+          await sweetLikeSuccessAlert();
+        }
+      }
+    } catch (err: any) {
+      console.log("Err on FavoriteButton:", err);
+      sweetMixinErrorAlert(err.message).then();
+    }
   };
 
   return (
     <IconButton
       size="small"
       onClick={handleFavorite}
-      sx={{ position: "absolute", top: 15, right: 15, zIndex: 1 }}
+      sx={{
+        position: "absolute",
+        top: 12,
+        right: 12,
+        zIndex: 1,
+        color: liked ? "error.main" : "grey.400",
+        bgcolor: "background.paper",
+        boxShadow: 1,
+        "&:hover": { bgcolor: "background.paper" },
+      }}
     >
-      {isFavorite ? (
-        <Favorite color="primary" fontSize="small" />
-      ) : (
-        <FavoriteBorder fontSize="small" />
-      )}
+      {liked
+        ? <Favorite fontSize="small" />
+        : <FavoriteBorder fontSize="small" />
+      }
     </IconButton>
   );
 }

@@ -22,5 +22,6 @@ export default interface Product {
   published?: boolean;
   productLikes?: number;
   productViews?: number;
+  productRank?: number;
   meLiked?: boolean;
 }

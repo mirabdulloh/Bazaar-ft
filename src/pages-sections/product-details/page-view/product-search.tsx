@@ -24,7 +24,7 @@ import ProductsGridView from "components/products-view/products-grid-view";
 import ProductsListView from "components/products-view/products-list-view";
 // APOLLO
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_BRANDS, GET_PRODUCTS } from "../../../../apollo/user/query";
+import { GET_BRANDS, GET_CATEGORIES, GET_PRODUCTS } from "../../../../apollo/user/query";
 import { T } from "../../../lib/types/common";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
@@ -41,11 +41,15 @@ interface GqlProduct {
   productRatingAverage: number;
   productLikes: number;
   productViews: number;
+  productRank?: number;
   productType?: string;
+  productCategoryId?: string;
   memberData?: { memberNick?: string };
   productColor?: string;
   productSize?: string;
-  productMaterials?: string[];
+  productMaterials?: string;
+  productStockQuantity?: number;
+  meLiked?: { myFavorite?: boolean }[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,12 +71,17 @@ function toProductModel(p: GqlProduct): Product {
     categories: [],
     productLikes: p.productLikes,
     productViews: p.productViews,
+    productRank: p.productRank,
+    meLiked: p.meLiked?.[0]?.myFavorite ?? false,
   };
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LIMIT = 12;
+/** How many products to fetch from backend in a single request */
+const BACKEND_LIMIT = 100;
+/** How many products to show per display page */
+const DISPLAY_LIMIT = 12;
 
 // Maps hex swatch value → text substrings to match against productColor (seed stores text names)
 const COLOR_NAME_MAP: Record<string, string[]> = {
@@ -140,10 +149,9 @@ export default function ProductSearchPageView() {
 
   const { sort: backendSort, direction } = SORT_MAP[sort] ?? SORT_MAP.newest;
 
-  // Map URL params → backend search object
+  // Only pass text search to backend — all other filters are applied client-side
   const search: Record<string, unknown> = {};
   if (q) search.text = q;
-  if (categoryId) search.productCategoryId = categoryId;
 
   /** APOLLO REQUESTS **/
   const {
@@ -153,7 +161,7 @@ export default function ProductSearchPageView() {
     refetch: _getProductsRefetch,
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page, limit: LIMIT, sort: backendSort, direction, search } },
+    variables: { input: { page: 1, limit: BACKEND_LIMIT, sort: backendSort, direction, search } },
     notifyOnNetworkStatusChange: true,
   });
 
@@ -165,6 +173,17 @@ export default function ProductSearchPageView() {
   } = useQuery(GET_BRANDS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 100 } },
+    notifyOnNetworkStatusChange: true,
+  });
+
+  const {
+    loading: _getCategoriesLoading,
+    data: getCategoriesData,
+    error: _getCategoriesError,
+    refetch: _getCategoriesRefetch,
+  } = useQuery(GET_CATEGORIES, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 200 } },
     notifyOnNetworkStatusChange: true,
   });
 
@@ -184,15 +203,33 @@ export default function ProductSearchPageView() {
     others: BASE_FILTER_OTHERS,
   }), [dynamicBrands]);
 
+  // Build a set of category IDs to include when a category is selected.
+  // If the selected category has children, include parent + all children.
+  const activeCategoryIds = useMemo((): Set<string> => {
+    if (!categoryId) return new Set();
+    const allCats: T[] = (getCategoriesData as T)?.getCategories?.list ?? [];
+    const children = allCats.filter(
+      (c: T) => c.parentCategoryId && c.parentCategoryId.toString() === categoryId
+    );
+    const ids = new Set<string>([categoryId]);
+    children.forEach((c: T) => ids.add(c._id.toString()));
+    return ids;
+  }, [categoryId, getCategoriesData]);
+
   // Raw products from backend
   const rawProducts: GqlProduct[] = useMemo(
     () => (getProductsData as T)?.getProducts?.products ?? [],
     [getProductsData]
   );
 
-  // Client-side filters
+  // Client-side filters applied to ALL fetched products
   const filteredProducts: Product[] = useMemo(() => {
     let list = rawProducts;
+
+    // Category filter — supports parent categories by including all children
+    if (activeCategoryIds.size > 0) {
+      list = list.filter((p) => p.productCategoryId && activeCategoryIds.has(p.productCategoryId.toString()));
+    }
 
     if (prices[0] > 0 || prices[1] < 300) {
       list = list.filter((p) => p.productPrice >= prices[0] && p.productPrice <= prices[1]);
@@ -215,7 +252,7 @@ export default function ProductSearchPageView() {
     }
     if (materials.length > 0) {
       list = list.filter((p) =>
-        p.productMaterials?.some((m) => materials.includes(m))
+        p.productMaterials && materials.includes(p.productMaterials)
       );
     }
     if (discount > 0) {
@@ -232,17 +269,22 @@ export default function ProductSearchPageView() {
       list = list.filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice);
     }
     if (sales.includes("instock")) {
-      list = list.filter((p) => (p as T).productStockQuantity > 0);
+      list = list.filter((p) => (p.productStockQuantity ?? 0) > 0);
     }
 
     return list.map(toProductModel);
-  }, [rawProducts, prices, brands, colors, sizes, materials, discount, rating, sales]);
+  }, [rawProducts, activeCategoryIds, prices, brands, colors, sizes, materials, discount, rating, sales]);
 
-  const metaData   = (getProductsData as T)?.getProducts?.metaData;
-  const total      = metaData?.total ?? 0;
-  const pageCount  = Math.max(1, Math.ceil(total / LIMIT));
-  const firstIndex = total === 0 ? 0 : (page - 1) * LIMIT + 1;
-  const lastIndex  = Math.min(page * LIMIT, total);
+  // Client-side pagination on filtered results
+  const total      = filteredProducts.length;
+  const pageCount  = Math.max(1, Math.ceil(total / DISPLAY_LIMIT));
+  const safePage   = Math.min(page, pageCount);
+  const firstIndex = total === 0 ? 0 : (safePage - 1) * DISPLAY_LIMIT + 1;
+  const lastIndex  = Math.min(safePage * DISPLAY_LIMIT, total);
+  const displayProducts = useMemo(
+    () => filteredProducts.slice((safePage - 1) * DISPLAY_LIMIT, safePage * DISPLAY_LIMIT),
+    [filteredProducts, safePage]
+  );
 
   const handleChangeSort = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -335,7 +377,7 @@ export default function ProductSearchPageView() {
           <Grid size={{ xl: 10, md: 9, xs: 12 }}>
             {getProductsLoading ? (
               <Grid container spacing={3}>
-                {Array.from({ length: LIMIT }).map((_, i) => (
+                {Array.from({ length: DISPLAY_LIMIT }).map((_, i) => (
                   <Grid key={i} size={{ xl: 3, lg: 4, md: 4, sm: 6, xs: 12 }}>
                     <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 2 }} />
                     <Skeleton variant="text" width="70%" sx={{ mt: 1 }} />
@@ -343,18 +385,18 @@ export default function ProductSearchPageView() {
                   </Grid>
                 ))}
               </Grid>
-            ) : filteredProducts.length === 0 ? (
+            ) : displayProducts.length === 0 ? (
               <Box py={10} textAlign="center">
                 <Typography variant="h6" color="text.secondary">No products found.</Typography>
               </Box>
             ) : view === "grid" ? (
-              <ProductsGridView products={filteredProducts} />
+              <ProductsGridView products={displayProducts} />
             ) : (
-              <ProductsListView products={filteredProducts} />
+              <ProductsListView products={displayProducts} />
             )}
 
             {/* PAGINATION */}
-            {!getProductsLoading && total > LIMIT && (
+            {!getProductsLoading && total > DISPLAY_LIMIT && (
               <FlexBetween flexWrap="wrap" mt={6}>
                 <Typography variant="body1" sx={{ color: "grey.600" }}>
                   Showing {firstIndex}–{lastIndex} of {total} products
@@ -362,7 +404,7 @@ export default function ProductSearchPageView() {
                 <Pagination
                   color="primary"
                   variant="outlined"
-                  page={page}
+                  page={safePage}
                   count={pageCount}
                   onChange={(_, p) => {
                     const params = new URLSearchParams(searchParams.toString());

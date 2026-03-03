@@ -3,6 +3,10 @@
 import { styled } from "@mui/material/styles";
 
 export const StyledRoot = styled("div")(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
   borderRadius: 12,
   overflow: "hidden",
   border: `1px solid ${theme.palette.divider}`,
@@ -10,14 +14,17 @@ export const StyledRoot = styled("div")(({ theme }) => ({
   "& .img-wrapper": {
     display: "flex",
     position: "relative",
+    overflow: "hidden",
     backgroundColor: theme.palette.grey[50],
     img: { transition: "0.3s" }
   },
   "& .content": {
+    flex: 1,
     padding: "1rem",
     display: "flex",
     alignItems: "flex-end",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    gap: "0.75rem",
   }
 }));
 

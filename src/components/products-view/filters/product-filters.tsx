@@ -27,7 +27,9 @@ import Filters from "models/Filters";
 const BRANDS_PREVIEW = 4;
 
 const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-const SHOE_SIZES     = ["36", "37", "38", "39", "40", "41", "42", "43", "44"];
+const US_SHOE_SIZES  = ["US 6", "US 7", "US 8", "US 9", "US 10", "US 11", "US 12"];
+const EU_SHOE_SIZES  = ["EU 36", "EU 37", "EU 38", "EU 39", "EU 40", "EU 41", "EU 42", "EU 43", "EU 44"];
+const DENIM_SIZES    = ["28/30", "30/30", "32/30", "32/32", "34/30"];
 const DISCOUNT_OPTIONS = [
   { label: "10% or more",  value: 10 },
   { label: "20% or more",  value: 20 },
@@ -132,10 +134,10 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
       </FlexBox>
 
       <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
-        Shoes (EU)
+        Shoes — US
       </Typography>
-      <FlexBox flexWrap="wrap" gap={0.75} mb={0.5}>
-        {SHOE_SIZES.map((s) => (
+      <FlexBox flexWrap="wrap" gap={0.75} mb={1.5}>
+        {US_SHOE_SIZES.map((s) => (
           <Chip
             key={s}
             label={s}
@@ -143,7 +145,41 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
             variant={sizes.includes(s) ? "filled" : "outlined"}
             color={sizes.includes(s) ? "primary" : "default"}
             onClick={() => handleChangeSize(s)}
-            sx={{ cursor: "pointer", fontSize: 12 }}
+            sx={{ cursor: "pointer", fontSize: 11 }}
+          />
+        ))}
+      </FlexBox>
+
+      <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
+        Shoes — EU
+      </Typography>
+      <FlexBox flexWrap="wrap" gap={0.75} mb={1.5}>
+        {EU_SHOE_SIZES.map((s) => (
+          <Chip
+            key={s}
+            label={s}
+            size="small"
+            variant={sizes.includes(s) ? "filled" : "outlined"}
+            color={sizes.includes(s) ? "primary" : "default"}
+            onClick={() => handleChangeSize(s)}
+            sx={{ cursor: "pointer", fontSize: 11 }}
+          />
+        ))}
+      </FlexBox>
+
+      <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
+        Denim
+      </Typography>
+      <FlexBox flexWrap="wrap" gap={0.75} mb={0.5}>
+        {DENIM_SIZES.map((s) => (
+          <Chip
+            key={s}
+            label={s}
+            size="small"
+            variant={sizes.includes(s) ? "filled" : "outlined"}
+            color={sizes.includes(s) ? "primary" : "default"}
+            onClick={() => handleChangeSize(s)}
+            sx={{ cursor: "pointer", fontSize: 11 }}
           />
         ))}
       </FlexBox>

@@ -12,7 +12,7 @@ export default function ProductsGridView({ products }: Props) {
   return (
     <Grid container spacing={3}>
       {products.map((product: Product) => (
-        <Grid size={{ xl: 3, lg: 4, md: 4, sm: 6, xs: 12 }} key={product.id}>
+        <Grid size={{ xl: 3, lg: 4, md: 4, sm: 6, xs: 12 }} key={product.id} sx={{ display: "flex" }}>
           <ProductCard16 product={product} />
         </Grid>
       ))}
