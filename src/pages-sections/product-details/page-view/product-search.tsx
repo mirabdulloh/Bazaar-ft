@@ -264,7 +264,10 @@ export default function ProductSearchPageView() {
       });
     }
     if (rating > 0) {
-      list = list.filter((p) => p.productRatingAverage >= rating);
+      // Show products that would display as X stars (rating >= X - 0.5)
+      // E.g., "5 stars" filter shows products with rating >= 4.5
+      const minRating = rating - 0.5;
+      list = list.filter((p) => p.productRatingAverage >= minRating);
     }
     const saleSelected = sales.includes("sale");
     const inStockSelected = sales.includes("instock");
