@@ -265,10 +265,18 @@ export default function ProductSearchPageView() {
     if (rating > 0) {
       list = list.filter((p) => p.productRatingAverage >= rating);
     }
-    if (sales.includes("sale")) {
+    const saleSelected = sales.includes("sale");
+    const inStockSelected = sales.includes("instock");
+
+    if (saleSelected && inStockSelected) {
+      list = list.filter(
+        (p) =>
+          (p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice) ||
+          (p.productStockQuantity ?? 0) > 0
+      );
+    } else if (saleSelected) {
       list = list.filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice);
-    }
-    if (sales.includes("instock")) {
+    } else if (inStockSelected) {
       list = list.filter((p) => (p.productStockQuantity ?? 0) > 0);
     }
 
