@@ -34,8 +34,9 @@ type Props = { product: Product };
 // ==============================================================
 
 export default function ProductCard16({ product }: Props) {
-  const { slug, title, thumbnail, price, discount, rating, productLikes, productViews, productRank, meLiked, id } = product;
+  const { slug, title, thumbnail, price, discount, rating, productLikes, productViews, productRank, meLiked, id, productStockQuantity } = product;
   const isBestSeller = (productRank ?? 0) >= 5;
+  const isSoldOut = (productStockQuantity ?? 0) === 0;
 
   const user = useReactiveVar(userVar);
   const [likes, setLikes] = useState<number>(productLikes ?? 0);
@@ -78,8 +79,22 @@ export default function ProductCard16({ product }: Props) {
           {/* Discount chip — top left */}
           {discount ? <DiscountChip discount={discount} sx={{ left: 12, top: 12 }} /> : null}
 
-          {/* Best Seller chip — top right */}
-          {isBestSeller && (
+          {/* Status chip — top right (Sold Out or Best Seller) */}
+          {isSoldOut ? (
+            <Chip
+              label="SOLD OUT"
+              size="small"
+              color="error"
+              sx={{
+                position: "absolute",
+                right: 12,
+                top: 12,
+                fontWeight: 700,
+                fontSize: 11,
+                height: 22,
+              }}
+            />
+          ) : isBestSeller ? (
             <Chip
               label="Best Seller"
               size="small"
@@ -93,7 +108,7 @@ export default function ProductCard16({ product }: Props) {
                 height: 22,
               }}
             />
-          )}
+          ) : null}
         </div>
       </Link>
 

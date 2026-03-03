@@ -73,6 +73,7 @@ function toProductModel(p: GqlProduct): Product {
     productViews: p.productViews,
     productRank: p.productRank,
     meLiked: p.meLiked?.[0]?.myFavorite ?? false,
+    productStockQuantity: p.productStockQuantity,
   };
 }
 
