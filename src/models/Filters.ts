@@ -13,4 +13,6 @@ export default interface Filters {
   others: Item[];
   colors: string[];
   categories: Category[];
+  sizes?: Item[];
+  materials?: string[];
 }

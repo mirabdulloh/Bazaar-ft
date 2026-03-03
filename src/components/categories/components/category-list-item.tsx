@@ -8,6 +8,7 @@ import IconComponent from "components/IconComponent";
 
 // STYLED COMPONENT
 export const Wrapper = styled("div")(({ theme }) => ({
+  position: "relative", // ← required so mega-menu is positioned relative to this row, not the list root
   "& .category-dropdown-link": {
     height: 40,
     display: "flex",
@@ -34,7 +35,16 @@ export const Wrapper = styled("div")(({ theme }) => ({
     left: "100%",
     right: "auto",
     display: "none",
-    position: "absolute"
+    position: "absolute",
+    // invisible bridge prevents gap between row and submenu from breaking hover
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: "-8px",
+      width: "8px",
+      height: "100%"
+    }
   },
   ".caret-icon": {
     fontSize: "1rem",

@@ -10,10 +10,10 @@ const navbarNavigation: Menu[] = [
     child: []
   },
   {
-    title: "New Arrivals",
+    title: "Products",
     megaMenu: false,
     megaMenuWithSub: false,
-    url: "/products/search?sort=newest",
+    url: "/products/search",
     child: []
   },
   {

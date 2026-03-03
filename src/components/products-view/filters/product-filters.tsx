@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // MUI
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import Rating from "@mui/material/Rating";
 import Slider from "@mui/material/Slider";
 import Button from "@mui/material/Button";
@@ -13,7 +14,6 @@ import TextField from "@mui/material/TextField";
 import FormGroup from "@mui/material/FormGroup";
 import Typography from "@mui/material/Typography";
 // GLOBAL CUSTOM COMPONENTS
-import AccordionHeader from "components/accordion";
 import { FlexBetween, FlexBox } from "components/flex-box";
 // LOCAL CUSTOM COMPONENTS
 import CheckboxLabel from "./checkbox-label";
@@ -22,12 +22,30 @@ import useProductFilterCard from "./use-product-filter-card";
 // TYPES
 import Filters from "models/Filters";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BRANDS_PREVIEW = 4;
+
+const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const SHOE_SIZES     = ["36", "37", "38", "39", "40", "41", "42", "43", "44"];
+const DISCOUNT_OPTIONS = [
+  { label: "10% or more",  value: 10 },
+  { label: "20% or more",  value: 20 },
+  { label: "30% or more",  value: 30 },
+  { label: "50% or more",  value: 50 },
+];
+const MATERIALS = ["Cotton", "Leather", "Wool", "Denim", "Polyester", "Silk", "Synthetic"];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function ProductFilters({ filters }: { filters: Filters }) {
-  const { brands: BRANDS, categories: CATEGORIES, others: OTHERS, colors: COLORS } = filters;
+  const { brands: BRANDS, others: OTHERS, colors: COLORS } = filters;
 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const [brandsHovered, setBrandsHovered] = useState(false);
 
   const {
     sales,
@@ -35,13 +53,17 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
     rating,
     colors,
     prices,
-    collapsed,
-    setCollapsed,
+    sizes,
+    materials,
+    discount,
     handleChangeBrand,
     handleChangeColor,
     handleChangePrice,
     handleChangeSales,
-    handleChangeSearchParams
+    handleChangeSize,
+    handleChangeMaterial,
+    handleChangeDiscount,
+    handleChangeSearchParams,
   } = useProductFilterCard();
 
   const handleClearFilters = () => {
@@ -50,59 +72,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
 
   return (
     <div>
-      {/* CATEGORY VARIANT FILTER */}
-      <Typography variant="h6" sx={{ mb: 1.25 }}>
-        Categories
-      </Typography>
-
-      {CATEGORIES.map((item) =>
-        item.children ? (
-          <Fragment key={item.title}>
-            <AccordionHeader
-              open={collapsed}
-              onClick={() => setCollapsed((state) => !state)}
-              sx={{ padding: ".5rem 0", cursor: "pointer", color: "grey.600" }}
-            >
-              <Typography component="span">{item.title}</Typography>
-            </AccordionHeader>
-
-            <Collapse in={collapsed}>
-              {item.children.map((name) => (
-                <Typography
-                  variant="body1"
-                  key={name}
-                  sx={{
-                    py: 0.75,
-                    pl: "22px",
-                    fontSize: 14,
-                    cursor: "pointer",
-                    color: "grey.600"
-                  }}
-                >
-                  {name}
-                </Typography>
-              ))}
-            </Collapse>
-          </Fragment>
-        ) : (
-          <Typography
-            variant="body1"
-            key={item.title}
-            sx={{
-              py: 0.75,
-              fontSize: 14,
-              cursor: "pointer",
-              color: "grey.600"
-            }}
-          >
-            {item.title}
-          </Typography>
-        )
-      )}
-
-      <Box component={Divider} my={3} />
-
-      {/* PRICE VARIANT FILTER */}
+      {/* ── PRICE RANGE ───────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 2 }}>
         Price Range
       </Typography>
@@ -126,11 +96,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
           value={prices[0]}
           onChange={(e) => handleChangePrice([+e.target.value, prices[1]])}
         />
-
-        <Typography variant="h5" sx={{ px: 1, color: "grey.600" }}>
-          -
-        </Typography>
-
+        <Typography variant="h5" sx={{ px: 1, color: "grey.600" }}>-</Typography>
         <TextField
           fullWidth
           size="small"
@@ -143,57 +109,93 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
 
       <Box component={Divider} my={3} />
 
-      {/* BRAND VARIANT FILTER */}
+      {/* ── SIZE ─────────────────────────────────────────────── */}
+      <Typography variant="h6" sx={{ mb: 1.5 }}>
+        Size
+      </Typography>
+
+      <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
+        Clothing
+      </Typography>
+      <FlexBox flexWrap="wrap" gap={0.75} mb={1.5}>
+        {CLOTHING_SIZES.map((s) => (
+          <Chip
+            key={s}
+            label={s}
+            size="small"
+            variant={sizes.includes(s) ? "filled" : "outlined"}
+            color={sizes.includes(s) ? "primary" : "default"}
+            onClick={() => handleChangeSize(s)}
+            sx={{ cursor: "pointer", fontSize: 12 }}
+          />
+        ))}
+      </FlexBox>
+
+      <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
+        Shoes (EU)
+      </Typography>
+      <FlexBox flexWrap="wrap" gap={0.75} mb={0.5}>
+        {SHOE_SIZES.map((s) => (
+          <Chip
+            key={s}
+            label={s}
+            size="small"
+            variant={sizes.includes(s) ? "filled" : "outlined"}
+            color={sizes.includes(s) ? "primary" : "default"}
+            onClick={() => handleChangeSize(s)}
+            sx={{ cursor: "pointer", fontSize: 12 }}
+          />
+        ))}
+      </FlexBox>
+
+      <Box component={Divider} my={3} />
+
+      {/* ── BRANDS ───────────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 2 }}>
         Brands
       </Typography>
 
-      <FormGroup>
-        {BRANDS.map(({ label, value }) => (
-          <CheckboxLabel
-            key={value}
-            label={label}
-            checked={brands.includes(value)}
-            onChange={() => handleChangeBrand(value)}
-          />
-        ))}
-      </FormGroup>
+      <Box
+        onMouseEnter={() => setBrandsHovered(true)}
+        onMouseLeave={() => setBrandsHovered(false)}
+      >
+        <FormGroup>
+          {BRANDS.slice(0, BRANDS_PREVIEW).map(({ label, value }) => (
+            <CheckboxLabel
+              key={value}
+              label={label}
+              checked={brands.includes(value)}
+              onChange={() => handleChangeBrand(value)}
+            />
+          ))}
+        </FormGroup>
+
+        <Collapse in={brandsHovered} timeout={300}>
+          <FormGroup>
+            {BRANDS.slice(BRANDS_PREVIEW).map(({ label, value }) => (
+              <CheckboxLabel
+                key={value}
+                label={label}
+                checked={brands.includes(value)}
+                onChange={() => handleChangeBrand(value)}
+              />
+            ))}
+          </FormGroup>
+        </Collapse>
+
+        {!brandsHovered && BRANDS.length > BRANDS_PREVIEW && (
+          <Typography
+            variant="caption"
+            sx={{ color: "grey.400", mt: 0.5, display: "block", userSelect: "none" }}
+          >
+            +{BRANDS.length - BRANDS_PREVIEW} more
+          </Typography>
+        )}
+      </Box>
 
       <Box component={Divider} my={3} />
 
-      {/* SALES OPTIONS */}
-      <FormGroup>
-        {OTHERS.map(({ label, value }) => (
-          <CheckboxLabel
-            key={value}
-            label={label}
-            checked={sales.includes(value)}
-            onChange={() => handleChangeSales(value)}
-          />
-        ))}
-      </FormGroup>
-
-      <Box component={Divider} my={3} />
-
-      {/* RATINGS FILTER */}
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Ratings
-      </Typography>
-
-      <FormGroup>
-        {[5, 4, 3, 2, 1].map((item) => (
-          <CheckboxLabel
-            key={item}
-            checked={rating === item}
-            onChange={() => handleChangeSearchParams("rating", item.toString())}
-            label={<Rating size="small" value={item} color="warn" readOnly />}
-          />
-        ))}
-      </FormGroup>
-
-      <Box component={Divider} my={3} />
-
-      {/* COLORS VARIANT FILTER */}
+      {/* ── COLORS ───────────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 2 }}>
         Colors
       </Typography>
@@ -212,11 +214,84 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
               cursor: "pointer",
               borderRadius: 3,
               outline: colors.includes(item) ? 1 : 0,
-              outlineColor: item
+              outlineColor: item,
+              border: item === "#FFFFFF" ? "1px solid #e0e0e0" : "none",
             }}
           />
         ))}
       </FlexBox>
+
+      <Box component={Divider} my={3} />
+
+      {/* ── DISCOUNT % ───────────────────────────────────────── */}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Discount
+      </Typography>
+
+      <FormGroup>
+        {DISCOUNT_OPTIONS.map(({ label, value }) => (
+          <CheckboxLabel
+            key={value}
+            label={label}
+            checked={discount === value}
+            onChange={() => handleChangeDiscount(value)}
+          />
+        ))}
+      </FormGroup>
+
+      <Box component={Divider} my={3} />
+
+      {/* ── MATERIAL ─────────────────────────────────────────── */}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Material
+      </Typography>
+
+      <FormGroup>
+        {MATERIALS.map((m) => (
+          <CheckboxLabel
+            key={m}
+            label={m}
+            checked={materials.includes(m)}
+            onChange={() => handleChangeMaterial(m)}
+          />
+        ))}
+      </FormGroup>
+
+      <Box component={Divider} my={3} />
+
+      {/* ── AVAILABILITY ─────────────────────────────────────── */}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Availability
+      </Typography>
+
+      <FormGroup>
+        {OTHERS.map(({ label, value }) => (
+          <CheckboxLabel
+            key={value}
+            label={label}
+            checked={sales.includes(value)}
+            onChange={() => handleChangeSales(value)}
+          />
+        ))}
+      </FormGroup>
+
+      <Box component={Divider} my={3} />
+
+      {/* ── RATINGS ──────────────────────────────────────────── */}
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Ratings
+      </Typography>
+
+      <FormGroup>
+        {[5, 4, 3, 2, 1].map((item) => (
+          <CheckboxLabel
+            key={item}
+            checked={rating === item}
+            onChange={() => handleChangeSearchParams("rating", rating === item ? "0" : item.toString())}
+            label={<Rating size="small" value={item} color="warn" readOnly />}
+          />
+        ))}
+      </FormGroup>
 
       {searchParams.size > 0 && (
         <Button

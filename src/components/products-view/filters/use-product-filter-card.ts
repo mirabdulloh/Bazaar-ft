@@ -31,6 +31,21 @@ export default function useProductFilterCard() {
     [searchParams]
   );
 
+  const sizes = useMemo<string[]>(
+    () => JSON.parse(searchParams.get("sizes") || "[]"),
+    [searchParams]
+  );
+
+  const materials = useMemo<string[]>(
+    () => JSON.parse(searchParams.get("materials") || "[]"),
+    [searchParams]
+  );
+
+  const discount = useMemo<number>(
+    () => Number(searchParams.get("discount") || "0"),
+    [searchParams]
+  );
+
   const handleChangeSearchParams = useCallback(
     (key: string, value: string) => {
       if (!key || !value) return;
@@ -53,29 +68,45 @@ export default function useProductFilterCard() {
     [debouncedChangePrice]
   );
 
-  const handleChangeColor = (value: string) => {
+  const handleChangeColor = useCallback((value: string) => {
     const values = colors.includes(value)
       ? colors.filter((item) => item !== value)
       : [...colors, value];
-
     handleChangeSearchParams("colors", JSON.stringify(values));
-  };
+  }, [colors, handleChangeSearchParams]);
 
-  const handleChangeBrand = (value: string) => {
+  const handleChangeBrand = useCallback((value: string) => {
     const values = brands.includes(value)
       ? brands.filter((item) => item !== value)
       : [...brands, value];
-
     handleChangeSearchParams("brands", JSON.stringify(values));
-  };
+  }, [brands, handleChangeSearchParams]);
 
-  const handleChangeSales = (value: string) => {
+  const handleChangeSales = useCallback((value: string) => {
     const values = sales.includes(value)
       ? sales.filter((item) => item !== value)
       : [...sales, value];
-
     handleChangeSearchParams("sales", JSON.stringify(values));
-  };
+  }, [sales, handleChangeSearchParams]);
+
+  const handleChangeSize = useCallback((value: string) => {
+    const values = sizes.includes(value)
+      ? sizes.filter((item) => item !== value)
+      : [...sizes, value];
+    handleChangeSearchParams("sizes", JSON.stringify(values));
+  }, [sizes, handleChangeSearchParams]);
+
+  const handleChangeMaterial = useCallback((value: string) => {
+    const values = materials.includes(value)
+      ? materials.filter((item) => item !== value)
+      : [...materials, value];
+    handleChangeSearchParams("materials", JSON.stringify(values));
+  }, [materials, handleChangeSearchParams]);
+
+  const handleChangeDiscount = useCallback((value: number) => {
+    const next = discount === value ? 0 : value;
+    handleChangeSearchParams("discount", next.toString());
+  }, [discount, handleChangeSearchParams]);
 
   return {
     sales,
@@ -83,12 +114,18 @@ export default function useProductFilterCard() {
     rating,
     colors,
     prices,
+    sizes,
+    materials,
+    discount,
     collapsed,
     setCollapsed,
     handleChangePrice,
     handleChangeColor,
     handleChangeBrand,
     handleChangeSales,
-    handleChangeSearchParams
+    handleChangeSize,
+    handleChangeMaterial,
+    handleChangeDiscount,
+    handleChangeSearchParams,
   };
 }
