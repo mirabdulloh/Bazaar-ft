@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Link from "next/link";
 import Chip from "@mui/material/Chip";
 import Rating from "@mui/material/Rating";
@@ -24,12 +25,10 @@ type Props = { product: Product };
 export default function ProductCard9({ product }: Props) {
   const { thumbnail, title, price, discount, rating, slug, productLikes, productViews, productRank } = product;
   const isBestSeller = (productRank ?? 0) >= 5;
+  const [likes, setLikes] = useState<number>(productLikes ?? 0);
 
   return (
     <Wrapper>
-      {/* LIKE BUTTON — wired to real mutation */}
-      <FavoriteButton product={product} />
-
       <ContentWrapper>
         <div className="img-wrapper">
           <DiscountChip discount={discount} />
@@ -48,6 +47,15 @@ export default function ProductCard9({ product }: Props) {
                   sx={{ fontWeight: 700, fontSize: 11, height: 20 }}
                 />
               )}
+              {discount ? (
+                <Chip
+                  label={`${discount}% off`}
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  sx={{ fontSize: 11, height: 20 }}
+                />
+              ) : null}
             </FlexBox>
 
             {/* TITLE */}
@@ -74,11 +82,9 @@ export default function ProductCard9({ product }: Props) {
             {/* LIKES + VIEWS */}
             <FlexBox alignItems="center" gap={1.5} mt={1}>
               <FlexBox alignItems="center" gap={0.5}>
+                <FavoriteButton product={product} mode="inline" onLikesChange={setLikes} />
                 <Typography variant="body2" color="text.secondary">
-                  Likes:
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {productLikes ?? 0}
+                  {likes}
                 </Typography>
               </FlexBox>
               <FlexBox alignItems="center" gap={0.5}>

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-// MUI
-import IconButton from "@mui/material/IconButton";
 import Favorite from "@mui/icons-material/Favorite";
 import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
 // APOLLO
@@ -14,12 +12,17 @@ import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "l
 import { Message } from "../../../../lib/types/common";
 // DATA MODEL
 import Product from "models/Product.model";
+import { StyledFavoriteIconButton } from "./styles";
 
 // ==============================================================
-type Props = { product: Product };
+type Props = {
+  product: Product;
+  mode?: "floating" | "inline";
+  onLikesChange?: (likes: number) => void;
+};
 // ==============================================================
 
-export default function FavoriteButton({ product }: Props) {
+export default function FavoriteButton({ product, mode = "floating", onLikesChange }: Props) {
   const { id, meLiked } = product;
   const user = useReactiveVar(userVar);
   const [liked, setLiked] = useState<boolean>(meLiked ?? false);
@@ -33,7 +36,11 @@ export default function FavoriteButton({ product }: Props) {
       if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
 
       const { data } = await likeTargetProduct({ variables: { input: id } });
-      if (data?.likeTargetProduct?._id) {
+      const updated = data?.likeTargetProduct;
+      if (updated?._id) {
+        if (typeof updated.productLikes === "number") {
+          onLikesChange?.(updated.productLikes);
+        }
         if (liked) {
           setLiked(false);
           await sweetUnlikeAlert();
@@ -49,24 +56,16 @@ export default function FavoriteButton({ product }: Props) {
   };
 
   return (
-    <IconButton
+    <StyledFavoriteIconButton
       size="small"
+      mode={mode}
+      liked={liked}
       onClick={handleFavorite}
-      sx={{
-        position: "absolute",
-        top: 12,
-        right: 12,
-        zIndex: 1,
-        color: liked ? "error.main" : "grey.400",
-        bgcolor: "background.paper",
-        boxShadow: 1,
-        "&:hover": { bgcolor: "background.paper" },
-      }}
     >
       {liked
         ? <Favorite fontSize="small" />
         : <FavoriteBorder fontSize="small" />
       }
-    </IconButton>
+    </StyledFavoriteIconButton>
   );
 }

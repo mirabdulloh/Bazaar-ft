@@ -76,6 +76,8 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
     return Number(normalized || 0);
   };
 
+  const inputPriceValue = (value: number): string => (value === 0 ? "" : String(value));
+
   return (
     <div>
       {/* ── PRICE RANGE ───────────────────────────────────────── */}
@@ -97,18 +99,22 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
         <TextField
           fullWidth
           size="small"
-          type="number"
+          type="text"
+          inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
           placeholder="0"
-          value={prices[0]}
+          value={inputPriceValue(prices[0])}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => handleChangePrice([normalizePriceValue(e.target.value), prices[1]])}
         />
         <Typography variant="h5" sx={{ px: 1, color: "grey.600" }}>-</Typography>
         <TextField
           fullWidth
           size="small"
-          type="number"
+          type="text"
+          inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
           placeholder="250"
-          value={prices[1]}
+          value={inputPriceValue(prices[1])}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => handleChangePrice([prices[0], normalizePriceValue(e.target.value)])}
         />
       </FlexBetween>
