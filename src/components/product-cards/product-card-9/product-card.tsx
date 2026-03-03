@@ -3,7 +3,6 @@ import Chip from "@mui/material/Chip";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
 // MUI ICONS
-import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
 import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
 // GLOBAL CUSTOM COMPONENTS
 import LazyImage from "components/LazyImage";
@@ -49,15 +48,6 @@ export default function ProductCard9({ product }: Props) {
                   sx={{ fontWeight: 700, fontSize: 11, height: 20 }}
                 />
               )}
-              {discount ? (
-                <Chip
-                  label={`${discount}% off`}
-                  size="small"
-                  color="error"
-                  variant="outlined"
-                  sx={{ fontSize: 11, height: 20 }}
-                />
-              ) : null}
             </FlexBox>
 
             {/* TITLE */}
@@ -84,7 +74,9 @@ export default function ProductCard9({ product }: Props) {
             {/* LIKES + VIEWS */}
             <FlexBox alignItems="center" gap={1.5} mt={1}>
               <FlexBox alignItems="center" gap={0.5}>
-                <FavoriteBorder sx={{ fontSize: 16, color: "grey.500" }} />
+                <Typography variant="body2" color="text.secondary">
+                  Likes:
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {productLikes ?? 0}
                 </Typography>

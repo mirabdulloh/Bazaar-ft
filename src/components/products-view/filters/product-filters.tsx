@@ -27,7 +27,6 @@ import Filters from "models/Filters";
 const BRANDS_PREVIEW = 4;
 
 const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-const US_SHOE_SIZES  = ["US 6", "US 7", "US 8", "US 9", "US 10", "US 11", "US 12"];
 const EU_SHOE_SIZES  = ["EU 36", "EU 37", "EU 38", "EU 39", "EU 40", "EU 41", "EU 42", "EU 43", "EU 44"];
 const DENIM_SIZES    = ["28/30", "30/30", "32/30", "32/32", "34/30"];
 const DISCOUNT_OPTIONS = [
@@ -72,6 +71,11 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
     router.push(pathname);
   };
 
+  const normalizePriceValue = (value: string): number => {
+    const normalized = value.replace(/^0+(?=\d)/, "");
+    return Number(normalized || 0);
+  };
+
   return (
     <div>
       {/* ── PRICE RANGE ───────────────────────────────────────── */}
@@ -96,7 +100,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
           type="number"
           placeholder="0"
           value={prices[0]}
-          onChange={(e) => handleChangePrice([+e.target.value, prices[1]])}
+          onChange={(e) => handleChangePrice([normalizePriceValue(e.target.value), prices[1]])}
         />
         <Typography variant="h5" sx={{ px: 1, color: "grey.600" }}>-</Typography>
         <TextField
@@ -105,7 +109,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
           type="number"
           placeholder="250"
           value={prices[1]}
-          onChange={(e) => handleChangePrice([prices[0], +e.target.value])}
+          onChange={(e) => handleChangePrice([prices[0], normalizePriceValue(e.target.value)])}
         />
       </FlexBetween>
 
@@ -129,23 +133,6 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
             color={sizes.includes(s) ? "primary" : "default"}
             onClick={() => handleChangeSize(s)}
             sx={{ cursor: "pointer", fontSize: 12 }}
-          />
-        ))}
-      </FlexBox>
-
-      <Typography variant="caption" sx={{ color: "grey.500", mb: 0.5, display: "block" }}>
-        Shoes — US
-      </Typography>
-      <FlexBox flexWrap="wrap" gap={0.75} mb={1.5}>
-        {US_SHOE_SIZES.map((s) => (
-          <Chip
-            key={s}
-            label={s}
-            size="small"
-            variant={sizes.includes(s) ? "filled" : "outlined"}
-            color={sizes.includes(s) ? "primary" : "default"}
-            onClick={() => handleChangeSize(s)}
-            sx={{ cursor: "pointer", fontSize: 11 }}
           />
         ))}
       </FlexBox>
