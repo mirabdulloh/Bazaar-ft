@@ -15,6 +15,9 @@ import { useReactiveVar } from "@apollo/client/react";
 import { userVar } from "../../../apollo/store";
 // AUTH
 import { logOut } from "lib/auth";
+// NAV DATA
+import { MENUS } from "components/layouts/customer-dashboard/navigation";
+import IconComponent from "components/IconComponent";
 
 export function HeaderUser() {
   const user = useReactiveVar(userVar);
@@ -78,12 +81,31 @@ export function HeaderUser() {
 
         <Divider />
 
-        <MenuItem component={Link} href="/profile" onClick={() => setAnchorEl(null)}>
-          My Profile
-        </MenuItem>
-        <MenuItem component={Link} href="/orders" onClick={() => setAnchorEl(null)}>
-          My Orders
-        </MenuItem>
+        {MENUS.map((section) => (
+          <Box key={section.title} sx={{ py: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ px: 2, display: "block", fontWeight: 600 }}
+            >
+              {section.title}
+            </Typography>
+
+            {section.list.map((item) => (
+              <MenuItem
+                key={item.title}
+                component={Link}
+                href={item.href}
+                onClick={() => setAnchorEl(null)}
+                sx={{ gap: 1 }}
+              >
+                <IconComponent icon={item.icon} fontSize="small" />
+                {item.title}
+              </MenuItem>
+            ))}
+          </Box>
+        ))}
+
         {isAdminOrBrand && (
           <MenuItem component={Link} href={dashboardHref} onClick={() => setAnchorEl(null)}>
             Dashboard

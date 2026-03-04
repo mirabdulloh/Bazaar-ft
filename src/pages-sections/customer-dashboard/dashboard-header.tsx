@@ -3,15 +3,12 @@
 import Link from "next/link";
 // MUI
 import Avatar from "@mui/material/Avatar";
-import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
-import Menu from "@mui/icons-material/Menu";
+import IconButton from "@mui/material/IconButton";
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
 import { type SvgIconComponent } from "@mui/icons-material";
 // GLOBAL CUSTOM COMPONENTS
-import SideNav from "components/side-nav";
-import { Navigation } from "components/layouts/customer-dashboard";
 
 // STYLED COMPONENT
 const StyledRoot = styled("div")(({ theme }) => ({
@@ -75,19 +72,7 @@ export default function DashboardHeader({ title, href, Icon }: Props) {
         </Typography>
       </div>
 
-      {/* SHOW ONLY SMALL DEVICE */}
-      <div className="right">
-        <SideNav
-          position="left"
-          handler={(close) => (
-            <IconButton onClick={close}>
-              <Menu fontSize="small" />
-            </IconButton>
-          )}
-        >
-          <Navigation />
-        </SideNav>
-      </div>
+      {/* Mobile nav is handled globally; keep header clean */}
     </StyledRoot>
   );
 }

@@ -10,7 +10,7 @@ import { logOut } from "lib/auth";
 // STYLED COMPONENTS
 import { MainContainer } from "./styles";
 
-const MENUS = [
+export const MENUS = [
   {
     title: "DASHBOARD",
     list: [
