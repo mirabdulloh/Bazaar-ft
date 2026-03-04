@@ -12,6 +12,8 @@ export interface CartItem {
   slug: string;
   price: number;
   thumbnail: string;
+  size?: string;
+  color?: string;
 }
 
 interface CartActionType {
@@ -66,7 +68,12 @@ const reducer = (state: InitialState, action: CartActionType) => {
 
       if (cartItem === undefined) return state;
 
-      const existIndex = cartList.findIndex((item) => item.id === cartItem!.id);
+      const existIndex = cartList.findIndex(
+        (item) =>
+          item.id === cartItem!.id &&
+          (item.size ?? "") === (cartItem.size ?? "") &&
+          (item.color ?? "") === (cartItem.color ?? "")
+      );
 
       // REMOVE ITEM IF QUANTITY IS LESS THAN 1
       if (cartItem.qty < 1) {

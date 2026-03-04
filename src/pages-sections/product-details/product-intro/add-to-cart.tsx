@@ -7,29 +7,57 @@ import Button from "@mui/material/Button";
 import useCart from "hooks/useCart";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
+// UTILS
+import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "lib/sweetAlert";
 
 // ================================================================
-type Props = { product: Product };
+type Props = {
+  product: Product;
+  qty: number;
+  selectedSize?: string;
+  selectedColor?: string;
+};
 // ================================================================
 
-export default function AddToCart({ product }: Props) {
-  const { id, price, title, slug, thumbnail } = product;
+export default function AddToCart({ product, qty, selectedSize, selectedColor }: Props) {
+  const { id, price, title, slug, thumbnail, size, colors } = product;
 
   const router = useRouter();
   const [isLoading, setLoading] = useState(false);
   const { dispatch } = useCart();
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    // Validate selections
+    if (size && size.length > 0 && !selectedSize) {
+      await sweetMixinErrorAlert("Please select a size");
+      return;
+    }
+    if (colors && colors.length > 0 && !selectedColor) {
+      await sweetMixinErrorAlert("Please select a color");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+
+    setTimeout(async () => {
       dispatch({
         type: "CHANGE_CART_AMOUNT",
-        payload: { id, slug, price, title, thumbnail, qty: 1 }
+        payload: {
+          id,
+          slug,
+          price,
+          title,
+          thumbnail,
+          qty,
+          size: selectedSize || undefined,
+          color: selectedColor || undefined,
+        }
       });
 
-      router.push("/mini-cart", { scroll: false });
       setLoading(false);
-    }, 500);
+      await sweetTopSmallSuccessAlert("Added to cart!");
+      router.push("/mini-cart", { scroll: false });
+    }, 400);
   };
 
   return (

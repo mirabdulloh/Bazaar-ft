@@ -45,7 +45,7 @@ export const ProductImageWrapper = styled("div", {
     width: "100%",
     height: "100%",
     position: "relative",
-    transform: zoomed ? "scale(1.9)" : "scale(1)",
+    transform: zoomed ? "scale(2.4)" : "scale(1)",
     transition: "transform 0.18s ease-out"
   },
   "& img": { objectFit: "cover" },

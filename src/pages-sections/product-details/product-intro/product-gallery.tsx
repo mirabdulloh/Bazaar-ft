@@ -27,7 +27,6 @@ export default function ProductGallery({ images }: { images: string[] }) {
     <Fragment>
       <ProductImageWrapper
         zoomed={zoomed}
-        onMouseEnter={() => setZoomed(true)}
         onMouseLeave={() => {
           setZoomed(false);
           setOrigin("50% 50%");

@@ -35,6 +35,7 @@ interface GqlProduct {
   productRatingCount?: number;
   productLikes: number;
   productViews: number;
+  productStockQuantity?: number;
   productDesc?: string;
   productSize?: string[] | string;
   productColor?: string[] | string;
@@ -89,6 +90,8 @@ const toProductModel = (p: GqlProduct, categoryById: Map<string, string>): Produ
     categories: resolvedCategory ? [resolvedCategory] : [],
     productLikes: p.productLikes,
     productViews: p.productViews,
+    productStockQuantity: p.productStockQuantity,
+    productRatingCount: p.productRatingCount,
     meLiked: p.meLiked?.[0]?.myFavorite === true,
     brand: p.memberData?.memberNick
   };
