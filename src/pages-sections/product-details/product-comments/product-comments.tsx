@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -10,6 +10,7 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
+import ReplyIcon from "@mui/icons-material/Reply";
 import SendIcon from "@mui/icons-material/Send";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
 // UTILS
@@ -23,13 +24,17 @@ import { CREATE_COMMENT, UPDATE_COMMENT } from "../../../../apollo/user/mutation
 import { userVar } from "../../../../apollo/store";
 
 // ================================================================
-type Props = { productId: string };
+type Props = {
+  productId: string;
+  onCountChange?: (count: number) => void;
+};
 // ================================================================
 
 interface GqlComment {
   _id: string;
   memberId: string;
   commentContent: string;
+  commentReplyId?: string | null;
   commentLikes: number;
   commentViews: number;
   createdAt: string;
@@ -54,53 +59,136 @@ function resolveMemberImage(memberImage?: string): string {
   return normalizedPath;
 }
 
-export default function ProductComments({ productId }: Props) {
+/** A commentReplyId that is truly pointing to a parent — guards against null/empty/string-"null" */
+function isActualReply(c: GqlComment): boolean {
+  const v = c.commentReplyId;
+  return !!v && v !== "" && v !== "null" && v !== "undefined";
+}
+
+// ─── Inline reply form helper ─────────────────────────────────────────────────
+function ReplyForm({
+  toNick,
+  replyContent,
+  onChange,
+  onSubmit,
+  onCancel,
+  userImage,
+  userNick
+}: {
+  toNick: string;
+  replyContent: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  userImage?: string;
+  userNick?: string;
+}) {
+  return (
+    <Box sx={{ display: "flex", gap: 1.5, mt: 1.5, pl: 6.5 }}>
+      <Avatar
+        src={resolveMemberImage(userImage)}
+        alt={userNick || "You"}
+        sx={{ width: 30, height: 30, flexShrink: 0, mt: 0.25 }}
+      />
+      <Box sx={{ flex: 1 }}>
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          size="small"
+          placeholder={`Reply to ${toNick}…`}
+          value={replyContent}
+          onChange={(e) => onChange(e.target.value)}
+          sx={{ mb: 1 }}
+        />
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            size="small"
+            variant="contained"
+            endIcon={<SendIcon />}
+            onClick={onSubmit}
+            disabled={!replyContent.trim()}
+          >
+            Reply
+          </Button>
+          <Button size="small" variant="outlined" onClick={onCancel}>
+            Cancel
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+export default function ProductComments({ productId, onCountChange }: Props) {
   const user = useReactiveVar(userVar);
 
-  const [comments, setComments] = useState<GqlComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [createComment] = useMutation(CREATE_COMMENT);
   const [updateComment] = useMutation(UPDATE_COMMENT);
 
-  const { loading, error, refetch } = useQuery(GET_COMMENTS, {
+  // ── Query ────────────────────────────────────────────────────────────────
+  const { loading, error, refetch, data: rawData } = useQuery(GET_COMMENTS, {
     fetchPolicy: "cache-and-network",
     variables: {
-      input: {
-        page: 1,
-        limit: 20,
-        search: { commentRefId: productId }
-      }
+      input: { page: 1, limit: 50, search: { commentRefId: productId } }
     },
     notifyOnNetworkStatusChange: true,
     onCompleted: (data: T) => {
-      setComments(data?.getComments?.list ?? []);
+      const total = Number(data?.getComments?.metaCounter?.[0]?.total ?? 0);
+      onCountChange?.(total);
     }
   });
 
+  // Derive comments directly from query data — always in sync with the cache
+  const comments: GqlComment[] = useMemo(
+    () => (rawData as T)?.getComments?.list ?? [],
+    [rawData]
+  );
+
   const noDataError = error?.message?.toLowerCase().includes("no data found");
+
+  // ── Thread organisation ──────────────────────────────────────────────────
+  const topLevelComments = useMemo(
+    () => comments.filter((c) => !isActualReply(c)),
+    [comments]
+  );
+
+  /** All direct-child replies for a given parent id */
+  const getReplies = (parentId: string) =>
+    comments.filter((c) => isActualReply(c) && c.commentReplyId === parentId);
+
+  // ── Display helpers ──────────────────────────────────────────────────────
+  const getNick = (c: GqlComment) =>
+    c.memberData?.memberNick ||
+    (user?._id === c.memberId ? user?.memberNick : "") ||
+    "User";
+
+  const getImage = (c: GqlComment) =>
+    c.memberData?.memberImage ||
+    (user?._id === c.memberId ? user?.memberImage : "") ||
+    "";
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const startReplying = (commentId: string) => {
+    setReplyingToId((prev) => (prev === commentId ? null : commentId));
+    setReplyContent("");
+  };
 
   const handlePost = async () => {
     const content = newComment.trim();
     if (!content) return;
-    if (!user?._id) {
-      await sweetMixinErrorAlert(Message.NOT_AUTHENTICATED);
-      return;
-    }
+    if (!user?._id) { await sweetMixinErrorAlert(Message.NOT_AUTHENTICATED); return; }
     setSubmitting(true);
     try {
-      await createComment({
-        variables: {
-          input: {
-            commentGroup: "PRODUCT",
-            commentRefId: productId,
-            commentContent: content
-          }
-        }
-      });
+      await createComment({ variables: { input: { commentGroup: "PRODUCT", commentRefId: productId, commentContent: content } } });
       setNewComment("");
       await refetch();
       await sweetTopSmallSuccessAlert("Comment posted!");
@@ -111,15 +199,29 @@ export default function ProductComments({ productId }: Props) {
     }
   };
 
+  const handleReplyPost = async (replyToCommentId: string) => {
+    const content = replyContent.trim();
+    if (!content) return;
+    if (!user?._id) { await sweetMixinErrorAlert(Message.NOT_AUTHENTICATED); return; }
+    try {
+      await createComment({
+        variables: {
+          input: { commentGroup: "PRODUCT", commentRefId: productId, commentReplyId: replyToCommentId, commentContent: content }
+        }
+      });
+      setReplyingToId(null);
+      setReplyContent("");
+      await refetch();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
+    }
+  };
+
   const handleEditSave = async (commentId: string) => {
     const content = editContent.trim();
     if (!content) return;
     try {
-      await updateComment({
-        variables: {
-          input: { _id: commentId, commentContent: content }
-        }
-      });
+      await updateComment({ variables: { input: { _id: commentId, commentContent: content } } });
       setEditingId(null);
       await refetch();
     } catch (err: any) {
@@ -127,111 +229,109 @@ export default function ProductComments({ productId }: Props) {
     }
   };
 
-  if (loading && comments.length === 0) {
+  // ── Shared row renderer (used for both top-level and replies) ─────────────
+  const renderRow = (c: GqlComment, { indent = false }: { indent?: boolean } = {}) => {
+    const isOwn = user?._id === c.memberId;
+    const isEditing = editingId === c._id;
+    const isReplying = replyingToId === c._id;
+    const nick = getNick(c);
+    const img = getImage(c);
+
     return (
-      <Box py={4} display="flex" justifyContent="center">
-        <CircularProgress />
+      <Box key={c._id}>
+        <Box sx={{ display: "flex", gap: 1.5, pl: indent ? 6.5 : 0 }}>
+          <Avatar
+            src={resolveMemberImage(img)}
+            alt={nick}
+            sx={{ width: indent ? 30 : 38, height: indent ? 30 : 38, flexShrink: 0, mt: 0.25 }}
+          />
+          <Box sx={{ flex: 1 }}>
+            {/* Header */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
+              <Typography variant="subtitle2" fontWeight={600} fontSize={indent ? 13 : 14} lineHeight={1}>
+                {nick}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {getDateDifference(c.createdAt)}
+              </Typography>
+              {/* Edit — own comments */}
+              {isOwn && !isEditing && (
+                <IconButton
+                  size="small"
+                  sx={{ color: "text.disabled", p: 0.25 }}
+                  onClick={() => { setEditingId(c._id); setEditContent(c.commentContent); }}
+                >
+                  <EditIcon sx={{ fontSize: indent ? 13 : 14 }} />
+                </IconButton>
+              )}
+              {/* Reply — logged-in users */}
+              {user?._id && !isEditing && (
+                <IconButton
+                  size="small"
+                  sx={{ color: isReplying ? "primary.main" : "text.disabled", p: 0.25 }}
+                  onClick={() => startReplying(c._id)}
+                >
+                  <ReplyIcon sx={{ fontSize: indent ? 13 : 14 }} />
+                </IconButton>
+              )}
+            </Box>
+
+            {/* Content or inline edit */}
+            {isEditing ? (
+              <Box>
+                <TextField
+                  fullWidth multiline size="small"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button size="small" variant="contained" onClick={() => handleEditSave(c._id)} disabled={!editContent.trim()}>
+                    Save
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => setEditingId(null)}>
+                    Cancel
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.primary" fontSize={indent ? 13 : 14}>
+                {c.commentContent}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        {/* Inline reply form — appears directly under the comment being replied to */}
+        {isReplying && (
+          <ReplyForm
+            toNick={nick}
+            replyContent={replyContent}
+            onChange={setReplyContent}
+            onSubmit={() => handleReplyPost(c._id)}
+            onCancel={() => { setReplyingToId(null); setReplyContent(""); }}
+            userImage={user?.memberImage}
+            userNick={user?.memberNick}
+          />
+        )}
       </Box>
     );
+  };
+
+  // ── Loading / Error ──────────────────────────────────────────────────────
+  if (loading && comments.length === 0) {
+    return <Box py={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
   }
 
   if (error && !noDataError) {
-    return (
-      <Typography color="error.main" sx={{ mt: 2 }}>
-        Failed to load comments.
-      </Typography>
-    );
+    return <Typography color="error.main" sx={{ mt: 2 }}>Failed to load comments.</Typography>;
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div>
-      {/* COMMENT LIST */}
-      {comments.length === 0 ? (
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-          No comments yet. Be the first to share your thoughts!
-        </Typography>
-      ) : (
-        <>
-          {comments.map((comment) => {
-            const isOwn = user?._id === comment.memberId;
-            const isEditing = editingId === comment._id;
-
-            return (
-              <Box key={comment._id} sx={{ mb: 2.5, maxWidth: 640 }}>
-                <Box sx={{ display: "flex", gap: 1.5 }}>
-                  <Avatar
-                    src={resolveMemberImage(comment.memberData?.memberImage)}
-                    alt={comment.memberData?.memberNick || "User"}
-                    sx={{ width: 38, height: 38, flexShrink: 0, mt: 0.25 }}
-                  />
-                  <Box sx={{ flex: 1 }}>
-                    {/* HEADER ROW */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                      <Typography variant="subtitle2" fontWeight={600} lineHeight={1}>
-                        {comment.memberData?.memberNick || "User"}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {getDateDifference(comment.createdAt)}
-                      </Typography>
-                      {isOwn && !isEditing && (
-                        <IconButton
-                          size="small"
-                          sx={{ ml: "auto", color: "text.disabled", p: 0.25 }}
-                          onClick={() => {
-                            setEditingId(comment._id);
-                            setEditContent(comment.commentContent);
-                          }}
-                        >
-                          <EditIcon sx={{ fontSize: 15 }} />
-                        </IconButton>
-                      )}
-                    </Box>
-
-                    {/* CONTENT OR EDIT FORM */}
-                    {isEditing ? (
-                      <Box>
-                        <TextField
-                          fullWidth
-                          multiline
-                          size="small"
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          sx={{ mb: 1 }}
-                        />
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() => handleEditSave(comment._id)}
-                            disabled={!editContent.trim()}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => setEditingId(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </Box>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.primary">
-                        {comment.commentContent}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-                <Divider sx={{ mt: 2.5 }} />
-              </Box>
-            );
-          })}
-        </>
-      )}
-
-      {/* WRITE COMMENT */}
-      <Box sx={{ mt: 3, maxWidth: 640 }}>
+    <Box sx={{ maxWidth: 720 }}>
+      {/* ── WRITE FORM AT TOP ── */}
+      <Box sx={{ mb: 3 }}>
         {user?._id ? (
           <Box sx={{ display: "flex", gap: 1.5 }}>
             <Avatar
@@ -241,19 +341,14 @@ export default function ProductComments({ productId }: Props) {
             />
             <Box sx={{ flex: 1 }}>
               <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                size="small"
-                placeholder="Write a comment..."
+                fullWidth multiline minRows={2} size="small"
+                placeholder="Write a comment…"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 sx={{ mb: 1 }}
               />
               <Button
-                variant="contained"
-                size="small"
-                endIcon={<SendIcon />}
+                variant="contained" size="small" endIcon={<SendIcon />}
                 onClick={handlePost}
                 disabled={submitting || !newComment.trim()}
               >
@@ -267,6 +362,38 @@ export default function ProductComments({ productId }: Props) {
           </Typography>
         )}
       </Box>
-    </div>
+
+      <Divider sx={{ mb: 3 }} />
+
+      {/* ── COMMENT LIST ── */}
+      {topLevelComments.length === 0 ? (
+        <Typography variant="body1" color="text.secondary">
+          No comments yet. Be the first to share your thoughts!
+        </Typography>
+      ) : (
+        topLevelComments.map((comment) => {
+          const replies = getReplies(comment._id);
+          return (
+            <Box key={comment._id}>
+              {/* Top-level comment */}
+              {renderRow(comment)}
+
+              {/* Replies (all direct children) */}
+              {replies.length > 0 && (
+                <Box sx={{ mt: 1.5, mb: 0.5 }}>
+                  {replies.map((reply) => (
+                    <Box key={reply._id} sx={{ mb: 1.5 }}>
+                      {renderRow(reply, { indent: true })}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              <Divider sx={{ mt: 2, mb: 2.5 }} />
+            </Box>
+          );
+        })
+      )}
+    </Box>
   );
 }

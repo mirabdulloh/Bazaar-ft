@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -100,6 +100,9 @@ const toProductModel = (p: GqlProduct, categoryById: Map<string, string>): Produ
 };
 
 export default function ProductDetailsPageView(props: Props) {
+  // Live comment count — updated by ProductComments via onCountChange callback
+  const [commentCountLive, setCommentCountLive] = useState<number | null>(null);
+
   const { loading, data, error } = useQuery(GET_PRODUCT, {
     fetchPolicy: "cache-and-network",
     variables: { input: props.productId },
@@ -275,9 +278,14 @@ export default function ProductDetailsPageView(props: Props) {
       <ProductTabs
         description={<ProductDescription description={product.description} />}
         reviews={<ProductReviews productId={props.productId} />}
-        comments={<ProductComments productId={props.productId} />}
+        comments={
+          <ProductComments
+            productId={props.productId}
+            onCountChange={(count) => setCommentCountLive(count)}
+          />
+        }
         reviewCount={reviewCountFromMeta}
-        commentCount={commentCountFromMeta}
+        commentCount={commentCountLive ?? commentCountFromMeta}
       />
 
       {/* MORE FROM BRAND */}
