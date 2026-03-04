@@ -7,9 +7,11 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import Pagination from "@mui/material/Pagination";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import ReplyIcon from "@mui/icons-material/Reply";
 import SendIcon from "@mui/icons-material/Send";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
@@ -17,7 +19,7 @@ import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { getDateDifference } from "lib";
 import { useQuery } from "lib/hooks/useQuery";
 import { Message, T } from "lib/types/common";
-import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "../../../lib/sweetAlert";
+import { sweetConfirmAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "../../../lib/sweetAlert";
 // APOLLO
 import { GET_COMMENTS } from "../../../../apollo/user/query";
 import { CREATE_COMMENT, UPDATE_COMMENT } from "../../../../apollo/user/mutation";
@@ -127,6 +129,8 @@ export default function ProductComments({ productId }: Props) {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
   const [createComment] = useMutation(CREATE_COMMENT);
   const [updateComment] = useMutation(UPDATE_COMMENT);
@@ -135,7 +139,7 @@ export default function ProductComments({ productId }: Props) {
   const { loading, error, refetch, data: rawData } = useQuery(GET_COMMENTS, {
     fetchPolicy: "cache-and-network",
     variables: {
-      input: { page: 1, limit: 50, search: { commentRefId: productId } }
+      input: { page, limit, search: { commentRefId: productId } }
     },
     notifyOnNetworkStatusChange: true
   });
@@ -147,6 +151,11 @@ export default function ProductComments({ productId }: Props) {
   );
 
   const noDataError = error?.message?.toLowerCase().includes("no data found");
+  const totalComments = useMemo(() => {
+    if (noDataError) return 0;
+    return Number((rawData as T)?.getComments?.metaCounter?.[0]?.total ?? 0);
+  }, [rawData, noDataError]);
+  const pageCount = Math.max(1, Math.ceil(totalComments / limit));
 
   // ── Thread organisation ──────────────────────────────────────────────────
   const topLevelComments = useMemo(
@@ -183,6 +192,7 @@ export default function ProductComments({ productId }: Props) {
     try {
       await createComment({ variables: { input: { commentGroup: "PRODUCT", commentRefId: productId, commentContent: content } } });
       setNewComment("");
+      setPage(1);
       await refetch();
       await sweetTopSmallSuccessAlert("Comment posted!");
     } catch (err: any) {
@@ -204,6 +214,13 @@ export default function ProductComments({ productId }: Props) {
     const effectiveParentId =
       target && isActualReply(target) ? target.commentReplyId! : replyToCommentId;
 
+    // Enforce max 2 replies per top-level comment
+    const existingReplies = getReplies(effectiveParentId);
+    if (existingReplies.length >= 2) {
+      await sweetMixinErrorAlert("Max 2 replies allowed.");
+      return;
+    }
+
     try {
       await createComment({
         variables: {
@@ -212,6 +229,7 @@ export default function ProductComments({ productId }: Props) {
       });
       setReplyingToId(null);
       setReplyContent("");
+      setPage(1);
       await refetch();
     } catch (err: any) {
       sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
@@ -225,6 +243,19 @@ export default function ProductComments({ productId }: Props) {
       await updateComment({ variables: { input: { _id: commentId, commentContent: content } } });
       setEditingId(null);
       await refetch();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
+    }
+  };
+
+  const handleDelete = async (commentId: string) => {
+    try {
+      const ok = await sweetConfirmAlert("Delete this comment?", "This action cannot be undone.", "Delete");
+      if (!ok) return;
+      await updateComment({ variables: { input: { _id: commentId, commentStatus: "DELETED" } } });
+      setPage(1);
+      await refetch();
+      await sweetTopSmallSuccessAlert("Comment deleted");
     } catch (err: any) {
       sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
     }
@@ -265,8 +296,17 @@ export default function ProductComments({ productId }: Props) {
                   <EditIcon sx={{ fontSize: indent ? 13 : 14 }} />
                 </IconButton>
               )}
+              {isOwn && !isEditing && (
+                <IconButton
+                  size="small"
+                  sx={{ color: "text.disabled", p: 0.25 }}
+                  onClick={() => handleDelete(c._id)}
+                >
+                  <DeleteIcon sx={{ fontSize: indent ? 13 : 14 }} />
+                </IconButton>
+              )}
               {/* Reply — logged-in users */}
-              {user?._id && !isEditing && (
+              {user?._id && !isEditing && !isActualReply(c) && getReplies(c._id).length < 2 && (
                 <IconButton
                   size="small"
                   sx={{ color: isReplying ? "primary.main" : "text.disabled", p: 0.25 }}
@@ -331,8 +371,51 @@ export default function ProductComments({ productId }: Props) {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <Box sx={{ maxWidth: 720 }}>
-      {/* ── WRITE FORM AT TOP ── */}
-      <Box sx={{ mb: 3 }}>
+      {/* ── COMMENT LIST ── */}
+      {topLevelComments.length === 0 ? (
+        <Typography variant="body1" color="text.secondary">
+          No comments yet. Be the first to share your thoughts!
+        </Typography>
+      ) : (
+        topLevelComments.map((comment) => {
+          const replies = getReplies(comment._id);
+          return (
+            <Box key={comment._id}>
+              {/* Top-level comment */}
+              {renderRow(comment)}
+
+              {/* Replies (all direct children) */}
+              {replies.length > 0 && (
+                <Box sx={{ mt: 1.5, mb: 0.5 }}>
+                  {replies.map((reply) => (
+                    <Box key={reply._id} sx={{ mb: 1.5 }}>
+                      {renderRow(reply, { indent: true })}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              <Divider sx={{ mt: 2, mb: 2.5 }} />
+            </Box>
+          );
+        })
+      )}
+
+      {totalComments > limit && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+          <Pagination
+            color="primary"
+            page={page}
+            count={pageCount}
+            onChange={(_, value) => setPage(value)}
+          />
+        </Box>
+      )}
+
+      <Divider sx={{ my: 3 }} />
+
+      {/* ── WRITE FORM AT BOTTOM ── */}
+      <Box>
         {user?._id ? (
           <Box sx={{ display: "flex", gap: 1.5 }}>
             <Avatar
@@ -363,38 +446,6 @@ export default function ProductComments({ productId }: Props) {
           </Typography>
         )}
       </Box>
-
-      <Divider sx={{ mb: 3 }} />
-
-      {/* ── COMMENT LIST ── */}
-      {topLevelComments.length === 0 ? (
-        <Typography variant="body1" color="text.secondary">
-          No comments yet. Be the first to share your thoughts!
-        </Typography>
-      ) : (
-        topLevelComments.map((comment) => {
-          const replies = getReplies(comment._id);
-          return (
-            <Box key={comment._id}>
-              {/* Top-level comment */}
-              {renderRow(comment)}
-
-              {/* Replies (all direct children) */}
-              {replies.length > 0 && (
-                <Box sx={{ mt: 1.5, mb: 0.5 }}>
-                  {replies.map((reply) => (
-                    <Box key={reply._id} sx={{ mb: 1.5 }}>
-                      {renderRow(reply, { indent: true })}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-
-              <Divider sx={{ mt: 2, mb: 2.5 }} />
-            </Box>
-          );
-        })
-      )}
     </Box>
   );
 }

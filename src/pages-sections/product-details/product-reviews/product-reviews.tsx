@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
+import Pagination from "@mui/material/Pagination";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
@@ -64,6 +65,8 @@ export default function ProductReviews(props: Props) {
   const { productId } = props;
   const user = useReactiveVar(userVar);
   const [reviews, setReviews] = useState<GqlReview[]>([]);
+  const [page, setPage] = useState(1);
+  const limit = 8;
   const [likeTargetReview] = useMutation(LIKE_TARGET_REVIEW);
   const {
     loading: getReviewsLoading,
@@ -74,8 +77,8 @@ export default function ProductReviews(props: Props) {
     fetchPolicy: "cache-and-network",
     variables: {
       input: {
-        page: 1,
-        limit: 20,
+        page,
+        limit,
         sort: "createdAt",
         direction: "DESC",
         search: { productId }
@@ -89,6 +92,11 @@ export default function ProductReviews(props: Props) {
   void getReviewsData;
 
   const noDataError = getReviewsError?.message?.toLowerCase().includes("no data found");
+  const totalReviews = useMemo(() => {
+    if (noDataError) return 0;
+    return Number((getReviewsData as T)?.getReviews?.metaCounter?.[0]?.total ?? 0);
+  }, [getReviewsData, noDataError]);
+  const pageCount = Math.max(1, Math.ceil(totalReviews / limit));
 
   const likeReviewHandler = async (user: T, reviewId: string) => {
     try {
@@ -167,6 +175,17 @@ export default function ProductReviews(props: Props) {
           </Typography>
         </ReviewRoot>
       ))}
+
+      {totalReviews > limit && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+          <Pagination
+            color="primary"
+            page={page}
+            count={pageCount}
+            onChange={(_, value) => setPage(value)}
+          />
+        </Box>
+      )}
     </div>
   );
 }

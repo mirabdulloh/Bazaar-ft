@@ -277,7 +277,7 @@ export default function ProductDetailsPageView(props: Props) {
       {/* CUSTOMER DISCUSSION — standalone section at bottom */}
       <Box sx={{ mt: 6, mb: 4 }}>
         <Typography variant="h3" sx={{ mb: 3 }}>
-          Customer Discussion
+          Comments
         </Typography>
         <ProductComments productId={props.productId} />
       </Box>
