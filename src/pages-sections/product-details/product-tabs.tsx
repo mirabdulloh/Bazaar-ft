@@ -23,11 +23,13 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
 interface Props {
   reviews: ReactNode;
   description: ReactNode;
+  comments: ReactNode;
   reviewCount?: number;
+  commentCount?: number;
 }
 // ==============================================================
 
-export default function ProductTabs({ reviews, description, reviewCount = 0 }: Props) {
+export default function ProductTabs({ reviews, description, comments, reviewCount = 0, commentCount = 0 }: Props) {
   const [selectedOption, setSelectedOption] = useState(0);
   const handleChangeTab = (_: SyntheticEvent, value: number) => setSelectedOption(value);
 
@@ -41,11 +43,13 @@ export default function ProductTabs({ reviews, description, reviewCount = 0 }: P
       >
         <Tab className="inner-tab" label="Description" />
         <Tab className="inner-tab" label={`Review (${reviewCount})`} />
+        <Tab className="inner-tab" label={`Discussion (${commentCount})`} />
       </StyledTabs>
 
       <div className="mb-3">
         {selectedOption === 0 && description}
         {selectedOption === 1 && reviews}
+        {selectedOption === 2 && comments}
       </div>
     </Fragment>
   );

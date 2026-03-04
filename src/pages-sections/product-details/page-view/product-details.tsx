@@ -9,12 +9,13 @@ import Typography from "@mui/material/Typography";
 import ProductTabs from "../product-tabs";
 import ProductIntro from "../product-intro";
 import ProductReviews from "../product-reviews";
+import ProductComments from "../product-comments/product-comments";
 import AvailableShops from "../available-shops";
 import RelatedProducts from "../related-products";
 import MoreFromBrand from "../more-from-brand";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
+import { GET_CATEGORIES, GET_COMMENTS, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
@@ -148,6 +149,24 @@ export default function ProductDetailsPageView(props: Props) {
     return Number((getReviewsCountData as T)?.getReviews?.metaCounter?.[0]?.total ?? 0);
   }, [getReviewsCountData, getReviewsCountError]);
 
+  const { data: getCommentsCountData, error: getCommentsCountError } = useQuery(GET_COMMENTS, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      input: {
+        page: 1,
+        limit: 1,
+        search: { commentRefId: props.productId }
+      }
+    },
+    notifyOnNetworkStatusChange: true
+  });
+
+  const commentCountFromMeta = useMemo(() => {
+    const noDataError = getCommentsCountError?.message?.toLowerCase().includes("no data found");
+    if (noDataError) return 0;
+    return Number((getCommentsCountData as T)?.getComments?.metaCounter?.[0]?.total ?? 0);
+  }, [getCommentsCountData, getCommentsCountError]);
+
   const { data: categoryProductsData } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     skip: !productCategoryId,
@@ -252,11 +271,13 @@ export default function ProductDetailsPageView(props: Props) {
       {/* PRODUCT DETAILS INFO AREA */}
       <ProductIntro product={product} />
 
-      {/* PRODUCT DESCRIPTION AND REVIEW */}
+      {/* PRODUCT DESCRIPTION, REVIEW AND DISCUSSION */}
       <ProductTabs
         description={<ProductDescription description={product.description} />}
         reviews={<ProductReviews productId={props.productId} />}
+        comments={<ProductComments productId={props.productId} />}
         reviewCount={reviewCountFromMeta}
+        commentCount={commentCountFromMeta}
       />
 
       {/* MORE FROM BRAND */}
