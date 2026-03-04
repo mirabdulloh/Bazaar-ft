@@ -11,6 +11,7 @@ import ProductIntro from "../product-intro";
 import ProductReviews from "../product-reviews";
 import AvailableShops from "../available-shops";
 import RelatedProducts from "../related-products";
+import MoreFromBrand from "../more-from-brand";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
@@ -41,7 +42,7 @@ interface GqlProduct {
   productColor?: string[] | string;
   productStatus?: string;
   productCategoryId?: string;
-  memberData?: { _id: string; memberNick?: string };
+  memberData?: { _id: string; memberNick?: string; memberImage?: string };
   meLiked?: { myFavorite: boolean }[];
 }
 
@@ -124,6 +125,8 @@ export default function ProductDetailsPageView(props: Props) {
   const productCategoryId = currentRawProduct?.productCategoryId;
   const currentBrandId = currentRawProduct?.memberData?._id;
   const currentType = currentRawProduct?.productType;
+  const brandName = currentRawProduct?.memberData?.memberNick ?? "";
+  const brandImage = currentRawProduct?.memberData?.memberImage ?? "";
 
   const { data: getReviewsCountData, error: getReviewsCountError } = useQuery(GET_REVIEWS, {
     fetchPolicy: "cache-and-network",
@@ -158,22 +161,46 @@ export default function ProductDetailsPageView(props: Props) {
     notifyOnNetworkStatusChange: true
   });
 
+  const { data: brandProductsData } = useQuery(GET_PRODUCTS, {
+    fetchPolicy: "cache-and-network",
+    skip: !currentBrandId,
+    variables: {
+      input: {
+        page: 1,
+        limit: 9,
+        search: { memberId: currentBrandId }
+      }
+    },
+    notifyOnNetworkStatusChange: true
+  });
+
   const categoryProductsRaw: GqlProduct[] = useMemo(
     () => ((categoryProductsData as T)?.getProducts?.products ?? []) as GqlProduct[],
     [categoryProductsData]
   );
 
+  const brandProducts: Product[] = useMemo(() => {
+    if (!currentRawProduct) return [];
+    const raw: GqlProduct[] = ((brandProductsData as T)?.getProducts?.products ?? []) as GqlProduct[];
+    return raw
+      .filter((p) => p._id !== currentRawProduct._id)
+      .slice(0, 8)
+      .map((p) => toProductModel(p, categoryById));
+  }, [brandProductsData, currentRawProduct, categoryById]);
+
   const relatedProducts: Product[] = useMemo(() => {
     if (!currentRawProduct) return [];
 
-    const withoutCurrent = categoryProductsRaw.filter((item) => item._id !== currentRawProduct._id);
-    const sameBrand = withoutCurrent.filter((item) => item.memberData?._id === currentBrandId);
-    const sameTypeOtherBrands = withoutCurrent.filter(
-      (item) => item.memberData?._id !== currentBrandId && (!currentType || item.productType === currentType)
+    // Exclude current product AND same-brand (shown in "More from Brand" section)
+    const withoutCurrent = categoryProductsRaw.filter(
+      (item) => item._id !== currentRawProduct._id && item.memberData?._id !== currentBrandId
+    );
+    const sameType = withoutCurrent.filter(
+      (item) => !currentType || item.productType === currentType
     );
 
-    const selected = [...sameBrand];
-    for (const candidate of sameTypeOtherBrands) {
+    const selected: GqlProduct[] = [];
+    for (const candidate of sameType) {
       if (selected.length >= 8) break;
       if (!selected.some((item) => item._id === candidate._id)) selected.push(candidate);
     }
@@ -230,6 +257,14 @@ export default function ProductDetailsPageView(props: Props) {
         description={<ProductDescription description={product.description} />}
         reviews={<ProductReviews productId={props.productId} />}
         reviewCount={reviewCountFromMeta}
+      />
+
+      {/* MORE FROM BRAND */}
+      <MoreFromBrand
+        products={brandProducts}
+        brandId={currentBrandId ?? ""}
+        brandName={brandName}
+        brandImage={brandImage}
       />
 
       {/* AVAILABLE SHOPS AREA */}

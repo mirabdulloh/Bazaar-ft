@@ -38,7 +38,10 @@ export default function ProductCard1({
         {/* DISCOUNT PERCENT CHIP IF AVAILABLE */}
         <DiscountChip discount={discount} />
 
-        {/* HOVER ACTION ICONS */}
+        {/* ALWAYS-VISIBLE LIKE BUTTON */}
+        <FavoriteButton product={product} />
+
+        {/* QUICK VIEW ICON (hover only) */}
         {showActions && (
           <HoverIconWrapper className="hover-box">
             <Link href={`/products/${slug}/view`} scroll={false}>
@@ -46,8 +49,6 @@ export default function ProductCard1({
                 <RemoveRedEye fontSize="small" color="inherit" />
               </IconButton>
             </Link>
-
-            <FavoriteButton />
           </HoverIconWrapper>
         )}
 

@@ -13,21 +13,32 @@ import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "lib/sweetAlert"
 // ================================================================
 type Props = {
   product: Product;
-  qty: number;
   selectedSize?: string;
   selectedColor?: string;
+  outOfStock?: boolean;
 };
 // ================================================================
 
-export default function AddToCart({ product, qty, selectedSize, selectedColor }: Props) {
+export default function AddToCart({ product, selectedSize, selectedColor, outOfStock }: Props) {
   const { id, price, title, slug, thumbnail, size, colors } = product;
 
   const router = useRouter();
   const [isLoading, setLoading] = useState(false);
   const { dispatch } = useCart();
 
+  if (outOfStock) {
+    return (
+      <Button
+        disabled
+        variant="contained"
+        sx={{ mb: 4.5, px: "1.75rem", height: 40 }}
+      >
+        Out of Stock
+      </Button>
+    );
+  }
+
   const handleAddToCart = async () => {
-    // Validate selections
     if (size && size.length > 0 && !selectedSize) {
       await sweetMixinErrorAlert("Please select a size");
       return;
@@ -48,7 +59,7 @@ export default function AddToCart({ product, qty, selectedSize, selectedColor }:
           price,
           title,
           thumbnail,
-          qty,
+          qty: 1,
           size: selectedSize || undefined,
           color: selectedColor || undefined,
         }

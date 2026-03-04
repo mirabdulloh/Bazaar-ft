@@ -11,10 +11,10 @@ import ProductCard1 from "components/product-cards/product-card-1";
 import Product from "models/Product.model";
 
 // ==============================================================
-type Props = { products: Product[] };
+type Props = { products: Product[]; title?: string };
 // ==============================================================
 
-export default function RelatedProducts({ products }: Props) {
+export default function RelatedProducts({ products, title }: Props) {
   const [page, setPage] = useState(1);
   const pageSize = 4;
   const totalPages = Math.ceil(products.length / pageSize);
@@ -34,7 +34,7 @@ export default function RelatedProducts({ products }: Props) {
   return (
     <div className="mb-4">
       <Typography variant="h3" sx={{ mb: 3 }}>
-        Related Products
+        {title ?? "You Might Also Like"}
       </Typography>
 
       <Grid container spacing={3}>

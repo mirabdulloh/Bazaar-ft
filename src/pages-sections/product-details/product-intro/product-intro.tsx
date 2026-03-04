@@ -5,17 +5,24 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 // MUI
 import Grid from "@mui/material/Grid";
+import Chip from "@mui/material/Chip";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import Remove from "@mui/icons-material/Remove";
-import Add from "@mui/icons-material/Add";
+import Favorite from "@mui/icons-material/Favorite";
+import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
+// APOLLO
+import { useMutation, useReactiveVar } from "@apollo/client/react";
+import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
+import { userVar } from "../../../../apollo/store";
 // LOCAL CUSTOM COMPONENTS
 import AddToCart from "./add-to-cart";
 import ProductGallery from "./product-gallery";
 import ProductVariantSelector from "./product-variant-selector";
-// CUSTOM UTILS LIBRARY FUNCTION
+// UTILS
 import { calculateDiscount, currency } from "lib";
+import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { Message } from "../../../lib/types/common";
 // STYLED COMPONENTS
 import { StyledRoot } from "./styles";
 // CUSTOM DATA MODEL
@@ -25,29 +32,77 @@ import Product from "models/Product.model";
 type Props = { product: Product };
 // ================================================================
 
+function StockBadge({ qty }: { qty: number | undefined }) {
+  if (qty === undefined) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Check availability
+      </Typography>
+    );
+  }
+  if (qty === 0) {
+    return <Chip label="Out of Stock" color="error" size="small" sx={{ fontWeight: 700 }} />;
+  }
+  if (qty <= 5) {
+    return (
+      <Typography variant="body2" color="error.main" fontWeight={700}>
+        🔥 Only {qty} left! Order soon.
+      </Typography>
+    );
+  }
+  if (qty <= 10) {
+    return (
+      <Typography variant="body2" color="warning.main" fontWeight={600}>
+        Only {qty} left in stock.
+      </Typography>
+    );
+  }
+  return (
+    <Typography variant="body2" color="success.main" fontWeight={600}>
+      {qty} in stock
+    </Typography>
+  );
+}
+
 export default function ProductIntro({ product }: Props) {
   const searchParams = useSearchParams();
-  const [qty, setQty] = useState(1);
+  const user = useReactiveVar(userVar);
+
+  const [liked, setLiked] = useState<boolean>(product.meLiked ?? false);
+  const [likes, setLikes] = useState<number>(product.productLikes ?? 0);
+
+  const [likeTargetProduct] = useMutation<{
+    likeTargetProduct: { _id: string; productLikes: number };
+  }>(LIKE_TARGET_PRODUCT);
 
   const selectedSize = searchParams.get("size") ?? "";
   const selectedColor = searchParams.get("color") ?? "";
-  const maxQty = product.productStockQuantity ?? 99;
 
   const category = product.categories?.[0] ? String(product.categories[0]) : "N/A";
   const hasDiscount = product.discount > 0;
-  const currentPrice = hasDiscount ? calculateDiscount(product.price, product.discount) : currency(product.price);
+  const currentPrice = hasDiscount
+    ? calculateDiscount(product.price, product.discount)
+    : currency(product.price);
+  const outOfStock = product.productStockQuantity === 0;
 
-  const stockQty = product.productStockQuantity;
-  const stockDisplay =
-    stockQty === undefined ? (
-      <Typography variant="body2" color="text.secondary">Stock Available</Typography>
-    ) : stockQty <= 10 ? (
-      <Typography variant="body2" color="error.main" fontWeight={600}>
-        Only {stockQty} left in stock!
-      </Typography>
-    ) : (
-      <Typography variant="body2" color="success.main" fontWeight={600}>In Stock</Typography>
-    );
+  const handleLike = async () => {
+    try {
+      if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
+      const { data } = await likeTargetProduct({ variables: { input: product.id } });
+      if (data?.likeTargetProduct?._id) {
+        setLikes(data.likeTargetProduct.productLikes);
+        if (liked) {
+          setLiked(false);
+          await sweetUnlikeAlert();
+        } else {
+          setLiked(true);
+          await sweetLikeSuccessAlert();
+        }
+      }
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message).then();
+    }
+  };
 
   return (
     <StyledRoot>
@@ -62,10 +117,6 @@ export default function ProductIntro({ product }: Props) {
 
           <Typography variant="body1">
             Category: <strong>{category}</strong>
-          </Typography>
-
-          <Typography variant="body1">
-            Product Code: <strong>{product.id}</strong>
           </Typography>
 
           <Typography variant="body1" fontSize={30} fontWeight={700} sx={{ my: 1 }}>
@@ -99,43 +150,38 @@ export default function ProductIntro({ product }: Props) {
             <Typography variant="h6">({product.productRatingCount ?? 0})</Typography>
           </div>
 
+          {/* LIKE BUTTON + COUNT */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
+            <IconButton
+              size="small"
+              onClick={handleLike}
+              sx={{
+                color: liked ? "error.main" : "grey.500",
+                p: 0.5,
+                "&:hover": { color: "error.main" }
+              }}
+            >
+              {liked ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
+            </IconButton>
+            <Typography variant="body2" color="text.secondary">
+              {likes} likes
+            </Typography>
+          </div>
+
           {/* PRODUCT VARIANTS */}
           <ProductVariantSelector sizes={product.size} colors={product.colors} />
 
-          {/* STOCK */}
-          <div style={{ marginTop: "0.5rem", marginBottom: "0.75rem" }}>
-            {stockDisplay}
-          </div>
-
-          {/* QUANTITY STEPPER */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-            <IconButton
-              size="small"
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}
-            >
-              <Remove fontSize="small" />
-            </IconButton>
-
-            <Typography variant="h6" sx={{ minWidth: 28, textAlign: "center" }}>
-              {qty}
-            </Typography>
-
-            <IconButton
-              size="small"
-              onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-              sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}
-            >
-              <Add fontSize="small" />
-            </IconButton>
+          {/* STOCK BADGE */}
+          <div style={{ marginTop: "0.75rem", marginBottom: "1rem" }}>
+            <StockBadge qty={product.productStockQuantity} />
           </div>
 
           {/* ADD TO CART BUTTON */}
           <AddToCart
             product={product}
-            qty={qty}
             selectedSize={selectedSize}
             selectedColor={selectedColor}
+            outOfStock={outOfStock}
           />
 
           {/* SHOP NAME */}
