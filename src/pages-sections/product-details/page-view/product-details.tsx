@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -15,7 +15,7 @@ import RelatedProducts from "../related-products";
 import MoreFromBrand from "../more-from-brand";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_CATEGORIES, GET_COMMENTS, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
+import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
@@ -100,9 +100,6 @@ const toProductModel = (p: GqlProduct, categoryById: Map<string, string>): Produ
 };
 
 export default function ProductDetailsPageView(props: Props) {
-  // Live comment count — updated by ProductComments via onCountChange callback
-  const [commentCountLive, setCommentCountLive] = useState<number | null>(null);
-
   const { loading, data, error } = useQuery(GET_PRODUCT, {
     fetchPolicy: "cache-and-network",
     variables: { input: props.productId },
@@ -151,24 +148,6 @@ export default function ProductDetailsPageView(props: Props) {
     if (noDataError) return 0;
     return Number((getReviewsCountData as T)?.getReviews?.metaCounter?.[0]?.total ?? 0);
   }, [getReviewsCountData, getReviewsCountError]);
-
-  const { data: getCommentsCountData, error: getCommentsCountError } = useQuery(GET_COMMENTS, {
-    fetchPolicy: "cache-and-network",
-    variables: {
-      input: {
-        page: 1,
-        limit: 1,
-        search: { commentRefId: props.productId }
-      }
-    },
-    notifyOnNetworkStatusChange: true
-  });
-
-  const commentCountFromMeta = useMemo(() => {
-    const noDataError = getCommentsCountError?.message?.toLowerCase().includes("no data found");
-    if (noDataError) return 0;
-    return Number((getCommentsCountData as T)?.getComments?.metaCounter?.[0]?.total ?? 0);
-  }, [getCommentsCountData, getCommentsCountError]);
 
   const { data: categoryProductsData } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
@@ -274,18 +253,11 @@ export default function ProductDetailsPageView(props: Props) {
       {/* PRODUCT DETAILS INFO AREA */}
       <ProductIntro product={product} />
 
-      {/* PRODUCT DESCRIPTION, REVIEW AND DISCUSSION */}
+      {/* PRODUCT DESCRIPTION AND REVIEW */}
       <ProductTabs
         description={<ProductDescription description={product.description} />}
         reviews={<ProductReviews productId={props.productId} />}
-        comments={
-          <ProductComments
-            productId={props.productId}
-            onCountChange={(count) => setCommentCountLive(count)}
-          />
-        }
         reviewCount={reviewCountFromMeta}
-        commentCount={commentCountLive ?? commentCountFromMeta}
       />
 
       {/* MORE FROM BRAND */}
@@ -301,6 +273,14 @@ export default function ProductDetailsPageView(props: Props) {
 
       {/* RELATED PRODUCTS AREA */}
       <RelatedProducts products={relatedProducts} />
+
+      {/* CUSTOMER DISCUSSION — standalone section at bottom */}
+      <Box sx={{ mt: 6, mb: 4 }}>
+        <Typography variant="h3" sx={{ mb: 3 }}>
+          Customer Discussion
+        </Typography>
+        <ProductComments productId={props.productId} />
+      </Box>
     </Container>
   );
 }

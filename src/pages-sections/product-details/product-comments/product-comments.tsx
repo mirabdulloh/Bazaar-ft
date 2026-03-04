@@ -24,10 +24,7 @@ import { CREATE_COMMENT, UPDATE_COMMENT } from "../../../../apollo/user/mutation
 import { userVar } from "../../../../apollo/store";
 
 // ================================================================
-type Props = {
-  productId: string;
-  onCountChange?: (count: number) => void;
-};
+type Props = { productId: string };
 // ================================================================
 
 interface GqlComment {
@@ -121,7 +118,7 @@ function ReplyForm({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-export default function ProductComments({ productId, onCountChange }: Props) {
+export default function ProductComments({ productId }: Props) {
   const user = useReactiveVar(userVar);
 
   const [newComment, setNewComment] = useState("");
@@ -140,11 +137,7 @@ export default function ProductComments({ productId, onCountChange }: Props) {
     variables: {
       input: { page: 1, limit: 50, search: { commentRefId: productId } }
     },
-    notifyOnNetworkStatusChange: true,
-    onCompleted: (data: T) => {
-      const total = Number(data?.getComments?.metaCounter?.[0]?.total ?? 0);
-      onCountChange?.(total);
-    }
+    notifyOnNetworkStatusChange: true
   });
 
   // Derive comments directly from query data — always in sync with the cache
@@ -203,10 +196,18 @@ export default function ProductComments({ productId, onCountChange }: Props) {
     const content = replyContent.trim();
     if (!content) return;
     if (!user?._id) { await sweetMixinErrorAlert(Message.NOT_AUTHENTICATED); return; }
+
+    // Flatten thread: if replying to a reply, point to the top-level ancestor.
+    // This ensures all replies in a thread share the same commentReplyId so
+    // getReplies(topLevelId) always finds them correctly.
+    const target = comments.find((c) => c._id === replyToCommentId);
+    const effectiveParentId =
+      target && isActualReply(target) ? target.commentReplyId! : replyToCommentId;
+
     try {
       await createComment({
         variables: {
-          input: { commentGroup: "PRODUCT", commentRefId: productId, commentReplyId: replyToCommentId, commentContent: content }
+          input: { commentGroup: "PRODUCT", commentRefId: productId, commentReplyId: effectiveParentId, commentContent: content }
         }
       });
       setReplyingToId(null);
