@@ -21,8 +21,9 @@ import { currency } from "lib";
 /** Normalize backend field which may be a single string or an array of strings */
 function toArray(val: string | string[] | undefined | null): string[] {
   if (!val) return [];
-  if (Array.isArray(val)) return val.filter(Boolean);
-  return val.split(",").map((s) => s.trim()).filter(Boolean);
+  const raw = Array.isArray(val) ? val : [val];
+  const split = raw.flatMap((item) => String(item).split(/[,/|]/));
+  return Array.from(new Set(split.map((s) => s.trim()).filter(Boolean)));
 }
 
 export default function VariantPickerModal() {
@@ -127,7 +128,7 @@ export default function VariantPickerModal() {
                   size="small"
                   variant={selectedSize === s ? "filled" : "outlined"}
                   color={selectedSize === s ? "primary" : "default"}
-                  onClick={() => { setSelectedSize(s); setError(""); }}
+                  onClick={() => { setSelectedSize(selectedSize === s ? "" : s); setError(""); }}
                   sx={{ cursor: "pointer", fontWeight: 500 }}
                 />
               ))}
@@ -149,7 +150,7 @@ export default function VariantPickerModal() {
                   size="small"
                   variant={selectedColor === c ? "filled" : "outlined"}
                   color={selectedColor === c ? "primary" : "default"}
-                  onClick={() => { setSelectedColor(c); setError(""); }}
+                  onClick={() => { setSelectedColor(selectedColor === c ? "" : c); setError(""); }}
                   sx={{ cursor: "pointer", fontWeight: 500 }}
                 />
               ))}
