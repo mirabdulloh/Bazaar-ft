@@ -23,7 +23,7 @@ import { signUp } from "lib/auth";
 type RegisterValues = { nick: string; phone: string; password: string; re_password: string; agreement: boolean | undefined };
 
 const validationSchema = yup.object().shape({
-  nick: yup.string().min(3, "Min 3 characters").max(12, "Max 12 characters").required("Name is required"),
+  nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Name is required"),
   phone: yup.string().matches(/^\+?[0-9]{7,15}$/, "Digits only, e.g. +821012345678").required("Phone number is required"),
   password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required"),
   re_password: yup

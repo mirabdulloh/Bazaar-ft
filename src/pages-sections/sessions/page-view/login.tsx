@@ -17,7 +17,7 @@ import { logIn } from "lib/auth";
 
 // LOGIN FORM FIELD VALIDATION SCHEMA
 const validationSchema = yup.object().shape({
-  nick: yup.string().min(3, "Min 3 characters").max(12, "Max 12 characters").required("Nickname is required"),
+  nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Nickname is required"),
   password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required")
 });
 
