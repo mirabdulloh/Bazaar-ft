@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // MUI
 import Box from "@mui/material/Box";
@@ -17,6 +17,13 @@ import Apps from "@mui/icons-material/Apps";
 import ViewList from "@mui/icons-material/ViewList";
 import FilterList from "@mui/icons-material/FilterList";
 import FlashOn from "@mui/icons-material/FlashOn";
+import FiberNew from "@mui/icons-material/FiberNew";
+import Favorite from "@mui/icons-material/Favorite";
+import TrendingUp from "@mui/icons-material/TrendingUp";
+import EmojiEvents from "@mui/icons-material/EmojiEvents";
+import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import ArrowDownward from "@mui/icons-material/ArrowDownward";
+import { SvgIconProps } from "@mui/material/SvgIcon";
 // GLOBAL CUSTOM COMPONENTS
 import Sidenav from "components/side-nav";
 import { FlexBetween, FlexBox } from "components/flex-box";
@@ -99,22 +106,31 @@ const COLOR_NAME_MAP: Record<string, string[]> = {
   "#A52A2A": ["brown"],
 };
 
-const SORT_OPTIONS = [
-  { label: "Newest First",       value: "newest" },
-  { label: "Most Popular",       value: "popular" },
-  { label: "Trending",           value: "trending" },
-  { label: "Flash Deals",        value: "flash_deals" },
-  { label: "Price: Low to High", value: "price_asc" },
-  { label: "Price: High to Low", value: "price_desc" },
+type SortOption = {
+  label: string;
+  value: string;
+  Icon: React.ComponentType<SvgIconProps>;
+  iconColor?: string;
+};
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Newest First",       value: "newest",       Icon: FiberNew,      iconColor: "#1976d2" },
+  { label: "Best Sellers",       value: "best_sellers", Icon: EmojiEvents,   iconColor: "#f9a825" },
+  { label: "Most Popular",       value: "popular",      Icon: Favorite,      iconColor: "#e91e63" },
+  { label: "Trending",           value: "trending",     Icon: TrendingUp,    iconColor: "#00897b" },
+  { label: "Flash Deals",        value: "flash_deals",  Icon: FlashOn,       iconColor: "#f44336" },
+  { label: "Price: Low to High", value: "price_asc",    Icon: ArrowUpward,   iconColor: "#555" },
+  { label: "Price: High to Low", value: "price_desc",   Icon: ArrowDownward, iconColor: "#555" },
 ];
 
 const SORT_MAP: Record<string, { sort: string; direction: string }> = {
-  newest:      { sort: "createdAt",    direction: "DESC" },
-  popular:     { sort: "productLikes", direction: "DESC" },
-  trending:    { sort: "productViews", direction: "DESC" },
-  flash_deals: { sort: "productLikes", direction: "DESC" },
-  price_asc:   { sort: "productPrice", direction: "ASC" },
-  price_desc:  { sort: "productPrice", direction: "DESC" },
+  newest:       { sort: "createdAt",    direction: "DESC" },
+  best_sellers: { sort: "productRank",  direction: "DESC" },
+  popular:      { sort: "productLikes", direction: "DESC" },
+  trending:     { sort: "productViews", direction: "DESC" },
+  flash_deals:  { sort: "productLikes", direction: "DESC" },
+  price_asc:    { sort: "productPrice", direction: "ASC" },
+  price_desc:   { sort: "productPrice", direction: "DESC" },
 };
 
 // Static parts — colors/others never change
@@ -330,14 +346,19 @@ export default function ProductSearchPageView() {
         {/* TOP BAR — title + sort + view toggle */}
         <FlexBetween flexWrap="wrap" gap={2} mb={2}>
           <div>
-            {sort === "flash_deals" && (
-              <FlexBox alignItems="center" gap={0.5} mb={0.5}>
-                <FlashOn sx={{ color: "error.main", fontSize: 22 }} />
-                <Typography variant="h5" sx={{ color: "error.main", fontWeight: 700 }}>
-                  Flash Deals
-                </Typography>
-              </FlexBox>
-            )}
+            {(() => {
+              const active = SORT_OPTIONS.find((o) => o.value === sort);
+              if (!active || sort === "newest") return null;
+              const { Icon, label, iconColor } = active;
+              return (
+                <FlexBox alignItems="center" gap={0.5} mb={0.5}>
+                  <Icon sx={{ color: iconColor, fontSize: 22 }} />
+                  <Typography variant="h5" sx={{ color: iconColor, fontWeight: 700 }}>
+                    {label}
+                  </Typography>
+                </FlexBox>
+              );
+            })()}
             {q && (
               <Typography variant="h5" sx={{ mb: 0.5 }}>
                 Results for &ldquo;{q}&rdquo;
@@ -364,8 +385,8 @@ export default function ProductSearchPageView() {
                 onChange={(e) => handleChangeSort(e.target.value)}
                 sx={{ flex: "1 1 0", minWidth: "150px" }}
               >
-                {SORT_OPTIONS.map((item) => (
-                  <MenuItem value={item.value} key={item.value}>{item.label}</MenuItem>
+                {SORT_OPTIONS.map(({ value, label }) => (
+                  <MenuItem value={value} key={value}>{label}</MenuItem>
                 ))}
               </TextField>
             </FlexBox>
