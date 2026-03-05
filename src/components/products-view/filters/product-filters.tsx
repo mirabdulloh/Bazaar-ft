@@ -239,12 +239,13 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
               width: 25,
               height: 25,
               flexShrink: 0,
-              outlineOffset: 1,
+              outlineOffset: 2,
               cursor: "pointer",
               borderRadius: 3,
-              outline: colors.includes(item) ? 1 : 0,
-              outlineColor: item,
+              outline: colors.includes(item) ? 2 : 0,
+              outlineColor: item === "#FFFFFF" ? "#111" : item,
               border: item === "#FFFFFF" ? "1px solid #e0e0e0" : "none",
+              boxShadow: colors.includes(item) ? "0 0 0 2px rgba(0,0,0,0.08)" : "none",
             }}
           />
         ))}

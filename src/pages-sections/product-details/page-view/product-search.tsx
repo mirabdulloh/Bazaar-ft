@@ -94,19 +94,29 @@ const BACKEND_LIMIT = 100;
 /** How many products to show per display page */
 const DISPLAY_LIMIT = 12;
 
-// Maps hex swatch value → text substrings to match against productColor (seed stores text names)
+// Maps hex swatch value → normalized color tokens
 const COLOR_NAME_MAP: Record<string, string[]> = {
-  "#1C1C1C": ["black"],
-  "#FFFFFF": ["white"],
-  "#8B0000": ["red"],
-  "#00008B": ["blue", "navy"],
-  "#006400": ["green"],
-  "#FFD700": ["yellow", "gold"],
-  "#FF8C00": ["orange"],
-  "#808080": ["gray", "grey"],
-  "#FFC0CB": ["pink"],
-  "#A52A2A": ["brown"],
+  "#1C1C1C": ["black", "coreblack", "tripleblack", "allblack", "charcoal"],
+  "#FFFFFF": ["white", "offwhite", "cream", "ivory", "cloudwhite", "triplewhite", "allwhite"],
+  "#8B0000": ["red", "burgundy", "maroon", "wine", "crimson"],
+  "#00008B": ["blue", "navy", "indigo", "denim", "cobalt"],
+  "#006400": ["green", "olive", "sage", "emerald", "forest"],
+  "#FFD700": ["yellow", "gold", "mustard"],
+  "#FF8C00": ["orange", "coral", "peach", "apricot"],
+  "#808080": ["gray", "grey", "silver", "graphite"],
+  "#FFC0CB": ["pink", "rose", "blush", "fuchsia", "magenta"],
+  "#A52A2A": ["brown", "tan", "camel", "beige", "ecru", "khaki", "chocolate", "coffee"],
 };
+
+const normalizeColorToken = (value: string) =>
+  value.toLowerCase().replace(/[^a-z]/g, "");
+
+const splitProductColors = (value: string) =>
+  value
+    .split(",")
+    .flatMap((part) => part.split(/[\\/&]/g))
+    .map((token) => token.trim())
+    .filter(Boolean);
 
 type SortOption = {
   label: string;
@@ -285,10 +295,12 @@ export default function ProductSearchPageView() {
     if (colors.length > 0) {
       list = list.filter((p) => {
         if (!p.productColor) return false;
-        const pc = p.productColor.toLowerCase();
+        const tokens = splitProductColors(p.productColor).map(normalizeColorToken);
         return colors.some((hex) => {
           const names = COLOR_NAME_MAP[hex] ?? [hex];
-          return names.some((name) => pc.includes(name));
+          return names.some((name) =>
+            tokens.some((token) => token.includes(normalizeColorToken(name)))
+          );
         });
       });
     }
