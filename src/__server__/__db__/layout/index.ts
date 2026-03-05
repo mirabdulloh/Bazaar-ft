@@ -29,8 +29,8 @@ export const LayoutEndpoints = (Mock: MockAdapter) => {
             logo: "/assets/images/bazaar-black-sm.svg"
           },
           topbar: {
-            label: "NEW",
-            title: "Free Shipping on Orders Over $50",
+            label: "NEW:",
+            title: "Free shipping on orders over $50",
             socials: db.topbarSocialLinks,
             languageOptions: db.languageOptions
           },

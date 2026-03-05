@@ -67,13 +67,6 @@ const navbarNavigation: Menu[] = [
     ]
   },
   {
-    title: "Sale",
-    megaMenu: false,
-    megaMenuWithSub: false,
-    url: "/products/search?sale=true",
-    child: []
-  },
-  {
     title: "Community",
     megaMenu: false,
     megaMenuWithSub: false,

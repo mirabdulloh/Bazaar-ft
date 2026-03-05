@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 // MUI
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Avatar from "@mui/material/Avatar";
 import IconButton from "@mui/material/IconButton";
@@ -13,6 +14,7 @@ import Trash from "icons/Trash";
 import FlexBox from "components/flex-box/flex-box";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
+import { toCssColor } from "lib/colorUtils";
 // CUSTOM DATA MODEL
 import { CartItem } from "contexts/CartContext";
 
@@ -73,6 +75,25 @@ export default function MiniCartItem({ item, onCart }: Props) {
         <Typography noWrap variant="body1">
           {item.title}
         </Typography>
+
+        {item.size && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+            Size: {item.size}
+          </Typography>
+        )}
+
+        {item.color && (
+          <FlexBox alignItems="center" gap={0.5} sx={{ mt: 0.15 }}>
+            <Box sx={{
+              width: 13, height: 13, borderRadius: "50%", flexShrink: 0,
+              bgcolor: toCssColor(item.color),
+              border: "1px solid rgba(0,0,0,0.2)"
+            }} />
+            <Typography variant="caption" color="text.secondary">
+              {item.color}
+            </Typography>
+          </FlexBox>
+        )}
 
         <Typography variant="body1" fontWeight={500} sx={{ mt: 0.25, mb: 1.5 }}>
           {currency(item.price * item.qty)}

@@ -50,7 +50,14 @@ const reducer = (state: InitialState, action: CartActionType) => {
 
       // REMOVE ITEM IF QUANTITY IS LESS THAN 1
       if (cartItem.qty < 1) {
-        const updatedCart = cartList.filter((item) => item.id !== cartItem!.id);
+        const updatedCart = cartList.filter(
+          (item) =>
+            !(
+              item.id === cartItem!.id &&
+              (item.size ?? "") === (cartItem.size ?? "") &&
+              (item.color ?? "") === (cartItem.color ?? "")
+            )
+        );
         return { ...state, cart: updatedCart };
       }
 

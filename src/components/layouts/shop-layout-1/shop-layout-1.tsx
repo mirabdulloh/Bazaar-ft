@@ -18,7 +18,7 @@ import LiveCategoryList from "components/secondary-header/live-category-list";
 import { SecondaryHeader } from "components/secondary-header";
 import { MobileNavigationBar } from "components/mobile-navigation";
 import { SearchInput1, SearchInput2 } from "components/search-box";
-import { Topbar, TopbarLanguageSelector, TopbarSocialLinks } from "components/topbar";
+import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice } from "components/topbar";
 import { Header, HeaderCart, HeaderUser, MobileHeader, HeaderSearch } from "components/header";
 // CUSTOM DATA MODEL
 import LayoutModel from "models/Layout.model";
@@ -54,7 +54,7 @@ export default function ShopLayout1({ children, data }: Props) {
   return (
     <Fragment>
       <Topbar>
-        <Topbar.Left label={topbar.label} title={topbar.title} />
+        <TopbarLatestNotice label={topbar.label} fallbackTitle={topbar.title} />
 
         <Topbar.Right>
           <TopbarLanguageSelector languages={topbar.languageOptions} />

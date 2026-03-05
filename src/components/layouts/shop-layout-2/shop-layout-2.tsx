@@ -4,7 +4,7 @@ import Sticky from "components/sticky";
 import { SearchInput2 } from "components/search-box";
 import { CategoryList } from "components/categories";
 import { MobileMenu } from "components/mobile-navbar";
-import { Topbar, TopbarLanguageSelector, TopbarSocialLinks } from "components/topbar";
+import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice } from "components/topbar";
 import { Header, HeaderCart, HeaderLogin, MobileHeader, HeaderSearch } from "components/header";
 // CUSTOM DATA MODEL
 import LayoutModel from "models/Layout.model";
@@ -40,7 +40,7 @@ export default function ShopLayout2({ children, data }: LayoutProps) {
   return (
     <Fragment>
       <Topbar>
-        <Topbar.Left label={topbar.label} title={topbar.title} />
+        <TopbarLatestNotice label={topbar.label} fallbackTitle={topbar.title} />
 
         <Topbar.Right>
           <TopbarLanguageSelector languages={topbar.languageOptions} />

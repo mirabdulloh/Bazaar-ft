@@ -29,6 +29,7 @@
     "axios": "^1.13.2",
     "axios-mock-adapter": "^2.1.0",
     "clsx": "^2.1.1",
+    "color-name-list": "^14.29.0",
     "cross-env": "^10.1.0",
     "date-fns": "^4.1.0",
     "embla-carousel": "^8.6.0",
