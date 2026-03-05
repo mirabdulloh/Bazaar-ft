@@ -27,6 +27,8 @@ interface GqlProduct {
   productRatingAverage: number;
   productLikes: number;
   productViews: number;
+  productSize?: string;
+  productColor?: string;
   meLiked?: { myFavorite: boolean }[];
 }
 
@@ -45,6 +47,8 @@ function toProductModel(p: GqlProduct): Product {
     images: p.productImages ?? [],
     rating: p.productRatingAverage ?? 0,
     categories: [],
+    size: p.productSize ? [p.productSize] : [],
+    colors: p.productColor ? [p.productColor] : [],
     productLikes: p.productLikes,
     productViews: p.productViews,
     meLiked: p.meLiked?.[0]?.myFavorite === true,

@@ -13,6 +13,8 @@ import ThemeProvider from "theme/theme-provider";
 
 // PRODUCT CART PROVIDER
 import CartProvider from "contexts/CartContext";
+import VariantPickerProvider from "contexts/VariantPickerContext";
+import VariantPickerModal from "components/variant-picker-modal";
 
 // SITE SETTINGS PROVIDER
 import SettingsProvider from "contexts/SettingContext";
@@ -41,18 +43,21 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
       <body id="body" className={geist.className}>
         <ApolloWrapper>
           <CartProvider>
-            <SettingsProvider>
-              <ThemeProvider>
-                <RTL>
-                  <InitialBrandLoader>
-                    {modal}
-                    {children}
-                  </InitialBrandLoader>
-                </RTL>
+            <VariantPickerProvider>
+              <SettingsProvider>
+                <ThemeProvider>
+                  <RTL>
+                    <InitialBrandLoader>
+                      {modal}
+                      {children}
+                    </InitialBrandLoader>
+                  </RTL>
 
-                <ProgressBar />
-              </ThemeProvider>
-            </SettingsProvider>
+                  <ProgressBar />
+                  <VariantPickerModal />
+                </ThemeProvider>
+              </SettingsProvider>
+            </VariantPickerProvider>
           </CartProvider>
         </ApolloWrapper>
 

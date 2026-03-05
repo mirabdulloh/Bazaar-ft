@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@mui/material/Button";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import useCart from "hooks/useCart";
+import { useVariantPicker } from "contexts/VariantPickerContext";
 import Product from "models/Product.model";
 
 // ========================================================
@@ -14,11 +15,19 @@ type Props = { product: Product };
 export default function HoverActions({ product }: Props) {
   const { id, slug, title, price, thumbnail } = product;
   const { dispatch } = useCart();
+  const { openPicker } = useVariantPicker();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // prevent Link navigation
+
+    // If the product has size or color variants, show the picker modal
+    if (product.size?.length || product.colors?.length) {
+      openPicker(product);
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => {
       dispatch({

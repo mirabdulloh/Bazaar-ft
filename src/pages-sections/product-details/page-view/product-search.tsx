@@ -77,6 +77,8 @@ function toProductModel(p: GqlProduct): Product {
     images: p.productImages ?? [],
     rating: p.productRatingAverage ?? 0,
     categories: [],
+    size: p.productSize ? [p.productSize] : [],
+    colors: p.productColor ? [p.productColor] : [],
     productLikes: p.productLikes,
     productViews: p.productViews,
     productRank: p.productRank,

@@ -19,7 +19,7 @@ import PageWrapper from "../../page-wrapper";
 import { tableHeading } from "../table-heading";
 // APOLLO
 import { useQuery } from "lib/hooks/useQuery";
-import { GET_MEMBERS } from "../../../../apollo/user/query";
+import { GET_MEMBERS } from "../../../../../apollo/user/query";
 import { T } from "lib/types/common";
 
 // =============================================================================
