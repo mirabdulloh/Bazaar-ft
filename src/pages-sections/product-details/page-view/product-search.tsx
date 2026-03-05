@@ -16,6 +16,7 @@ import Typography from "@mui/material/Typography";
 import Apps from "@mui/icons-material/Apps";
 import ViewList from "@mui/icons-material/ViewList";
 import FilterList from "@mui/icons-material/FilterList";
+import FlashOn from "@mui/icons-material/FlashOn";
 // GLOBAL CUSTOM COMPONENTS
 import Sidenav from "components/side-nav";
 import { FlexBetween, FlexBox } from "components/flex-box";
@@ -102,16 +103,18 @@ const SORT_OPTIONS = [
   { label: "Newest First",       value: "newest" },
   { label: "Most Popular",       value: "popular" },
   { label: "Trending",           value: "trending" },
+  { label: "Flash Deals",        value: "flash_deals" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
 ];
 
 const SORT_MAP: Record<string, { sort: string; direction: string }> = {
-  newest:     { sort: "createdAt",    direction: "DESC" },
-  popular:    { sort: "productLikes", direction: "DESC" },
-  trending:   { sort: "productViews", direction: "DESC" },
-  price_asc:  { sort: "productPrice", direction: "ASC" },
-  price_desc: { sort: "productPrice", direction: "DESC" },
+  newest:      { sort: "createdAt",    direction: "DESC" },
+  popular:     { sort: "productLikes", direction: "DESC" },
+  trending:    { sort: "productViews", direction: "DESC" },
+  flash_deals: { sort: "productLikes", direction: "DESC" },
+  price_asc:   { sort: "productPrice", direction: "ASC" },
+  price_desc:  { sort: "productPrice", direction: "DESC" },
 };
 
 // Static parts — colors/others never change
@@ -284,8 +287,18 @@ export default function ProductSearchPageView() {
       list = list.filter((p) => (p.productStockQuantity ?? 0) > 0);
     }
 
+    // Flash Deals: keep only discounted items, then sort by discount % descending
+    if (sort === "flash_deals") {
+      list = list.filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice);
+      list = [...list].sort((a, b) => {
+        const discA = ((a.productPrice - a.productDiscountPrice) / a.productPrice) * 100;
+        const discB = ((b.productPrice - b.productDiscountPrice) / b.productPrice) * 100;
+        return discB - discA;
+      });
+    }
+
     return list.map(toProductModel);
-  }, [rawProducts, activeCategoryIds, prices, brands, colors, sizes, materials, discount, rating, sales]);
+  }, [rawProducts, activeCategoryIds, prices, brands, colors, sizes, materials, discount, rating, sales, sort]);
 
   // Client-side pagination on filtered results
   const total      = filteredProducts.length;
@@ -317,6 +330,14 @@ export default function ProductSearchPageView() {
         {/* TOP BAR — title + sort + view toggle */}
         <FlexBetween flexWrap="wrap" gap={2} mb={2}>
           <div>
+            {sort === "flash_deals" && (
+              <FlexBox alignItems="center" gap={0.5} mb={0.5}>
+                <FlashOn sx={{ color: "error.main", fontSize: 22 }} />
+                <Typography variant="h5" sx={{ color: "error.main", fontWeight: 700 }}>
+                  Flash Deals
+                </Typography>
+              </FlexBox>
+            )}
             {q && (
               <Typography variant="h5" sx={{ mb: 0.5 }}>
                 Results for &ldquo;{q}&rdquo;

@@ -13,7 +13,7 @@ import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { GET_PRODUCTS } from "../../../../apollo/user/query";
 import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
-import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 import { T, Message } from "../../../lib/types/common";
 
 interface GqlProduct {
@@ -108,7 +108,7 @@ export default function Section2() {
 
   if (getFlashDealsLoading) {
     return (
-      <SectionCreator title={t("Flash Deals", { defaultValue: "Flash Deals" })}>
+      <SectionCreator title={t("Flash Deals", { defaultValue: "Flash Deals" })} seeMoreLink="/products/search?sort=flash_deals">
         <Box display="flex" gap={2} overflow="hidden">
           {Array.from({ length: 4 }).map((_, i) => (
             <Box key={i} sx={{ minWidth: { xs: "75vw", sm: 260 }, flex: "0 0 auto" }}>
@@ -125,7 +125,7 @@ export default function Section2() {
   if (!products.length) return null;
 
   return (
-    <SectionCreator title={t("Flash Deals", { defaultValue: "Flash Deals" })}>
+    <SectionCreator title={t("Flash Deals", { defaultValue: "Flash Deals" })} seeMoreLink="/products/search?sort=flash_deals">
       <ProductsCarousel>
         {products.map((product) => (
           <ProductCard2

@@ -2,6 +2,8 @@
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Typography from "@mui/material/Typography";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -20,7 +22,14 @@ import FlexBox from "components/flex-box/flex-box";
 import { signUp } from "lib/auth";
 
 // REGISTER FORM FIELD VALIDATION SCHEMA
-type RegisterValues = { nick: string; phone: string; password: string; re_password: string; agreement: boolean | undefined };
+type RegisterValues = {
+  nick: string;
+  phone: string;
+  password: string;
+  re_password: string;
+  agreement: boolean | undefined;
+  accountType: "USER" | "BRAND";
+};
 
 const validationSchema = yup.object().shape({
   nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Name is required"),
@@ -30,6 +39,7 @@ const validationSchema = yup.object().shape({
     .string()
     .oneOf([yup.ref("password")], "Passwords must match")
     .required("Please re-type password"),
+  accountType: yup.mixed<"USER" | "BRAND">().oneOf(["USER", "BRAND"]).required("Account type is required"),
   agreement: yup
     .bool()
     .test(
@@ -53,7 +63,8 @@ export default function RegisterPageView() {
     phone: "",
     password: "",
     re_password: "",
-    agreement: false
+    agreement: false,
+    accountType: "USER" as const
   };
 
   const methods = useForm({
@@ -66,8 +77,10 @@ export default function RegisterPageView() {
     formState: { isSubmitting }
   } = methods;
 
+  const accountType = methods.watch("accountType");
+
   const handleSubmitForm = handleSubmit(async (values: RegisterValues) => {
-    await signUp(values.nick, values.password, values.phone, "USER");
+    await signUp(values.nick, values.password, values.phone, values.accountType);
     router.push("/");
   });
 
@@ -87,6 +100,19 @@ export default function RegisterPageView() {
           type="text"
           placeholder="+821012345678"
         />
+      </div>
+
+      <div className="mb-1">
+        <Label>Account Type</Label>
+        <TextField fullWidth name="accountType" size="medium" select>
+          <MenuItem value="USER">User</MenuItem>
+          <MenuItem value="BRAND">Brand</MenuItem>
+        </TextField>
+        {accountType === "BRAND" && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+            Brand accounts require admin approval. You can shop as a user until approved.
+          </Typography>
+        )}
       </div>
 
       <div className="mb-1">
