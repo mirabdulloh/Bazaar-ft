@@ -21,6 +21,7 @@ export default function Section4() {
                 defaultValue: "Accessories to elevate every outfit."
               })}
               imgUrl="/assets/images/banners/banner-71.jpg"
+              href="/products/search?categoryName=Accessories"
             />
           </Grid>
 
@@ -29,6 +30,7 @@ export default function Section4() {
               title={t("BAGS & BACKPACKS", { defaultValue: "BAGS & BACKPACKS" })}
               body={t("Carry your style everywhere.", { defaultValue: "Carry your style everywhere." })}
               imgUrl="/assets/images/banners/banner-72.jpg"
+              href="/products/search?categoryName=Bags"
             />
           </Grid>
 
@@ -37,6 +39,7 @@ export default function Section4() {
               title={t("TOPS & SHIRTS", { defaultValue: "TOPS & SHIRTS" })}
               body={t("Fresh styles from top brands.", { defaultValue: "Fresh styles from top brands." })}
               imgUrl="/assets/images/banners/banner-73.jpg"
+              href="/products/search?categoryName=Clothing"
             />
           </Grid>
         </Grid>
@@ -45,6 +48,7 @@ export default function Section4() {
           <CardThree
             title={t("OUTERWEAR", { defaultValue: "OUTERWEAR" })}
             imgUrl="/assets/images/banners/banner-74.jpg"
+            href="/products/search?categoryName=Clothing"
             body={t(
               "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.",
               {

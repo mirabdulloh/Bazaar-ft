@@ -8,10 +8,11 @@ interface Props {
   body: string;
   title: string;
   imgUrl: string;
+  href?: string;
 }
 // ==========================================================
 
-export default function CardThree({ body, title, imgUrl }: Props) {
+export default function CardThree({ body, title, imgUrl, href = "/products/search" }: Props) {
   return (
     <Wrapper>
       <Image fill alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
@@ -19,7 +20,7 @@ export default function CardThree({ body, title, imgUrl }: Props) {
       <div className="content">
         <h2 className="title">{title}</h2>
         <p className="body">{body}</p>
-        <Link href="/products/search?sale=true">
+        <Link href={href}>
           <span className="btn">SHOP NOW</span>
         </Link>
       </div>

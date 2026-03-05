@@ -10,7 +10,14 @@ import { NavigationList } from "components/navbar";
 import { CategoryList } from "components/categories";
 import { MobileMenu } from "components/mobile-navbar/mobile-menu";
 import { MobileNavigationBar } from "components/mobile-navigation";
-import { Header, HeaderCart, HeaderLogin, MobileHeader, HeaderSearch } from "components/header";
+import {
+  Header,
+  HeaderCart,
+  HeaderLogin,
+  HeaderNotifications,
+  MobileHeader,
+  HeaderSearch
+} from "components/header";
 import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice } from "components/topbar";
 import { SearchInput2 } from "components/search-box";
 // LOCAL CUSTOM COMPONENTS
@@ -61,6 +68,7 @@ export default function ShopLayout4({ children, navigation, data }: Props) {
           <SearchInput2 />
         </HeaderSearch>
 
+        <HeaderNotifications />
         <HeaderCart />
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
@@ -96,6 +104,7 @@ export default function ShopLayout4({ children, navigation, data }: Props) {
 
           <Header.Right>
             <HeaderLogin />
+            <HeaderNotifications />
             <HeaderCart />
           </Header.Right>
         </Header>

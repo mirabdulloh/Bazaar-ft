@@ -157,7 +157,8 @@ export default function ProductSearchPageView() {
   const page       = Number(searchParams.get("page") || "1");
   const sort       = searchParams.get("sort") || "newest";
   const view       = searchParams.get("view") || "grid";
-  const categoryId = searchParams.get("categoryId") || "";
+  const categoryId   = searchParams.get("categoryId")   || "";
+  const categoryName = searchParams.get("categoryName") || "";
 
   // Sidebar filter values (set by useProductFilterCard inside ProductFilters)
   const prices    = JSON.parse(searchParams.get("prices")    || "[0,300]") as number[];
@@ -228,15 +229,37 @@ export default function ProductSearchPageView() {
   // Build a set of category IDs to include when a category is selected.
   // If the selected category has children, include parent + all children.
   const activeCategoryIds = useMemo((): Set<string> => {
-    if (!categoryId) return new Set();
     const allCats: T[] = (getCategoriesData as T)?.getCategories?.list ?? [];
-    const children = allCats.filter(
-      (c: T) => c.parentCategoryId && c.parentCategoryId.toString() === categoryId
-    );
-    const ids = new Set<string>([categoryId]);
-    children.forEach((c: T) => ids.add(c._id.toString()));
-    return ids;
-  }, [categoryId, getCategoriesData]);
+
+    if (categoryId) {
+      const children = allCats.filter(
+        (c: T) => c.parentCategoryId && c.parentCategoryId.toString() === categoryId
+      );
+      const ids = new Set<string>([categoryId]);
+      children.forEach((c: T) => ids.add(c._id.toString()));
+      return ids;
+    }
+
+    if (categoryName) {
+      const nameLower = categoryName.toLowerCase();
+      // Match any category whose name contains the search term
+      const matched = allCats.filter(
+        (c: T) => (c.categoryName as string)?.toLowerCase().includes(nameLower)
+      );
+      const ids = new Set<string>(matched.map((c: T) => (c._id as string).toString()));
+      // Also include children of matched parent categories
+      matched.forEach((parent: T) => {
+        allCats.forEach((c: T) => {
+          if (c.parentCategoryId && c.parentCategoryId.toString() === (parent._id as string).toString()) {
+            ids.add((c._id as string).toString());
+          }
+        });
+      });
+      return ids;
+    }
+
+    return new Set();
+  }, [categoryId, categoryName, getCategoriesData]);
 
   // Raw products from backend
   const rawProducts: GqlProduct[] = useMemo(

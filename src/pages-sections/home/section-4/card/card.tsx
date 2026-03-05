@@ -5,10 +5,10 @@ import Button from "@mui/material/Button";
 import { Wrapper } from "./styles";
 
 // ==========================================================
-type Props = { title: string; imgUrl: string };
+type Props = { title: string; imgUrl: string; href?: string };
 // ==========================================================
 
-export default function Card({ title, imgUrl }: Props) {
+export default function Card({ title, imgUrl, href = "/products/search" }: Props) {
   return (
     <Wrapper>
       <Image fill alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
@@ -16,7 +16,7 @@ export default function Card({ title, imgUrl }: Props) {
       <div className="content">
         <p className="title">{title}</p>
 
-        <Link href="/products/search?sale=true">
+        <Link href={href}>
           <Button color="dark" className="btn" variant="contained">
             Discover Now
           </Button>

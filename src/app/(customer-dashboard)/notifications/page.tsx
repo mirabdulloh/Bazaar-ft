@@ -6,5 +6,16 @@ export const metadata: Metadata = {
 };
 
 export default function NotificationsPage() {
-  return <div style={{ padding: 32 }}>Notifications coming soon.</div>;
+  return (
+    <div
+      style={{
+        minHeight: "60vh",
+        display: "flex",
+        alignItems: "center",
+        padding: 32,
+      }}
+    >
+      Notifications coming soon.
+    </div>
+  );
 }

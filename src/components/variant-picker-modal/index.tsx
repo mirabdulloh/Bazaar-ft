@@ -17,6 +17,7 @@ import Close from "@mui/icons-material/Close";
 import { useVariantPicker } from "contexts/VariantPickerContext";
 import useCart from "hooks/useCart";
 import { currency } from "lib";
+import { toCssColor } from "lib/colorUtils";
 
 /** Normalize backend field which may be a single string or an array of strings */
 function toArray(val: string | string[] | undefined | null): string[] {
@@ -144,15 +145,29 @@ export default function VariantPickerModal() {
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
               {colorOptions.map((c) => (
-                <Chip
+                <Box
                   key={c}
-                  label={c}
-                  size="small"
-                  variant={selectedColor === c ? "filled" : "outlined"}
-                  color={selectedColor === c ? "primary" : "default"}
                   onClick={() => { setSelectedColor(selectedColor === c ? "" : c); setError(""); }}
-                  sx={{ cursor: "pointer", fontWeight: 500 }}
-                />
+                  sx={{
+                    display: "flex", alignItems: "center", gap: 0.75,
+                    px: 1.25, py: 0.5,
+                    border: selectedColor === c ? "2px solid" : "1px solid",
+                    borderColor: selectedColor === c ? "primary.main" : "divider",
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    bgcolor: selectedColor === c ? "primary.50" : "transparent",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <Box sx={{
+                    width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                    bgcolor: toCssColor(c),
+                    border: "1px solid rgba(0,0,0,0.2)"
+                  }} />
+                  <Typography variant="caption" fontWeight={selectedColor === c ? 700 : 500}>
+                    {c}
+                  </Typography>
+                </Box>
               ))}
             </Box>
           </Box>
