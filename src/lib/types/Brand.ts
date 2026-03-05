@@ -6,6 +6,9 @@ export interface BrandMemberData {
   memberImage: string;
   memberFollowers?: number;
   memberProducts?: number;
+  memberRank?: number;
+  memberLikes?: number;
+  memberViews?: number;
 }
 
 export interface Brand {
@@ -19,6 +22,7 @@ export interface Brand {
   brandReviewsCount: number;
   createdAt: Date;
   memberData: BrandMemberData;
+  meLiked?: { myFavorite?: boolean }[];
 }
 
 export interface BrandsData {

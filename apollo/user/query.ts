@@ -105,6 +105,14 @@ export const GET_BRANDS = gql`
           _id
           memberNick
           memberImage
+          memberRank
+          memberLikes
+          memberViews
+        }
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
         }
       }
       metaData {
