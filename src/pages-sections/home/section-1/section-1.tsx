@@ -20,7 +20,7 @@ export default function Section1() {
               defaultValue: "Discover the latest drops from independent brands."
             })}
             title={t("Wear what makes you, you.", { defaultValue: "Wear what makes you, you." })}
-            imgUrl="/assets/images/banners/banner-66.jpg"
+            imgUrl="/assets/images/banners/banner-66-hq.jpg"
             delay={220}
           />
         </Grid>
@@ -34,7 +34,7 @@ export default function Section1() {
             title={t("The brands you love, all in one place.", {
               defaultValue: "The brands you love, all in one place."
             })}
-            imgUrl="/assets/images/banners/banner-67.jpg"
+            imgUrl="/assets/images/banners/banner-67-hq.jpg"
             delay={340}
           />
         </Grid>
@@ -46,7 +46,7 @@ export default function Section1() {
             title={t("Effortless style for every occasion", {
               defaultValue: "Effortless style for every occasion"
             })}
-            imgUrl="/assets/images/banners/banner-68.jpg"
+            imgUrl="/assets/images/banners/banner-68-hq.jpg"
             delay={80}
           />
         </Grid>
@@ -58,7 +58,7 @@ export default function Section1() {
               defaultValue: "From casual to bold — all seasons covered."
             })}
             title={t("Dress the way you feel", { defaultValue: "Dress the way you feel" })}
-            imgUrl="/assets/images/banners/banner-69.jpg"
+            imgUrl="/assets/images/banners/banner-69-hq.jpg"
             delay={460}
           />
         </Grid>
@@ -70,7 +70,7 @@ export default function Section1() {
               defaultValue: "Shop sale items before they’re gone."
             })}
             title={t("Up to 50% off selected brands", { defaultValue: "Up to 50% off selected brands" })}
-            imgUrl="/assets/images/banners/banner-70.jpg"
+            imgUrl="/assets/images/banners/banner-70-hq.jpg"
             delay={580}
           />
         </Grid>

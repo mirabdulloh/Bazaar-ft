@@ -25,9 +25,20 @@ export const Wrapper = styled("div", {
     "100%": { opacity: 1, transform: "translate3d(0, 0, 0)" }
   },
 
+  "&::before": {
+    inset: 0,
+    zIndex: 1,
+    width: "100%",
+    height: "100%",
+    content: "''",
+    position: "absolute",
+    background:
+      "linear-gradient(90deg, rgba(8,16,24,0.55) 0%, rgba(8,16,24,0.22) 45%, rgba(8,16,24,0) 70%)"
+  },
+
   "& img": {
     objectFit: "cover",
-    objectPosition: "top center",
+    objectPosition: "center",
     opacity: 0,
     transform: "scale(1.08)",
     animation: `heroSmallImageReveal 920ms cubic-bezier(0.22, 1, 0.36, 1) ${delay + 100}ms forwards`
@@ -38,7 +49,7 @@ export const Wrapper = styled("div", {
   },
 
   "& .content": {
-    zIndex: 1,
+    zIndex: 2,
     maxWidth: 300,
     paddingLeft: "2rem",
     position: "relative",
@@ -46,16 +57,19 @@ export const Wrapper = styled("div", {
       fontWeight: 700,
       lineHeight: 1.3,
       fontSize: "1.5rem",
+      textShadow: "0 6px 18px rgba(8,16,24,0.45)",
       [theme.breakpoints.down("sm")]: { fontSize: "1.5rem" }
     },
     "& .body": {
       fontSize: 14,
-      marginTop: ".5rem"
+      marginTop: ".5rem",
+      textShadow: "0 5px 14px rgba(8,16,24,0.4)"
     },
     "& .badge": {
       fontSize: 14,
       marginBottom: ".5rem",
-      display: "inline-block"
+      display: "inline-block",
+      textShadow: "0 4px 12px rgba(8,16,24,0.4)"
     },
     "& .btn": {
       fontWeight: 600,

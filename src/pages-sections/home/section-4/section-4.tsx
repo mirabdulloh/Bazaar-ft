@@ -20,7 +20,7 @@ export default function Section4() {
               title={t("Accessories to elevate every outfit.", {
                 defaultValue: "Accessories to elevate every outfit."
               })}
-              imgUrl="/assets/images/banners/banner-71.jpg"
+              imgUrl="/assets/images/banners/banner-71-hq.jpg"
               href="/products/search?categoryName=Accessories"
             />
           </Grid>
@@ -29,7 +29,7 @@ export default function Section4() {
             <CardTwo
               title={t("BAGS & BACKPACKS", { defaultValue: "BAGS & BACKPACKS" })}
               body={t("Carry your style everywhere.", { defaultValue: "Carry your style everywhere." })}
-              imgUrl="/assets/images/banners/banner-72.jpg"
+              imgUrl="/assets/images/banners/banner-72-hq.jpg"
               href="/products/search?categoryName=Bags"
             />
           </Grid>
@@ -38,7 +38,7 @@ export default function Section4() {
             <CardTwo
               title={t("TOPS & SHIRTS", { defaultValue: "TOPS & SHIRTS" })}
               body={t("Fresh styles from top brands.", { defaultValue: "Fresh styles from top brands." })}
-              imgUrl="/assets/images/banners/banner-73.jpg"
+              imgUrl="/assets/images/banners/banner-73-hq.jpg"
               href="/products/search?categoryName=Clothing"
             />
           </Grid>
@@ -47,7 +47,7 @@ export default function Section4() {
         <Grid size={{ md: 6, xs: 12 }}>
           <CardThree
             title={t("OUTERWEAR", { defaultValue: "OUTERWEAR" })}
-            imgUrl="/assets/images/banners/banner-74.jpg"
+            imgUrl="/assets/images/banners/banner-74-hq.jpg"
             href="/products/search?categoryName=Clothing"
             body={t(
               "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.",

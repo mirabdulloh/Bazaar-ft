@@ -10,6 +10,7 @@ export const Wrapper = styled("div")(({ theme }) => ({
   overflow: "hidden",
   position: "relative",
   alignItems: "flex-end",
+  color: theme.palette.common.white,
 
   "&::before": {
     inset: 0,
@@ -18,12 +19,13 @@ export const Wrapper = styled("div")(({ theme }) => ({
     height: "100%",
     content: "''",
     position: "absolute",
-    backgroundColor: "rgba(0, 0, 0, 0.1)"
+    background:
+      "linear-gradient(90deg, rgba(8,16,24,0.6) 0%, rgba(8,16,24,0.25) 45%, rgba(8,16,24,0) 70%)"
   },
 
   "& img": {
     objectFit: "cover",
-    objectPosition: "top center"
+    objectPosition: "center"
   },
 
   "& .content": {
@@ -32,8 +34,17 @@ export const Wrapper = styled("div")(({ theme }) => ({
     paddingLeft: "3rem",
     paddingBottom: "3rem",
     position: "relative",
-    "& .title": { lineHeight: 1.3, fontSize: "1.75rem" },
-    "& .btn": { borderRadius: 0, marginTop: "1.5rem" }
+    "& .title": {
+      lineHeight: 1.3,
+      fontSize: "1.75rem",
+      textShadow: "0 8px 22px rgba(8,16,24,0.45)"
+    },
+    "& .btn": {
+      borderRadius: 0,
+      marginTop: "1.5rem",
+      backgroundColor: theme.palette.common.white,
+      color: theme.palette.text.primary
+    }
   },
 
   [theme.breakpoints.down("sm")]: {
