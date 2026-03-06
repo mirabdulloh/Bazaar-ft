@@ -58,7 +58,7 @@ import { T } from "../../../../lib/types/common";
 // UTILS
 import { currency } from "lib";
 import { getJwtToken, logOut, updateStorage, updateUserInfo } from "lib/auth";
-import { sweetMixinSuccessAlert, sweetMixinErrorAlert } from "../../../../lib/sweetAlert";
+import { sweetMixinSuccessAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert, sweetTopSmallErrorAlert } from "../../../../lib/sweetAlert";
 // STYLED COMPONENTS
 import {
   ProfileCard,
@@ -354,26 +354,22 @@ export function ProfilePageView() {
   const handleFollow = useCallback(async (targetId: string) => {
     try {
       await subscribeMember({ variables: { input: targetId } });
-      await sweetMixinSuccessAlert("Followed!");
-      refetchFollowings();
-      refetchFollowers();
+      sweetTopSmallSuccessAlert("Followed");
     } catch (err: any) {
       console.error("Follow error:", err);
-      await sweetMixinErrorAlert(err.message || "Failed to follow");
+      sweetTopSmallErrorAlert(err.message || "Failed to follow");
     }
-  }, [subscribeMember, refetchFollowings, refetchFollowers]);
+  }, [subscribeMember]);
 
   const handleUnfollow = useCallback(async (targetId: string) => {
     try {
       await unsubscribeMember({ variables: { input: targetId } });
-      await sweetMixinSuccessAlert("Unfollowed!");
-      refetchFollowings();
-      refetchFollowers();
+      sweetTopSmallSuccessAlert("Unfollowed");
     } catch (err: any) {
       console.error("Unfollow error:", err);
-      await sweetMixinErrorAlert(err.message || "Failed to unfollow");
+      sweetTopSmallErrorAlert(err.message || "Failed to unfollow");
     }
-  }, [unsubscribeMember, refetchFollowings, refetchFollowers]);
+  }, [unsubscribeMember]);
 
   // Resolve avatar: preview > uploaded image > dicebear fallback
   const avatarSrc =
@@ -415,7 +411,6 @@ export function ProfilePageView() {
             loading={followersLoading}
             dataKey="followerData"
             emptyMsg="No followers yet."
-            followings={followings}
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
           />
@@ -428,7 +423,6 @@ export function ProfilePageView() {
             loading={followingsLoading}
             dataKey="followingData"
             emptyMsg="You haven't followed anyone yet."
-            followings={followings}
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
           />
@@ -823,7 +817,6 @@ function PeoplePanel({
   loading,
   dataKey,
   emptyMsg,
-  followings,
   onFollow,
   onUnfollow,
 }: {
@@ -832,28 +825,53 @@ function PeoplePanel({
   loading: boolean;
   dataKey: "followerData" | "followingData";
   emptyMsg: string;
-  followings: T[];
   onFollow: (id: string) => void;
   onUnfollow: (id: string) => void;
 }) {
   const ITEMS_PER_PAGE = 6;
   const [page, setPage] = useState(1);
+  const [localPeople, setLocalPeople] = useState<T[]>([]);
   const router = useRouter();
 
-  const totalPages = Math.max(1, Math.ceil(people.length / ITEMS_PER_PAGE));
-  const paginated = people.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  useEffect(() => {
+    setLocalPeople(people);
+  }, [people]);
 
-  // Build a set of IDs the current user is following
-  const followingIds = new Set(
-    followings.map((f: T) => {
-      const fd = (f.followingData as T) ?? {};
-      return fd._id as string;
-    }).filter(Boolean)
-  );
+  const totalPages = Math.max(1, Math.ceil(localPeople.length / ITEMS_PER_PAGE));
+  const paginated = localPeople.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const isFollowingsList = title.toLowerCase().includes("followings");
+
+  const getMemberId = (row: T) => {
+    const fd = (row[dataKey] as T) ?? {};
+    return fd._id as string;
+  };
+
+  const toggleLocalFollow = (targetId: string, nextFollowing: boolean) => {
+    setLocalPeople((prev) =>
+      prev.map((row) => {
+        const fd = (row[dataKey] as T) ?? {};
+        if ((fd._id as string) !== targetId) return row;
+        return { ...row, meFollowed: [{ myFollowing: nextFollowing }] };
+      })
+    );
+  };
+
+  const handleFollowClick = (targetId: string) => {
+    toggleLocalFollow(targetId, true);
+    onFollow(targetId);
+  };
+
+  const handleUnfollowClick = (targetId: string) => {
+    if (isFollowingsList) {
+      setLocalPeople((prev) => prev.filter((row) => getMemberId(row) !== targetId));
+    } else {
+      toggleLocalFollow(targetId, false);
+    }
+    onUnfollow(targetId);
+  };
 
   const handleNavigate = (fd: T) => {
-    const isBrand = fd.memberType === "BRAND";
-    router.push(isBrand ? `/brands/${fd._id}` : `/profile/${fd._id}`);
+    router.push(`/member/${fd._id}`);
   };
 
   return (
@@ -910,7 +928,7 @@ function PeoplePanel({
             const memberType = fd.memberType as string;
             const memberImg = resolveImage(fd.memberImage as string);
             const memberId = fd._id as string;
-            const isFollowing = followingIds.has(memberId);
+            const isFollowing = !!(f.meFollowed as T[])?.[0]?.myFollowing;
             const isBrandOrAdmin = memberType === "BRAND" || memberType === "ADMIN";
             return (
               <PeopleTableRow key={f._id as string}>
@@ -998,7 +1016,7 @@ function PeoplePanel({
                         size="small"
                         variant="outlined"
                         color="error"
-                        onClick={() => onUnfollow(memberId)}
+                        onClick={() => handleUnfollowClick(memberId)}
                         sx={{
                           borderRadius: 5,
                           fontSize: 11,
@@ -1017,7 +1035,7 @@ function PeoplePanel({
                       size="small"
                       variant="contained"
                       color="success"
-                      onClick={() => onFollow(memberId)}
+                      onClick={() => handleFollowClick(memberId)}
                       sx={{
                         borderRadius: 5,
                         fontSize: 11,

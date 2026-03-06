@@ -645,6 +645,11 @@ export const GET_MY_NOTIFICATIONS = gql`
         readAt
         createdAt
         updatedAt
+        authorData {
+          _id
+          memberNick
+          memberImage
+        }
       }
       metaCounter {
         total

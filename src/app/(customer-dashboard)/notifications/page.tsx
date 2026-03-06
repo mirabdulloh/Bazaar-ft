@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import NotificationsPageView from "pages-sections/customer-dashboard/notifications/page-view/notifications";
 
 export const metadata: Metadata = {
   title: "Notifications - Seoulé",
@@ -6,16 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function NotificationsPage() {
-  return (
-    <div
-      style={{
-        minHeight: "60vh",
-        display: "flex",
-        alignItems: "center",
-        padding: 32,
-      }}
-    >
-      Notifications coming soon.
-    </div>
-  );
+  return <NotificationsPageView />;
 }

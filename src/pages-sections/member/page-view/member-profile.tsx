@@ -32,7 +32,7 @@ import { SUBSCRIBE, UNSUBSCRIBE } from "../../../../apollo/user/mutation";
 // TYPES
 import { T } from "../../../lib/types/common";
 // UTILS
-import { sweetMixinSuccessAlert, sweetMixinErrorAlert } from "../../../lib/sweetAlert";
+import { sweetTopSmallSuccessAlert, sweetTopSmallErrorAlert } from "../../../lib/sweetAlert";
 import { alpha, styled } from "@mui/material/styles";
 
 // ─── Environment ──────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
   const ITEMS_PER_PAGE = 6;
 
   // ── Fetch target member ──
-  const { loading: memberLoading, data: memberData } = useQuery(GET_MEMBER, {
+  const { loading: memberLoading, data: memberData, refetch: memberRefetch } = useQuery(GET_MEMBER, {
     variables: { input: memberId },
     fetchPolicy: "cache-and-network",
     skip: !memberId,
@@ -149,62 +149,111 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
     skip: !memberId,
   });
 
-  // ── Fetch current user's followings (to check follow status) ──
-  const { data: myFollowingsData, refetch: refetchMyFollowings } = useQuery(GET_MEMBER_FOLLOWINGS, {
-    fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 200, search: { followerId: user?._id } } },
-    skip: !user?._id,
-  });
-
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
-  const myFollowings: T[] = (myFollowingsData as T)?.getMemberFollowings?.list ?? [];
+  const [followingsLocal, setFollowingsLocal] = useState<T[]>([]);
+  const [followersLocal, setFollowersLocal] = useState<T[]>([]);
 
-  // Build set of IDs the current user follows
-  const myFollowingIds = new Set(
-    myFollowings.map((f: T) => {
-      const fd = (f.followingData as T) ?? {};
-      return fd._id as string;
-    }).filter(Boolean)
-  );
+  const getRowId = (row: T, key: "followerData" | "followingData") => {
+    const data = (row as T)[key] as T;
+    return data?._id as string;
+  };
 
-  // Am I following this member?
-  const isFollowingMember = myFollowingIds.has(memberId);
+  const sameListById = (a: T[], b: T[], key: "followerData" | "followingData") => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (getRowId(a[i], key) !== getRowId(b[i], key)) return false;
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (!sameListById(followingsLocal, followings, "followingData")) {
+      setFollowingsLocal(followings);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followingsData]);
+
+  useEffect(() => {
+    if (!sameListById(followersLocal, followers, "followerData")) {
+      setFollowersLocal(followers);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followersData]);
+
+  // Am I following this member? (from member query's meFollowed aggregation)
+  const isFollowingMember = !!(member?.meFollowed as T[])?.[0]?.myFollowing;
 
   // ── Mutations ──
   const [subscribeMember] = useMutation(SUBSCRIBE);
   const [unsubscribeMember] = useMutation(UNSUBSCRIBE);
 
+  const updateLocalFollow = useCallback((targetId: string, nextFollowing: boolean) => {
+    const update = (list: T[]) =>
+      list.map((row) => {
+        const key = activeTab === "followers" ? "followerData" : "followingData";
+        const member = (row as T)[key] as T;
+        if ((member?._id as string) !== targetId) return row;
+        return { ...row, meFollowed: [{ myFollowing: nextFollowing }] };
+      });
+
+    if (activeTab === "followers") {
+      setFollowersLocal((prev) => update(prev));
+    } else {
+      setFollowingsLocal((prev) => update(prev));
+    }
+  }, [activeTab]);
+
+  // Follow/unfollow within the table — update locally (no refetch)
   const handleFollow = useCallback(async (targetId: string) => {
     try {
+      updateLocalFollow(targetId, true);
       await subscribeMember({ variables: { input: targetId } });
-      await sweetMixinSuccessAlert("Followed!");
-      refetchFollowings();
-      refetchFollowers();
-      refetchMyFollowings();
+      sweetTopSmallSuccessAlert("Followed");
     } catch (err: any) {
       console.error("Follow error:", err);
-      await sweetMixinErrorAlert(err.message || "Failed to follow");
+      sweetTopSmallErrorAlert(err.message || "Failed to follow");
     }
-  }, [subscribeMember, refetchFollowings, refetchFollowers, refetchMyFollowings]);
+  }, [subscribeMember, updateLocalFollow]);
 
   const handleUnfollow = useCallback(async (targetId: string) => {
     try {
+      updateLocalFollow(targetId, false);
       await unsubscribeMember({ variables: { input: targetId } });
-      await sweetMixinSuccessAlert("Unfollowed!");
-      refetchFollowings();
-      refetchFollowers();
-      refetchMyFollowings();
+      sweetTopSmallSuccessAlert("Unfollowed");
     } catch (err: any) {
       console.error("Unfollow error:", err);
-      await sweetMixinErrorAlert(err.message || "Failed to unfollow");
+      sweetTopSmallErrorAlert(err.message || "Failed to unfollow");
     }
-  }, [unsubscribeMember, refetchFollowings, refetchFollowers, refetchMyFollowings]);
+  }, [unsubscribeMember, updateLocalFollow]);
+
+  // Follow/unfollow the member themselves (hero card button) — only refetch member
+  const handleFollowMember = useCallback(async () => {
+    try {
+      await subscribeMember({ variables: { input: memberId } });
+      sweetTopSmallSuccessAlert("Followed");
+      memberRefetch();
+    } catch (err: any) {
+      console.error("Follow error:", err);
+      sweetTopSmallErrorAlert(err.message || "Failed to follow");
+    }
+  }, [subscribeMember, memberId, memberRefetch]);
+
+  const handleUnfollowMember = useCallback(async () => {
+    try {
+      await unsubscribeMember({ variables: { input: memberId } });
+      sweetTopSmallSuccessAlert("Unfollowed");
+      memberRefetch();
+    } catch (err: any) {
+      console.error("Unfollow error:", err);
+      sweetTopSmallErrorAlert(err.message || "Failed to unfollow");
+    }
+  }, [unsubscribeMember, memberId, memberRefetch]);
 
   // ── Derived ──
   const memberType = member.memberType as string;
   const isBrandOrAdmin = memberType === "BRAND" || memberType === "ADMIN";
-  const people = activeTab === "followers" ? followers : followings;
+  const people = activeTab === "followers" ? followersLocal : followingsLocal;
   const dataKey = activeTab === "followers" ? "followerData" : "followingData";
   const isLoading = activeTab === "followers" ? followersLoading : followingsLoading;
   const totalPages = Math.max(1, Math.ceil(people.length / ITEMS_PER_PAGE));
@@ -333,7 +382,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                     variant="outlined"
                     color="error"
                     size="small"
-                    onClick={() => handleUnfollow(memberId)}
+                    onClick={handleUnfollowMember}
                     sx={{ borderRadius: 5, textTransform: "none", fontWeight: 600, px: 3 }}
                   >
                     Unfollow
@@ -343,7 +392,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                     variant="contained"
                     color="success"
                     size="small"
-                    onClick={() => handleFollow(memberId)}
+                    onClick={handleFollowMember}
                     sx={{ borderRadius: 5, textTransform: "none", fontWeight: 600, px: 3, boxShadow: "none" }}
                   >
                     Follow
@@ -432,7 +481,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
             const mt = fd.memberType as string;
             const fMemberImg = resolveImage(fd.memberImage as string);
             const fMemberId = fd._id as string;
-            const fIsFollowing = myFollowingIds.has(fMemberId);
+            const fIsFollowing = !!(f.meFollowed as T[])?.[0]?.myFollowing;
             const fIsBrandOrAdmin = mt === "BRAND" || mt === "ADMIN";
             return (
               <TableRow key={f._id as string}>
