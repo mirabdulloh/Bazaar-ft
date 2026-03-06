@@ -138,7 +138,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 		article.articleImages?.[0] ?? "/assets/images/products/product-1.png";
 
 	return (
-		<Container sx={{ py: 6, maxWidth: "md" }}>
+		<Container sx={{ py: 6, maxWidth: "lg" }}>
 			<IconButton onClick={() => router.back()} sx={{ mb: 2 }}>
 				<ArrowBackIcon />
 			</IconButton>
@@ -208,17 +208,28 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 			{coverImage && (
 				<Box
-					component="img"
-					src={coverImage}
-					alt={article.articleTitle}
 					sx={{
+						position: "relative",
 						width: "100%",
-						borderRadius: 2,
 						mb: 4,
-						maxHeight: 480,
-						objectFit: "cover",
+						borderRadius: 2,
+						overflow: "hidden",
+						bgcolor: "grey.100",
+						aspectRatio: { xs: "4/3", md: "21/9" },
 					}}
-				/>
+				>
+					<Box
+						component="img"
+						src={coverImage}
+						alt={article.articleTitle}
+						sx={{
+							width: "100%",
+							height: "100%",
+							objectFit: "cover",
+							display: "block",
+						}}
+					/>
+				</Box>
 			)}
 
 			<Typography

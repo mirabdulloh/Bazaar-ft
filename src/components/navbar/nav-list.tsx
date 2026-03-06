@@ -5,6 +5,9 @@ import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
 import { useTranslation } from "../../../node_modules/react-i18next";
+import { useReactiveVar } from "@apollo/client/react";
+// APOLLO STORE
+import { userVar } from "../../../apollo/store";
 // GLOBAL CUSTOM COMPONENTS
 import { NavLink } from "components/nav-link";
 import FlexBox from "components/flex-box/flex-box";
@@ -33,6 +36,8 @@ type Props = { navigation: Menu[] };
 
 export function NavigationList({ navigation }: Props) {
   const { t } = useTranslation();
+  const user = useReactiveVar(userVar);
+  const isLoggedIn = !!user._id;
   const [liveCategoryChildren, setLiveCategoryChildren] = useState<MenuItemWithChild[]>([]);
 
   /** APOLLO REQUESTS — fetch real categories for the "Categories" nav item **/
@@ -193,5 +198,12 @@ export function NavigationList({ navigation }: Props) {
     });
   };
 
-  return <FlexBox gap={4}>{renderRootLevel(withCustomerSupport(navigation))}</FlexBox>;
+  return (
+    <FlexBox gap={4}>
+      {renderRootLevel(withCustomerSupport(navigation))}
+      {isLoggedIn && (
+        <StyledNavLink href="/profile">My Profile</StyledNavLink>
+      )}
+    </FlexBox>
+  );
 }

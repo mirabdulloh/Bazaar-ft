@@ -6,18 +6,21 @@ import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import SvgIcon from "@mui/material/SvgIcon";
 import Typography from "@mui/material/Typography";
+import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
+import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
 import { useReactiveVar } from "@apollo/client/react";
 // APOLLO STORE
 import { userVar } from "../../../apollo/store";
 // AUTH
 import { logOut } from "lib/auth";
-// NAV DATA
-import { MENUS } from "components/layouts/customer-dashboard/navigation";
-import IconComponent from "components/IconComponent";
+// ICONS
+import HeartLine from "icons/HeartLine";
+import User3 from "icons/User3";
 
 export function HeaderUser() {
   const user = useReactiveVar(userVar);
@@ -81,33 +84,17 @@ export function HeaderUser() {
 
         <Divider />
 
-        {MENUS.map((section) => (
-          <Box key={section.title} sx={{ py: 0.5 }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ px: 2, display: "block", fontWeight: 600 }}
-            >
-              {section.title}
-            </Typography>
-
-            {section.list.map((item) => (
-              <MenuItem
-                key={item.title}
-                component={Link}
-                href={item.href}
-                onClick={() => setAnchorEl(null)}
-                sx={{ gap: 1 }}
-              >
-                <IconComponent icon={item.icon} fontSize="small" />
-                {item.title}
-              </MenuItem>
-            ))}
-          </Box>
-        ))}
-
+        <MenuItem component={Link} href="/wish-list" onClick={() => setAnchorEl(null)}>
+          <ListItemIcon><HeartLine fontSize="small" /></ListItemIcon>
+          Wish List
+        </MenuItem>
+        <MenuItem component={Link} href="/profile" onClick={() => setAnchorEl(null)}>
+          <ListItemIcon><User3 fontSize="small" /></ListItemIcon>
+          Profile
+        </MenuItem>
         {isAdminOrBrand && (
           <MenuItem component={Link} href={dashboardHref} onClick={() => setAnchorEl(null)}>
+            <ListItemIcon><DashboardOutlined fontSize="small" /></ListItemIcon>
             Dashboard
           </MenuItem>
         )}
@@ -115,12 +102,10 @@ export function HeaderUser() {
         <Divider />
 
         <MenuItem
-          onClick={() => {
-            setAnchorEl(null);
-            logOut();
-          }}
+          onClick={() => { setAnchorEl(null); logOut(); }}
           sx={{ color: "error.main" }}
         >
+          <ListItemIcon sx={{ color: "error.main" }}><LogoutOutlined fontSize="small" /></ListItemIcon>
           Logout
         </MenuItem>
       </Menu>
