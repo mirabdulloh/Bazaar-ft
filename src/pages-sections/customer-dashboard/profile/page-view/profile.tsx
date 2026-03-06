@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 // MUI
 import Alert from "@mui/material/Alert";
@@ -21,7 +22,13 @@ import CardGiftcardOutlined from "@mui/icons-material/CardGiftcardOutlined";
 import CameraEnhance from "@mui/icons-material/CameraEnhance";
 import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
 import EditOutlined from "@mui/icons-material/EditOutlined";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
+import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import IconButton from "@mui/material/IconButton";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import HistoryIcon from "@mui/icons-material/History";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
@@ -41,7 +48,7 @@ import {
   GET_VISITED_PRODUCTS,
   GET_FAVORITE_PRODUCTS
 } from "../../../../../apollo/user/query";
-import { CLAIM_COUPON, UPDATE_MEMBER } from "../../../../../apollo/user/mutation";
+import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE } from "../../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import DashboardHeader from "../../dashboard-header";
@@ -74,6 +81,14 @@ import {
   ProductCard,
   ProductImageBox,
   PeopleCard,
+  PeopleTableWrapper,
+  PeopleTableHeader,
+  PeopleTableRow,
+  PeopleNameCell,
+  PeopleDetailsCell,
+  PeopleSubscriptionCell,
+  DetailBadge,
+  PaginationWrapper,
   AvatarUploadWrapper,
   EditAvatar,
   CameraButton
@@ -167,6 +182,8 @@ export function ProfilePageView() {
   });
   const [editMsg, setEditMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [updateMember, { loading: updateLoading }] = useMutation(UPDATE_MEMBER);
+  const [subscribeMember] = useMutation(SUBSCRIBE);
+  const [unsubscribeMember] = useMutation(UNSUBSCRIBE);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   // Sync edit form when user reactive var changes
@@ -198,7 +215,7 @@ export function ProfilePageView() {
             query: `mutation ImageUploader($file: Upload!, $target: String!) {
               imageUploader(file: $file, target: $target)
             }`,
-            variables: { file: null, target: "member" }
+            variables: { file: null, target: "members" }
           })
         );
         formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
@@ -312,14 +329,14 @@ export function ProfilePageView() {
     notifyOnNetworkStatusChange: true
   });
 
-  const { loading: followingsLoading, data: followingsData } = useQuery(GET_MEMBER_FOLLOWINGS, {
+  const { loading: followingsLoading, data: followingsData, refetch: refetchFollowings } = useQuery(GET_MEMBER_FOLLOWINGS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 50, search: { followerId: user._id } } },
     notifyOnNetworkStatusChange: true,
     skip: !user._id
   });
 
-  const { loading: followersLoading, data: followersData } = useQuery(GET_MEMBER_FOLLOWERS, {
+  const { loading: followersLoading, data: followersData, refetch: refetchFollowers } = useQuery(GET_MEMBER_FOLLOWERS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 50, search: { followingId: user._id } } },
     notifyOnNetworkStatusChange: true,
@@ -332,6 +349,31 @@ export function ProfilePageView() {
   const favoriteProducts: T[] = (favoritesData as T)?.getFavoriteProducts?.products ?? [];
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
+
+  // ── Follow / Unfollow handlers ──
+  const handleFollow = useCallback(async (targetId: string) => {
+    try {
+      await subscribeMember({ variables: { input: targetId } });
+      await sweetMixinSuccessAlert("Followed!");
+      refetchFollowings();
+      refetchFollowers();
+    } catch (err: any) {
+      console.error("Follow error:", err);
+      await sweetMixinErrorAlert(err.message || "Failed to follow");
+    }
+  }, [subscribeMember, refetchFollowings, refetchFollowers]);
+
+  const handleUnfollow = useCallback(async (targetId: string) => {
+    try {
+      await unsubscribeMember({ variables: { input: targetId } });
+      await sweetMixinSuccessAlert("Unfollowed!");
+      refetchFollowings();
+      refetchFollowers();
+    } catch (err: any) {
+      console.error("Unfollow error:", err);
+      await sweetMixinErrorAlert(err.message || "Failed to unfollow");
+    }
+  }, [unsubscribeMember, refetchFollowings, refetchFollowers]);
 
   // Resolve avatar: preview > uploaded image > dicebear fallback
   const avatarSrc =
@@ -373,6 +415,9 @@ export function ProfilePageView() {
             loading={followersLoading}
             dataKey="followerData"
             emptyMsg="No followers yet."
+            followings={followings}
+            onFollow={handleFollow}
+            onUnfollow={handleUnfollow}
           />
         );
       case "followings":
@@ -383,6 +428,9 @@ export function ProfilePageView() {
             loading={followingsLoading}
             dataKey="followingData"
             emptyMsg="You haven't followed anyone yet."
+            followings={followings}
+            onFollow={handleFollow}
+            onUnfollow={handleUnfollow}
           />
         );
       case "claim-coupon":
@@ -774,14 +822,44 @@ function PeoplePanel({
   people,
   loading,
   dataKey,
-  emptyMsg
+  emptyMsg,
+  followings,
+  onFollow,
+  onUnfollow
 }: {
   title: string;
   people: T[];
   loading: boolean;
   dataKey: "followerData" | "followingData";
   emptyMsg: string;
+  followings: T[];
+  onFollow: (id: string) => void;
+  onUnfollow: (id: string) => void;
 }) {
+  const ITEMS_PER_PAGE = 6;
+  const [page, setPage] = useState(1);
+  const router = useRouter();
+
+  const totalPages = Math.max(1, Math.ceil(people.length / ITEMS_PER_PAGE));
+  const paginated = people.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // Build a set of IDs the current user is following
+  const followingIds = new Set(
+    followings.map((f: T) => {
+      const fd = (f.followingData as T) ?? {};
+      return fd._id as string;
+    }).filter(Boolean)
+  );
+
+  const handleNavigate = (fd: T) => {
+    const memberType = fd.memberType as string;
+    if (memberType === "BRAND") {
+      router.push(`/brands/${fd._id}`);
+    } else {
+      router.push(`/member/${fd._id}`);
+    }
+  };
+
   return (
     <Box>
       <SectionTitle
@@ -794,16 +872,18 @@ function PeoplePanel({
       />
 
       {loading ? (
-        <Grid container spacing={2}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid size={{ xs: 4, sm: 3, md: 2 }} key={i}>
-              <Box textAlign="center">
-                <Skeleton variant="circular" width={64} height={64} sx={{ mx: "auto" }} />
-                <Skeleton width={60} sx={{ mx: "auto", mt: 1 }} />
+        <Box>
+          {[1, 2, 3, 4].map((i) => (
+            <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 2, py: 2, px: 2.5, borderBottom: "1px solid", borderColor: "grey.100" }}>
+              <Skeleton variant="circular" width={48} height={48} />
+              <Box flex={1}>
+                <Skeleton width={120} />
+                <Skeleton width={200} sx={{ mt: 0.5 }} />
               </Box>
-            </Grid>
+              <Skeleton width={80} height={36} variant="rounded" />
+            </Box>
           ))}
-        </Grid>
+        </Box>
       ) : people.length === 0 ? (
         <EmptyCard>
           <PeopleAltOutlinedIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
@@ -812,47 +892,210 @@ function PeoplePanel({
           </Typography>
         </EmptyCard>
       ) : (
-        <Grid container spacing={2.5}>
-          {people.map((f: T) => {
+        <PeopleTableWrapper>
+          {/* Table Header */}
+          <PeopleTableHeader>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.8}>
+              Name
+            </Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.8}>
+              Details
+            </Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.8} textAlign="right">
+              Subscription
+            </Typography>
+          </PeopleTableHeader>
+
+          {/* Rows */}
+          {paginated.map((f: T) => {
             const fd = (f[dataKey] as T) ?? {};
             const memberType = fd.memberType as string;
-            const href = memberType === "BRAND" ? `/brands/${fd._id}` : `/profile/${fd._id}`;
             const memberImg = resolveImage(fd.memberImage as string);
+            const memberId = fd._id as string;
+            const isFollowing = followingIds.has(memberId);
+            const isBrandOrAdmin = memberType === "BRAND" || memberType === "ADMIN";
+
             return (
-              <Grid size={{ xs: 4, sm: 3, md: 2 }} key={f._id as string}>
-                <Link href={href} style={{ textDecoration: "none" }}>
-                  <PeopleCard>
-                    <Avatar
-                      src={memberImg}
-                      alt={fd.memberNick as string}
-                      sx={{ width: 64, height: 64, mx: "auto", mb: 1 }}
-                    />
+              <PeopleTableRow key={f._id as string}>
+                {/* Name Cell */}
+                <PeopleNameCell>
+                  <Avatar
+                    src={memberImg}
+                    alt={fd.memberNick as string}
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      cursor: "pointer",
+                      border: isBrandOrAdmin ? "2px solid" : "none",
+                      borderColor: memberType === "BRAND" ? "primary.main" : "info.main",
+                    }}
+                    onClick={() => handleNavigate(fd)}
+                  />
+                  <Box sx={{ minWidth: 0 }}>
                     <Typography
-                      variant="caption"
+                      variant="body2"
                       fontWeight={600}
                       sx={{
-                        display: "block",
+                        cursor: "pointer",
                         overflow: "hidden",
                         whiteSpace: "nowrap",
-                        textOverflow: "ellipsis"
+                        textOverflow: "ellipsis",
+                        "&:hover": { color: "primary.main" }
                       }}
+                      onClick={() => handleNavigate(fd)}
                     >
                       {fd.memberNick as string}
                     </Typography>
-                    {memberType && (
+                    {isBrandOrAdmin && (
                       <Chip
                         label={memberType}
                         size="small"
+                        color={memberType === "BRAND" ? "primary" : "info"}
                         variant="outlined"
-                        sx={{ fontSize: 9, mt: 0.5, height: 18 }}
+                        sx={{ fontSize: 9, height: 18, mt: 0.3 }}
                       />
                     )}
-                  </PeopleCard>
-                </Link>
-              </Grid>
+                  </Box>
+                </PeopleNameCell>
+
+                {/* Details Cell */}
+                <PeopleDetailsCell>
+                  <DetailBadge>
+                    <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
+                    <Typography variant="caption" fontWeight={600}>
+                      Followers ({(fd.memberFollowers as number) ?? 0})
+                    </Typography>
+                  </DetailBadge>
+                  <DetailBadge>
+                    <GroupsOutlinedIcon sx={{ fontSize: 15 }} />
+                    <Typography variant="caption" fontWeight={600}>
+                      Followings ({(fd.memberFollowings as number) ?? 0})
+                    </Typography>
+                  </DetailBadge>
+                  <DetailBadge>
+                    <FavoriteIcon sx={{ fontSize: 14, color: (fd.memberLikes as number) > 0 ? "error.main" : "text.disabled" }} />
+                    <Typography variant="caption" fontWeight={600}>
+                      ({(fd.memberLikes as number) ?? 0})
+                    </Typography>
+                  </DetailBadge>
+                  {isBrandOrAdmin && (
+                    <DetailBadge>
+                      <ArticleOutlinedIcon sx={{ fontSize: 15 }} />
+                      <Typography variant="caption" fontWeight={600}>
+                        Articles ({(fd.memberArticles as number) ?? 0})
+                      </Typography>
+                    </DetailBadge>
+                  )}
+                  {memberType === "BRAND" && (
+                    <DetailBadge>
+                      <StorefrontOutlinedIcon sx={{ fontSize: 15 }} />
+                      <Typography variant="caption" fontWeight={600}>
+                        Products ({(fd.memberProducts as number) ?? 0})
+                      </Typography>
+                    </DetailBadge>
+                  )}
+                </PeopleDetailsCell>
+
+                {/* Subscription Cell */}
+                <PeopleSubscriptionCell>
+                  {isFollowing ? (
+                    <>
+                      <Typography variant="caption" color="text.secondary" fontStyle="italic" sx={{ display: { xs: "none", sm: "block" } }}>
+                        Following
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => onUnfollow(memberId)}
+                        sx={{
+                          borderRadius: 5,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: "none",
+                          px: 2,
+                          py: 0.3,
+                          minWidth: 0,
+                        }}
+                      >
+                        Unfollow
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      onClick={() => onFollow(memberId)}
+                      sx={{
+                        borderRadius: 5,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        textTransform: "none",
+                        px: 2.5,
+                        py: 0.3,
+                        minWidth: 0,
+                        boxShadow: "none",
+                        "&:hover": { boxShadow: "none" },
+                      }}
+                    >
+                      Follow
+                    </Button>
+                  )}
+                </PeopleSubscriptionCell>
+              </PeopleTableRow>
             );
           })}
-        </Grid>
+
+          {/* Pagination + total */}
+          {totalPages > 1 && (
+            <PaginationWrapper>
+              <IconButton
+                size="small"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <Box
+                  key={p}
+                  onClick={() => setPage(p)}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.15s ease",
+                    ...(p === page
+                      ? { backgroundColor: "success.main", color: "white" }
+                      : { "&:hover": { backgroundColor: "grey.100" } }
+                    ),
+                  }}
+                >
+                  {p}
+                </Box>
+              ))}
+              <IconButton
+                size="small"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </PaginationWrapper>
+          )}
+
+          {/* Total text */}
+          <Typography variant="body2" color="text.secondary" textAlign="center" py={1.5}>
+            {people.length} {title.toLowerCase().includes("follower") ? "followers" : "followings"}
+          </Typography>
+        </PeopleTableWrapper>
       )}
     </Box>
   );

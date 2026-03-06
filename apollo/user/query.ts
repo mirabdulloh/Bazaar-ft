@@ -659,6 +659,16 @@ export const GET_MEMBER_FOLLOWINGS = gql`
           memberNick
           memberImage
           memberType
+          memberFollowers
+          memberFollowings
+          memberLikes
+          memberArticles
+          memberProducts
+        }
+        meFollowed {
+          followerId
+          followingId
+          myFollowing
         }
       }
       metaCounter {
@@ -682,6 +692,16 @@ export const GET_MEMBER_FOLLOWERS = gql`
           memberNick
           memberImage
           memberType
+          memberFollowers
+          memberFollowings
+          memberLikes
+          memberArticles
+          memberProducts
+        }
+        meFollowed {
+          followerId
+          followingId
+          myFollowing
         }
       }
       metaCounter {

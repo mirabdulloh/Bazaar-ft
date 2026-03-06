@@ -214,6 +214,85 @@ export const PeopleCard = styled(Card)(({ theme }) => ({
   },
 }));
 
+// ─── People Table Styles ─────────────────────────────────────────────────────
+export const PeopleTableWrapper = styled(Box)(({ theme }) => ({
+  border: `1px solid ${theme.palette.grey[200]}`,
+  borderRadius: 12,
+  overflow: "hidden",
+}));
+
+export const PeopleTableHeader = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "1fr 2fr 1fr",
+  padding: `${theme.spacing(1.5)} ${theme.spacing(2.5)}`,
+  backgroundColor: theme.palette.grey[50],
+  borderBottom: `1px solid ${theme.palette.grey[200]}`,
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr 1.5fr 1fr",
+    padding: `${theme.spacing(1)} ${theme.spacing(1.5)}`,
+  },
+}));
+
+export const PeopleTableRow = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "1fr 2fr 1fr",
+  alignItems: "center",
+  padding: `${theme.spacing(2)} ${theme.spacing(2.5)}`,
+  borderBottom: `1px solid ${theme.palette.grey[100]}`,
+  transition: "background-color 0.15s ease",
+  "&:last-child": {
+    borderBottom: "none",
+  },
+  "&:hover": {
+    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+  },
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr 1.5fr 1fr",
+    padding: `${theme.spacing(1.5)} ${theme.spacing(1.5)}`,
+  },
+}));
+
+export const PeopleNameCell = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  minWidth: 0,
+});
+
+export const PeopleDetailsCell = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(2.5),
+  flexWrap: "wrap",
+  [theme.breakpoints.down("sm")]: {
+    gap: theme.spacing(1.5),
+  },
+}));
+
+export const PeopleSubscriptionCell = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 10,
+});
+
+export const DetailBadge = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  fontSize: 13,
+  color: theme.palette.text.secondary,
+  fontWeight: 500,
+}));
+
+export const PaginationWrapper = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: theme.spacing(2),
+  gap: theme.spacing(1),
+}));
+
 // ─── Edit profile — avatar upload ────────────────────────────────────────────
 export const AvatarUploadWrapper = styled(Box)({
   position: "relative",
