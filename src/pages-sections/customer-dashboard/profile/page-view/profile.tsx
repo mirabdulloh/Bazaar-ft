@@ -1,32 +1,47 @@
 "use client";
 
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useMemo } from "react";
+import axios from "axios";
 // MUI
-import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import Chip from "@mui/material/Chip";
-import Grid from "@mui/material/Grid";
+import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
+import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
-import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 // MUI ICONS
-import CreditCardIcon from "@mui/icons-material/CreditCard";
-import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
+import CardGiftcardOutlined from "@mui/icons-material/CardGiftcardOutlined";
+import CameraEnhance from "@mui/icons-material/CameraEnhance";
+import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
+import EditOutlined from "@mui/icons-material/EditOutlined";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import HistoryIcon from "@mui/icons-material/History";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
+// REACT-i18n
+import { useTranslation } from "../../../../../node_modules/react-i18next";
 // APOLLO
-import { useReactiveVar } from "@apollo/client/react";
+import { useReactiveVar, useMutation } from "@apollo/client/react";
 import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import {
   GET_MY_ORDERS,
-  GET_ADDRESSES,
   GET_MEMBER_FOLLOWINGS,
-  GET_BRANDS,
+  GET_MEMBER_FOLLOWERS,
   GET_VISITED_PRODUCTS,
+  GET_FAVORITE_PRODUCTS
 } from "../../../../../apollo/user/query";
+import { CLAIM_COUPON, UPDATE_MEMBER } from "../../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import DashboardHeader from "../../dashboard-header";
@@ -35,12 +50,88 @@ import User3 from "icons/User3";
 import { T } from "../../../../lib/types/common";
 // UTILS
 import { currency } from "lib";
+import { getJwtToken, logOut, updateStorage, updateUserInfo } from "lib/auth";
+import { sweetMixinSuccessAlert, sweetMixinErrorAlert } from "../../../../lib/sweetAlert";
+// STYLED COMPONENTS
+import {
+  ProfileCard,
+  SidebarWrapper,
+  SidebarProfileBox,
+  SidebarAvatar,
+  SidebarNav,
+  NavItem,
+  LogoutNavItem,
+  SectionLabel,
+  ContentArea,
+  SectionTitleBar,
+  PanelCard,
+  OverviewHeroCard,
+  OverviewAvatar,
+  StatCard,
+  InfoRowWrapper,
+  OrderCard,
+  EmptyCard,
+  ProductCard,
+  ProductImageBox,
+  PeopleCard,
+  AvatarUploadWrapper,
+  EditAvatar,
+  CameraButton
+} from "../styles";
 
-// ─── Static payment methods (no backend) ──────────────────────────────────────
-const STATIC_PAYMENT_METHODS = [
-  { id: "1", type: "Visa", last4: "4242", expiry: "08/26" },
-  { id: "2", type: "Mastercard", last4: "8910", expiry: "11/27" },
+// ─── Tab Definitions ──────────────────────────────────────────────────────────
+
+type TabKey =
+  | "overview"
+  | "orders"
+  | "recently-visited"
+  | "favorites"
+  | "followers"
+  | "followings"
+  | "claim-coupon"
+  | "edit-profile";
+
+interface TabDef {
+  key: TabKey;
+  label: string;
+  icon: React.ReactNode;
+  section?: string;
+}
+
+const ICON_SZ = { fontSize: 18 };
+
+const TABS: TabDef[] = [
+  {
+    key: "overview",
+    label: "Overview",
+    icon: <PersonOutlined sx={ICON_SZ} />,
+    section: "MY ACCOUNT"
+  },
+  {
+    key: "orders",
+    label: "Orders",
+    icon: <LocalShippingOutlined sx={ICON_SZ} />,
+    section: "MANAGE"
+  },
+  { key: "recently-visited", label: "Recently Visited", icon: <HistoryIcon sx={ICON_SZ} /> },
+  { key: "favorites", label: "My Favorites", icon: <FavoriteBorderIcon sx={ICON_SZ} /> },
+  { key: "followers", label: "My Followers", icon: <PeopleAltOutlinedIcon sx={ICON_SZ} /> },
+  { key: "followings", label: "My Followings", icon: <GroupsOutlinedIcon sx={ICON_SZ} /> },
+  {
+    key: "claim-coupon",
+    label: "Claim Coupon",
+    icon: <CardGiftcardOutlined sx={ICON_SZ} />,
+    section: "COUPONS"
+  },
+  {
+    key: "edit-profile",
+    label: "Edit Profile",
+    icon: <EditOutlined sx={ICON_SZ} />,
+    section: "SETTINGS"
+  }
 ];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function orderStatusColor(status: string): "warning" | "success" | "error" | "default" {
   if (["PENDING", "PROCESSING"].includes(status)) return "warning";
@@ -49,365 +140,1079 @@ function orderStatusColor(status: string): "warning" | "success" | "error" | "de
   return "default";
 }
 
-function Section({
-  title,
-  linkHref,
-  linkLabel = "See all →",
-  children,
-}: {
-  title: string;
-  linkHref: string;
-  linkLabel?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Box sx={{ mt: 4 }}>
-      <FlexBetween mb={2}>
-        <Typography variant="h6" fontWeight={700}>{title}</Typography>
-        <Link href={linkHref}>
-          <Typography variant="body2" color="primary.main" sx={{ cursor: "pointer" }}>
-            {linkLabel}
-          </Typography>
-        </Link>
-      </FlexBetween>
-      <Card
-        elevation={0}
-        sx={{
-          p: { xs: 2, sm: 2.5 },
-          border: "1px solid",
-          borderColor: "grey.100",
-          borderRadius: 3,
-          bgcolor: "background.paper",
-        }}
-      >
-        {children}
-      </Card>
-    </Box>
-  );
+function resolveImage(img: string | undefined | null): string {
+  if (!img || img.trim() === "") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const path = img.startsWith("/") ? img : `/${img}`;
+  return `${base}${path}`;
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
 export function ProfilePageView() {
+  const { t } = useTranslation();
   const user = useReactiveVar(userVar);
+  const token = getJwtToken();
 
-  /** APOLLO REQUESTS **/
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+
+  // ── Edit Profile state ──
+  const [updateData, setUpdateData] = useState({
+    memberNick: user.memberNick || "",
+    memberFullName: user.memberFullName || "",
+    memberPhone: user.memberPhone || "",
+    memberAddress: user.memberAddress || "",
+    memberDesc: user.memberDesc || "",
+    memberImage: user.memberImage || ""
+  });
+  const [editMsg, setEditMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [updateMember, { loading: updateLoading }] = useMutation(UPDATE_MEMBER);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+
+  // Sync edit form when user reactive var changes
+  useEffect(() => {
+    setUpdateData({
+      memberNick: user.memberNick || "",
+      memberFullName: user.memberFullName || "",
+      memberPhone: user.memberPhone || "",
+      memberAddress: user.memberAddress || "",
+      memberDesc: user.memberDesc || "",
+      memberImage: user.memberImage || ""
+    });
+  }, [user]);
+
+  /** Upload image to backend via multipart/form-data graphql-upload **/
+  const uploadImage = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Show local preview immediately
+        setProfileImagePreview(URL.createObjectURL(file));
+
+        const formData = new FormData();
+        formData.append(
+          "operations",
+          JSON.stringify({
+            query: `mutation ImageUploader($file: Upload!, $target: String!) {
+              imageUploader(file: $file, target: $target)
+            }`,
+            variables: { file: null, target: "member" }
+          })
+        );
+        formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
+        formData.append("0", file);
+
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_GRAPHQL_URL}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "apollo-require-preflight": "true",
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const responseImage = response.data.data.imageUploader;
+        setUpdateData((prev) => ({ ...prev, memberImage: responseImage }));
+      } catch (err) {
+        console.error("Error uploading image:", err);
+        await sweetMixinErrorAlert("Image upload failed");
+        setProfileImagePreview(null);
+      }
+    },
+    [token]
+  );
+
+  /** Save profile changes **/
+  const handleUpdateProfile = useCallback(async () => {
+    try {
+      if (!user._id) throw new Error("Not authenticated");
+
+      const result = await updateMember({
+        variables: {
+          input: {
+            _id: user._id,
+            memberNick: updateData.memberNick.trim() || undefined,
+            memberFullName: updateData.memberFullName.trim() || undefined,
+            memberPhone: updateData.memberPhone.trim() || undefined,
+            memberAddress: updateData.memberAddress.trim() || undefined,
+            memberDesc: updateData.memberDesc.trim() || undefined,
+            memberImage: updateData.memberImage || undefined
+          }
+        }
+      });
+
+      const jwtToken = (result?.data as T)?.updateMember?.accessToken;
+      if (jwtToken) {
+        updateStorage({ jwtToken });
+        updateUserInfo(jwtToken);
+      }
+      setProfileImagePreview(null);
+      setEditMsg(null);
+      await sweetMixinSuccessAlert("Profile updated successfully!");
+    } catch (err: any) {
+      console.error("Update error:", err);
+      await sweetMixinErrorAlert(err?.message || "Failed to update profile");
+    }
+  }, [updateData, user._id, updateMember]);
+
+  const doDisabledCheck = () => {
+    return (
+      !updateData.memberNick.trim() ||
+      !updateData.memberPhone.trim() ||
+      !updateData.memberAddress.trim()
+    );
+  };
+
+  // ── Coupon state ──
+  const [couponCode, setCouponCode] = useState("");
+  const [couponMsg, setCouponMsg] = useState<{ type: "success" | "error"; text: string } | null>(
+    null
+  );
+  const [claimCoupon, { loading: claimLoading }] = useMutation(CLAIM_COUPON);
+
+  const handleClaimCoupon = useCallback(async () => {
+    if (!couponCode.trim()) return;
+    setCouponMsg(null);
+    try {
+      const result = await claimCoupon({ variables: { couponCode: couponCode.trim() } });
+
+      const jwtToken = (result?.data as T)?.claimCoupon?.accessToken;
+      if (jwtToken) {
+        updateStorage({ jwtToken });
+        updateUserInfo(jwtToken);
+      }
+
+      setCouponMsg({ type: "success", text: "Coupon claimed successfully!" });
+      setCouponCode("");
+      await sweetMixinSuccessAlert("Coupon claimed!");
+    } catch (err: any) {
+      console.error("Coupon error:", err);
+      setCouponMsg({ type: "error", text: "Invalid or expired coupon code." });
+      await sweetMixinErrorAlert("Invalid or expired coupon code");
+    }
+  }, [couponCode, claimCoupon]);
+
+  /** APOLLO QUERIES **/
   const { loading: ordersLoading, data: ordersData } = useQuery(GET_MY_ORDERS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 3 } },
-    notifyOnNetworkStatusChange: true,
-  });
-
-  const { loading: addressesLoading, data: addressesData } = useQuery(GET_ADDRESSES, {
-    fetchPolicy: "cache-and-network",
-    notifyOnNetworkStatusChange: true,
-  });
-
-  const { loading: followingsLoading, data: followingsData } = useQuery(GET_MEMBER_FOLLOWINGS, {
-    fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 50 } },
-    notifyOnNetworkStatusChange: true,
-  });
-
-  const { loading: brandsLoading, data: brandsData } = useQuery(GET_BRANDS, {
-    fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 100 } },
-    notifyOnNetworkStatusChange: true,
+    variables: { input: { page: 1, limit: 10 } },
+    notifyOnNetworkStatusChange: true
   });
 
   const { loading: visitedLoading, data: visitedData } = useQuery(GET_VISITED_PRODUCTS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 6 } },
-    notifyOnNetworkStatusChange: true,
+    variables: { input: { page: 1, limit: 12 } },
+    notifyOnNetworkStatusChange: true
   });
 
-  const followedBrands = useMemo(() => {
-    const followingIds = new Set<string>(
-      ((followingsData as T)?.getMemberFollowings?.list ?? []).map(
-        (f: T) => (f.followingId as string)?.toString()
-      )
-    );
-    const allBrands: T[] = (brandsData as T)?.getBrands?.brands ?? [];
-    return allBrands.filter((b: T) => followingIds.has((b._id as string)?.toString())).slice(0, 6);
-  }, [followingsData, brandsData]);
+  const { loading: favoritesLoading, data: favoritesData } = useQuery(GET_FAVORITE_PRODUCTS, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 12 } },
+    notifyOnNetworkStatusChange: true
+  });
 
+  const { loading: followingsLoading, data: followingsData } = useQuery(GET_MEMBER_FOLLOWINGS, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 50, search: { followerId: user._id } } },
+    notifyOnNetworkStatusChange: true,
+    skip: !user._id
+  });
+
+  const { loading: followersLoading, data: followersData } = useQuery(GET_MEMBER_FOLLOWERS, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 50, search: { followingId: user._id } } },
+    notifyOnNetworkStatusChange: true,
+    skip: !user._id
+  });
+
+  // ── Data extraction ──
   const orders: T[] = (ordersData as T)?.getMyOrders?.orders ?? [];
-  const addresses: T[] = (addressesData as T)?.getAddresses ?? [];
   const visitedProducts: T[] = (visitedData as T)?.getVisitedProducts?.products ?? [];
+  const favoriteProducts: T[] = (favoritesData as T)?.getFavoriteProducts?.products ?? [];
+  const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
+  const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
+
+  // Resolve avatar: preview > uploaded image > dicebear fallback
+  const avatarSrc =
+    profileImagePreview ||
+    resolveImage(updateData.memberImage) ||
+    resolveImage(user.memberImage) ||
+    `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(user.memberNick || "U")}`;
+
+  // ── Render active tab content ──
+  const renderContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return <OverviewPanel user={user} avatarSrc={avatarSrc} />;
+      case "orders":
+        return <OrdersPanel orders={orders} loading={ordersLoading} />;
+      case "recently-visited":
+        return (
+          <ProductGridPanel
+            title="Recently Visited"
+            products={visitedProducts}
+            loading={visitedLoading}
+            emptyMsg="No recently visited products."
+          />
+        );
+      case "favorites":
+        return (
+          <ProductGridPanel
+            title="My Favorites"
+            products={favoriteProducts}
+            loading={favoritesLoading}
+            emptyMsg="No favorite products yet."
+          />
+        );
+      case "followers":
+        return (
+          <PeoplePanel
+            title="My Followers"
+            people={followers}
+            loading={followersLoading}
+            dataKey="followerData"
+            emptyMsg="No followers yet."
+          />
+        );
+      case "followings":
+        return (
+          <PeoplePanel
+            title="My Followings"
+            people={followings}
+            loading={followingsLoading}
+            dataKey="followingData"
+            emptyMsg="You haven't followed anyone yet."
+          />
+        );
+      case "claim-coupon":
+        return (
+          <CouponPanel
+            couponCode={couponCode}
+            setCouponCode={setCouponCode}
+            couponMsg={couponMsg}
+            setCouponMsg={setCouponMsg}
+            handleClaimCoupon={handleClaimCoupon}
+            claimLoading={claimLoading}
+            user={user}
+          />
+        );
+      case "edit-profile":
+        return (
+          <EditProfilePanel
+            updateData={updateData}
+            setUpdateData={setUpdateData}
+            editMsg={editMsg}
+            handleUpdateProfile={handleUpdateProfile}
+            updateLoading={updateLoading}
+            doDisabledCheck={doDisabledCheck}
+            avatarSrc={avatarSrc}
+            uploadImage={uploadImage}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Box>
-      <DashboardHeader title="My Profile" Icon={User3} />
+      <DashboardHeader title={t("My Profile", { defaultValue: "My Profile" })} Icon={User3} />
 
-      {/* ── Profile Hero ─────────────────────────────────────────── */}
-      <Card
-        elevation={0}
-        sx={{
-          p: { xs: 2.5, sm: 3.5 },
-          border: "1px solid",
-          borderColor: "grey.100",
-          borderRadius: 3,
-          background: "linear-gradient(135deg, #f6f7fb 0%, #ffffff 60%)",
-        }}
-      >
-        <Stack direction={{ xs: "column", sm: "row" }} alignItems="center" spacing={3}>
-          <Avatar
-            src={
-              user.memberImage ||
-              `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(user.memberNick || "U")}&backgroundColor=6366f1&textColor=ffffff`
-            }
-            alt={user.memberNick}
-            sx={{ width: 86, height: 86 }}
-          />
-          <Box flex={1} minWidth={0}>
-            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-              <Typography variant="h5" fontWeight={800} noWrap>
-                {user.memberNick}
-              </Typography>
-              <Chip label={user.memberType} size="small" sx={{ fontSize: 11 }} />
-            </Stack>
-            {user.memberFullName && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {user.memberFullName}
-              </Typography>
-            )}
-            {user.memberPhone && (
-              <Typography variant="body2" color="text.secondary">
-                {user.memberPhone}
-              </Typography>
-            )}
-          </Box>
-          <Link href="/profile/edit">
-            <Typography variant="body2" color="primary.main" sx={{ cursor: "pointer", fontWeight: 600 }}>
-              Edit Profile →
-            </Typography>
-          </Link>
-        </Stack>
-      </Card>
-
-      {/* ── Quick Stats ─────────────────────────────────────────── */}
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        {[
-          { label: "Orders", value: orders.length },
-          { label: "Addresses", value: addresses.length },
-          { label: "Following", value: followedBrands.length },
-          { label: "Visited", value: visitedProducts.length },
-        ].map((item) => (
-          <Grid key={item.label} size={{ xs: 6, md: 3 }}>
-            <Card
-              elevation={0}
-              sx={{
-                p: 2,
-                border: "1px solid",
-                borderColor: "grey.100",
-                borderRadius: 2,
-                textAlign: "center",
-              }}
-            >
-              <Typography variant="h5" fontWeight={800}>
-                {item.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {item.label}
-              </Typography>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* ── Recent Orders ────────────────────────────────────────── */}
-      <Section title="Recent Orders" linkHref="/orders">
-        {ordersLoading ? (
-          [1, 2, 3].map((i) => <Skeleton key={i} height={56} sx={{ mb: 1 }} />)
-        ) : orders.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">No orders yet.</Typography>
-        ) : (
-          <Box sx={{ border: "1px solid", borderColor: "grey.100", borderRadius: 2, overflow: "hidden" }}>
-            {orders.map((order: T, idx: number) => (
-              <Box key={order._id as string}>
-                <Link href={`/orders/${order._id}`} style={{ textDecoration: "none" }}>
-                  <FlexBetween
-                    sx={{ px: 2, py: 1.5, cursor: "pointer", "&:hover": { bgcolor: "grey.50" } }}
-                  >
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        Order #{(order._id as string).slice(-8).toUpperCase()}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(order.createdAt as string).toLocaleDateString("en-US", {
-                          year: "numeric", month: "short", day: "numeric",
-                        })}
-                      </Typography>
-                    </Box>
-                    <FlexBox alignItems="center" gap={2}>
-                      <Chip
-                        label={order.orderStatus as string}
-                        size="small"
-                        color={orderStatusColor(order.orderStatus as string)}
-                        sx={{ fontWeight: 600, fontSize: 11 }}
-                      />
-                      <Typography variant="body2" fontWeight={700}>
-                        {currency((order.orderFinalPrice ?? order.orderTotalPrice) as number)}
-                      </Typography>
-                    </FlexBox>
-                  </FlexBetween>
-                </Link>
-                {idx < orders.length - 1 && <Divider />}
-              </Box>
-            ))}
-          </Box>
-        )}
-      </Section>
-
-      {/* ── My Addresses ─────────────────────────────────────────── */}
-      <Section title="My Addresses" linkHref="/address" linkLabel="Manage →">
-        {addressesLoading ? (
-          <Grid container spacing={2}>
-            {[1, 2].map((i) => <Grid size={{ sm: 6, xs: 12 }} key={i}><Skeleton height={90} /></Grid>)}
-          </Grid>
-        ) : addresses.length === 0 ? (
-          <FlexBox alignItems="center" gap={1}>
-            <Typography variant="body2" color="text.secondary">No addresses saved.</Typography>
-            <Link href="/address/add">
-              <Typography variant="body2" color="primary.main" sx={{ cursor: "pointer" }}>Add Address →</Typography>
-            </Link>
-          </FlexBox>
-        ) : (
-          <Grid container spacing={2}>
-            {addresses.map((addr: T) => (
-              <Grid size={{ sm: 6, xs: 12 }} key={addr._id as string}>
-                <Card elevation={0} sx={{ p: 2, border: "1px solid", borderColor: "grey.100", borderRadius: 2, height: "100%" }}>
-                  <FlexBox alignItems="flex-start" gap={1}>
-                    <LocationOnOutlined sx={{ fontSize: 18, color: "primary.main", mt: 0.3 }} />
-                    <Box>
-                      <FlexBox alignItems="center" gap={1} mb={0.25}>
-                        <Typography variant="body2" fontWeight={700}>{addr.addressName as string}</Typography>
-                        {addr.isDefault && (
-                          <Chip label="Default" size="small" color="primary" sx={{ fontSize: 10, height: 18 }} />
-                        )}
-                      </FlexBox>
-                      <Typography variant="caption" color="text.secondary">
-                        {[addr.addressLine1, addr.addressCity, addr.addressCountry].filter(Boolean).join(", ")}
-                      </Typography>
-                    </Box>
-                  </FlexBox>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
-      </Section>
-
-      {/* ── Payment Methods (static) ─────────────────────────────── */}
-      <Section title="Payment Methods" linkHref="/payment-methods" linkLabel="Manage →">
-        <Grid container spacing={2}>
-          {STATIC_PAYMENT_METHODS.map((pm) => (
-            <Grid size={{ sm: 6, xs: 12 }} key={pm.id}>
-              <Card elevation={0} sx={{ p: 2, border: "1px solid", borderColor: "grey.100", borderRadius: 2 }}>
-                <FlexBox alignItems="center" gap={1.5}>
-                  <CreditCardIcon sx={{ fontSize: 28, color: "primary.main" }} />
-                  <Box>
-                    <Typography variant="body2" fontWeight={700}>
-                      {pm.type} •••• {pm.last4}
+      <ProfileCard>
+        <Grid container sx={{ minHeight: 600 }}>
+          {/* ── LEFT SIDEBAR ── */}
+          <Grid size={{ xs: 12, md: 3 }}>
+            <SidebarWrapper>
+              {/* Profile card in sidebar */}
+              <SidebarProfileBox>
+                <SidebarAvatar src={avatarSrc} alt={user.memberNick} />
+                <Typography variant="subtitle1" fontWeight={700} noWrap>
+                  {user.memberNick}
+                </Typography>
+                {user.memberFullName && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                    {user.memberFullName}
+                  </Typography>
+                )}
+                <Chip
+                  label={user.memberType}
+                  size="small"
+                  color="primary"
+                  sx={{ mt: 1, fontSize: 10, fontWeight: 700 }}
+                />
+                <FlexBox justifyContent="center" gap={3} mt={1.5}>
+                  <Box textAlign="center">
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {(user as T).memberFollowers ?? 0}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">Expires {pm.expiry}</Typography>
+                    <Typography variant="caption" color="text.secondary" fontSize={10}>
+                      Followers
+                    </Typography>
+                  </Box>
+                  <Divider orientation="vertical" flexItem />
+                  <Box textAlign="center">
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {(user as T).memberFollowings ?? 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" fontSize={10}>
+                      Following
+                    </Typography>
+                  </Box>
+                  <Divider orientation="vertical" flexItem />
+                  <Box textAlign="center">
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {user.memberPoints ?? 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" fontSize={10}>
+                      Points
+                    </Typography>
                   </Box>
                 </FlexBox>
-              </Card>
+              </SidebarProfileBox>
+
+              {/* Navigation tabs */}
+              <SidebarNav>
+                {TABS.map((tab, index) => {
+                  const isActive = activeTab === tab.key;
+                  const showSection =
+                    tab.section && (index === 0 || TABS[index - 1]?.section !== tab.section);
+
+                  return (
+                    <Box key={tab.key}>
+                      {showSection && (
+                        <SectionLabel sx={{ pt: index === 0 ? 0.5 : 1.5 }}>
+                          {tab.section}
+                        </SectionLabel>
+                      )}
+                      <NavItem isActive={isActive} onClick={() => setActiveTab(tab.key)}>
+                        {tab.icon}
+                        <Typography variant="body2" fontWeight={isActive ? 600 : 400}>
+                          {tab.label}
+                        </Typography>
+                      </NavItem>
+                    </Box>
+                  );
+                })}
+
+                {/* Logout */}
+                <Divider sx={{ my: 1.5 }} />
+                <LogoutNavItem onClick={logOut}>
+                  <LogoutOutlinedIcon sx={ICON_SZ} />
+                  <Typography variant="body2" fontWeight={500}>
+                    Logout
+                  </Typography>
+                </LogoutNavItem>
+              </SidebarNav>
+            </SidebarWrapper>
+          </Grid>
+
+          {/* ── RIGHT CONTENT ── */}
+          <Grid size={{ xs: 12, md: 9 }}>
+            <ContentArea>{renderContent()}</ContentArea>
+          </Grid>
+        </Grid>
+      </ProfileCard>
+    </Box>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ─── PANEL COMPONENTS ─────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Section Header ──
+function SectionTitle({ title, action }: { title: string; action?: React.ReactNode }) {
+  return (
+    <FlexBetween mb={2.5}>
+      <SectionTitleBar>
+        <Typography variant="h6" fontWeight={700}>
+          {title}
+        </Typography>
+      </SectionTitleBar>
+      {action}
+    </FlexBetween>
+  );
+}
+
+// ── Info Row ──
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <InfoRowWrapper>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>
+        {value || "\u2014"}
+      </Typography>
+    </InfoRowWrapper>
+  );
+}
+
+// ━━━ OVERVIEW PANEL ━━━
+function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
+  return (
+    <Box>
+      <SectionTitle title="Profile Overview" />
+
+      {/* Profile hero card */}
+      <OverviewHeroCard>
+        <FlexBox alignItems="center" gap={3} flexWrap="wrap">
+          <OverviewAvatar src={avatarSrc} alt={user.memberNick as string} />
+          <Box flex={1}>
+            <Typography variant="h5" fontWeight={800}>
+              {user.memberNick as string}
+            </Typography>
+            {user.memberFullName && (
+              <Typography variant="body1" color="text.secondary" mt={0.25}>
+                {user.memberFullName as string}
+              </Typography>
+            )}
+            <FlexBox gap={1} mt={1} flexWrap="wrap">
+              <Chip
+                label={user.memberType as string}
+                size="small"
+                color="primary"
+                sx={{ fontSize: 11, fontWeight: 600 }}
+              />
+              <Chip
+                label={`${user.memberPoints ?? 0} points`}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: 11 }}
+              />
+            </FlexBox>
+          </Box>
+        </FlexBox>
+      </OverviewHeroCard>
+
+      {/* Details */}
+      <PanelCard sx={{ p: 2.5 }}>
+        <Typography variant="subtitle2" fontWeight={700} mb={1} color="text.secondary">
+          PERSONAL INFORMATION
+        </Typography>
+        <InfoRow label="Username" value={user.memberNick as string} />
+        <InfoRow label="Full Name" value={user.memberFullName as string} />
+        <InfoRow label="Phone" value={user.memberPhone as string} />
+        <InfoRow label="Address" value={user.memberAddress as string} />
+        <InfoRow label="Member Type" value={user.memberType as string} />
+        <InfoRow label="Rank" value={String(user.memberRank ?? 0)} />
+
+        {/* Stats */}
+        <Grid container spacing={2} mt={2}>
+          {[
+            { label: "Articles", value: user.memberArticles ?? 0 },
+            { label: "Likes", value: user.memberLikes ?? 0 },
+            { label: "Views", value: user.memberViews ?? 0 },
+            { label: "Points", value: user.memberPoints ?? 0 }
+          ].map((stat) => (
+            <Grid size={{ xs: 6, sm: 3 }} key={stat.label}>
+              <StatCard>
+                <Typography variant="h5" color="primary.main" fontWeight={700}>
+                  {stat.value}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {stat.label}
+                </Typography>
+              </StatCard>
             </Grid>
           ))}
         </Grid>
-      </Section>
+      </PanelCard>
+    </Box>
+  );
+}
 
-      {/* ── Following Brands ─────────────────────────────────────── */}
-      <Section title="Following Brands" linkHref="/following">
-        {followingsLoading || brandsLoading ? (
-          <FlexBox gap={2} sx={{ overflowX: "auto", pb: 1 }}>
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} variant="rounded" width={120} height={80} sx={{ flexShrink: 0 }} />
-            ))}
-          </FlexBox>
-        ) : followedBrands.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            You haven&apos;t followed any brands yet.
+// ━━━ ORDERS PANEL ━━━
+function OrdersPanel({ orders, loading }: { orders: T[]; loading: boolean }) {
+  return (
+    <Box>
+      <SectionTitle title="My Orders" />
+
+      {loading ? (
+        <Stack spacing={1.5}>
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} height={64} variant="rounded" sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : orders.length === 0 ? (
+        <EmptyCard>
+          <LocalShippingOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            No orders yet.
           </Typography>
-        ) : (
-          <FlexBox gap={2} sx={{ overflowX: "auto", pb: 1 }}>
-            {followedBrands.map((brand: T) => (
-              <Link key={brand._id as string} href={`/brands/${brand._id}`} style={{ textDecoration: "none", flexShrink: 0 }}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    p: 1.5, border: "1px solid", borderColor: "grey.100", borderRadius: 2,
-                    width: 120, textAlign: "center",
-                    "&:hover": { borderColor: "primary.main" }, transition: "border-color 0.15s",
-                  }}
-                >
-                  {brand.brandLogo ? (
-                    <Box sx={{ position: "relative", width: 60, height: 60, mx: "auto", mb: 0.75, borderRadius: 1, overflow: "hidden" }}>
-                      <Image src={brand.brandLogo as string} alt={brand.brandName as string} fill style={{ objectFit: "cover" }} sizes="60px" />
-                    </Box>
-                  ) : (
-                    <Avatar sx={{ width: 60, height: 60, mx: "auto", mb: 0.75, bgcolor: "primary.main" }}>
-                      {(brand.brandName as string)?.[0]}
-                    </Avatar>
-                  )}
-                  <Typography variant="caption" fontWeight={600} sx={{ display: "block" }}>
-                    {brand.brandName as string}
-                  </Typography>
-                </Card>
-              </Link>
-            ))}
-          </FlexBox>
-        )}
-      </Section>
-
-      {/* ── Recently Visited Products ─────────────────────────────── */}
-      <Section title="Recently Visited" linkHref="/products/search" linkLabel="Browse all →">
-        {visitedLoading ? (
-          <FlexBox gap={2} sx={{ overflowX: "auto", pb: 1 }}>
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} variant="rounded" width={130} height={170} sx={{ flexShrink: 0 }} />
-            ))}
-          </FlexBox>
-        ) : visitedProducts.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">No recently visited products.</Typography>
-        ) : (
-          <FlexBox gap={2} sx={{ overflowX: "auto", pb: 1 }}>
-            {visitedProducts.map((p: T) => (
-              <Link key={p._id as string} href={`/products/${p._id}`} style={{ textDecoration: "none", flexShrink: 0 }}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    width: 130, border: "1px solid", borderColor: "grey.100", borderRadius: 2, overflow: "hidden",
-                    "&:hover": { borderColor: "primary.main" }, transition: "border-color 0.15s",
-                  }}
-                >
-                  <Box sx={{ position: "relative", width: "100%", height: 110 }}>
-                    <Image
-                      src={(p.productImages as string[])?.[0] ?? "/assets/images/products/product-1.png"}
-                      alt={p.productTitle as string}
-                      fill
-                      style={{ objectFit: "cover" }}
-                      sizes="130px"
-                    />
+          <Link href="/products/search">
+            <Button variant="contained" size="small" sx={{ mt: 2 }}>
+              Start Shopping
+            </Button>
+          </Link>
+        </EmptyCard>
+      ) : (
+        <Stack spacing={1}>
+          {orders.map((order: T) => (
+            <Link
+              key={order._id as string}
+              href={`/orders/${order._id}`}
+              style={{ textDecoration: "none" }}
+            >
+              <OrderCard>
+                <FlexBetween flexWrap="wrap" gap={1}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={700}>
+                      Order #{(order._id as string).slice(-8).toUpperCase()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(order.createdAt as string).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric"
+                      })}
+                    </Typography>
                   </Box>
-                  <Box sx={{ p: 1 }}>
+                  <FlexBox alignItems="center" gap={2}>
+                    <Chip
+                      label={order.orderStatus as string}
+                      size="small"
+                      color={orderStatusColor(order.orderStatus as string)}
+                      sx={{ fontWeight: 600, fontSize: 10 }}
+                    />
+                    <Typography variant="body2" fontWeight={700} color="primary.main">
+                      {currency((order.orderFinalPrice ?? order.orderTotalPrice) as number)}
+                    </Typography>
+                  </FlexBox>
+                </FlexBetween>
+              </OrderCard>
+            </Link>
+          ))}
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
+// ━━━ PRODUCT GRID PANEL (Recently Visited / Favorites) ━━━
+function ProductGridPanel({
+  title,
+  products,
+  loading,
+  emptyMsg
+}: {
+  title: string;
+  products: T[];
+  loading: boolean;
+  emptyMsg: string;
+}) {
+  return (
+    <Box>
+      <SectionTitle title={title} />
+
+      {loading ? (
+        <Grid container spacing={2}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={i}>
+              <Skeleton height={200} variant="rounded" sx={{ borderRadius: 2 }} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : products.length === 0 ? (
+        <EmptyCard>
+          <FavoriteBorderIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            {emptyMsg}
+          </Typography>
+          <Link href="/products/search">
+            <Button variant="contained" size="small" sx={{ mt: 2 }}>
+              Browse Products
+            </Button>
+          </Link>
+        </EmptyCard>
+      ) : (
+        <Grid container spacing={2}>
+          {products.map((p: T) => {
+            const imgSrc =
+              resolveImage((p.productImages as string[])?.[0]) ||
+              "/assets/images/products/product-1.png";
+            return (
+              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={p._id as string}>
+                <Link href={`/products/${p._id}`} style={{ textDecoration: "none" }}>
+                  <ProductCard>
+                    <ProductImageBox>
+                      <Image
+                        src={imgSrc}
+                        alt={p.productTitle as string}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        sizes="(max-width: 600px) 50vw, 25vw"
+                      />
+                    </ProductImageBox>
+                    <Box p={1.5}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
+                      >
+                        {p.productTitle as string}
+                      </Typography>
+                      <Typography variant="body2" color="primary.main" fontWeight={700} mt={0.5}>
+                        {currency(p.productPrice as number)}
+                      </Typography>
+                    </Box>
+                  </ProductCard>
+                </Link>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+    </Box>
+  );
+}
+
+// ━━━ PEOPLE PANEL (Followers / Followings) ━━━
+function PeoplePanel({
+  title,
+  people,
+  loading,
+  dataKey,
+  emptyMsg
+}: {
+  title: string;
+  people: T[];
+  loading: boolean;
+  dataKey: "followerData" | "followingData";
+  emptyMsg: string;
+}) {
+  return (
+    <Box>
+      <SectionTitle
+        title={title}
+        action={
+          <Typography variant="body2" color="text.secondary">
+            {people.length} total
+          </Typography>
+        }
+      />
+
+      {loading ? (
+        <Grid container spacing={2}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Grid size={{ xs: 4, sm: 3, md: 2 }} key={i}>
+              <Box textAlign="center">
+                <Skeleton variant="circular" width={64} height={64} sx={{ mx: "auto" }} />
+                <Skeleton width={60} sx={{ mx: "auto", mt: 1 }} />
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      ) : people.length === 0 ? (
+        <EmptyCard>
+          <PeopleAltOutlinedIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            {emptyMsg}
+          </Typography>
+        </EmptyCard>
+      ) : (
+        <Grid container spacing={2.5}>
+          {people.map((f: T) => {
+            const fd = (f[dataKey] as T) ?? {};
+            const memberType = fd.memberType as string;
+            const href = memberType === "BRAND" ? `/brands/${fd._id}` : `/profile/${fd._id}`;
+            const memberImg = resolveImage(fd.memberImage as string);
+            return (
+              <Grid size={{ xs: 4, sm: 3, md: 2 }} key={f._id as string}>
+                <Link href={href} style={{ textDecoration: "none" }}>
+                  <PeopleCard>
+                    <Avatar
+                      src={memberImg}
+                      alt={fd.memberNick as string}
+                      sx={{ width: 64, height: 64, mx: "auto", mb: 1 }}
+                    />
                     <Typography
                       variant="caption"
                       fontWeight={600}
-                      sx={{ display: "block", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
+                      sx={{
+                        display: "block",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis"
+                      }}
                     >
-                      {p.productTitle as string}
+                      {fd.memberNick as string}
                     </Typography>
-                    <Typography variant="caption" color="primary.main" fontWeight={700}>
-                      {currency(p.productPrice as number)}
-                    </Typography>
-                  </Box>
-                </Card>
-              </Link>
-            ))}
-          </FlexBox>
+                    {memberType && (
+                      <Chip
+                        label={memberType}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: 9, mt: 0.5, height: 18 }}
+                      />
+                    )}
+                  </PeopleCard>
+                </Link>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+    </Box>
+  );
+}
+
+// ━━━ COUPON PANEL ━━━
+function CouponPanel({
+  couponCode,
+  setCouponCode,
+  couponMsg,
+  setCouponMsg,
+  handleClaimCoupon,
+  claimLoading,
+  user
+}: {
+  couponCode: string;
+  setCouponCode: (v: string) => void;
+  couponMsg: { type: "success" | "error"; text: string } | null;
+  setCouponMsg: (v: { type: "success" | "error"; text: string } | null) => void;
+  handleClaimCoupon: () => void;
+  claimLoading: boolean;
+  user: T;
+}) {
+  return (
+    <Box>
+      <SectionTitle title="Coupons" />
+
+      {/* Claim coupon */}
+      <PanelCard sx={{ mb: 3 }}>
+        <FlexBox alignItems="center" gap={1.5} mb={2}>
+          <CardGiftcardOutlined color="primary" />
+          <Typography variant="subtitle1" fontWeight={700}>
+            Claim a Coupon
+          </Typography>
+        </FlexBox>
+
+        <Typography variant="body2" color="text.secondary" mb={2}>
+          Enter your coupon code below to claim your discount.
+        </Typography>
+
+        <FlexBox gap={1.5} alignItems="flex-start" flexWrap="wrap">
+          <TextField
+            size="small"
+            value={couponCode}
+            onChange={(e) => {
+              setCouponCode(e.target.value);
+              setCouponMsg(null);
+            }}
+            placeholder="Enter coupon code"
+            sx={{ flex: 1, minWidth: 200 }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleClaimCoupon();
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleClaimCoupon}
+            disabled={!couponCode.trim() || claimLoading}
+            loading={claimLoading}
+            sx={{ px: 4 }}
+          >
+            Claim
+          </Button>
+        </FlexBox>
+
+        {couponMsg && (
+          <Alert severity={couponMsg.type} sx={{ mt: 2, borderRadius: 2 }}>
+            {couponMsg.text}
+          </Alert>
         )}
-      </Section>
+      </PanelCard>
+
+      {/* Claimed coupon details */}
+      <PanelCard>
+        <FlexBox alignItems="center" gap={1.5} mb={2}>
+          <ConfirmationNumberOutlined color="primary" />
+          <Typography variant="subtitle1" fontWeight={700}>
+            My Claimed Coupon
+          </Typography>
+        </FlexBox>
+
+        {(user as T).memberCouponId ? (
+          <Box>
+            {/* Coupon visual card */}
+            <Box
+              sx={{
+                p: 2.5,
+                mb: 2,
+                borderRadius: 2.5,
+                border: "2px dashed",
+                borderColor:
+                  ((user as T).memberCouponStatus as string) === "ACTIVE"
+                    ? "success.main"
+                    : "grey.300",
+                bgcolor:
+                  ((user as T).memberCouponStatus as string) === "ACTIVE"
+                    ? "success.50"
+                    : "grey.50",
+                textAlign: "center"
+              }}
+            >
+              <CardGiftcardOutlined
+                sx={{
+                  fontSize: 40,
+                  color:
+                    ((user as T).memberCouponStatus as string) === "ACTIVE"
+                      ? "success.main"
+                      : "grey.400",
+                  mb: 1
+                }}
+              />
+              <Typography variant="h6" fontWeight={700}>
+                Coupon
+              </Typography>
+              <Chip
+                label={((user as T).memberCouponStatus as string) || "ACTIVE"}
+                size="small"
+                color={
+                  ((user as T).memberCouponStatus as string) === "ACTIVE"
+                    ? "success"
+                    : ((user as T).memberCouponStatus as string) === "EXPIRED"
+                      ? "error"
+                      : "default"
+                }
+                sx={{ mt: 1, fontSize: 11, fontWeight: 700 }}
+              />
+            </Box>
+
+            {/* Coupon info rows */}
+            <InfoRow label="Status" value={((user as T).memberCouponStatus as string) || "N/A"} />
+            {(user as T).memberCouponAssignedAt && (
+              <InfoRow
+                label="Claimed At"
+                value={new Date((user as T).memberCouponAssignedAt as string).toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }
+                )}
+              />
+            )}
+            {(user as T).memberCouponUsedAt && (
+              <InfoRow
+                label="Used At"
+                value={new Date((user as T).memberCouponUsedAt as string).toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }
+                )}
+              />
+            )}
+
+            {((user as T).memberCouponStatus as string) === "ACTIVE" && (
+              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+                This coupon will be applied automatically at checkout.
+              </Alert>
+            )}
+            {((user as T).memberCouponStatus as string) === "EXPIRED" && (
+              <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+                This coupon has been used. Claim a new one above!
+              </Alert>
+            )}
+          </Box>
+        ) : (
+          <Box textAlign="center" py={3}>
+            <ConfirmationNumberOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+            <Typography variant="body1" color="text.secondary">
+              No coupon claimed yet.
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Use the form above to claim your first coupon!
+            </Typography>
+          </Box>
+        )}
+      </PanelCard>
+    </Box>
+  );
+}
+
+// ━━━ EDIT PROFILE PANEL ━━━
+function EditProfilePanel({
+  updateData,
+  setUpdateData,
+  editMsg,
+  handleUpdateProfile,
+  updateLoading,
+  doDisabledCheck,
+  avatarSrc,
+  uploadImage
+}: {
+  updateData: {
+    memberNick: string;
+    memberFullName: string;
+    memberPhone: string;
+    memberAddress: string;
+    memberDesc: string;
+    memberImage: string;
+  };
+  setUpdateData: React.Dispatch<
+    React.SetStateAction<{
+      memberNick: string;
+      memberFullName: string;
+      memberPhone: string;
+      memberAddress: string;
+      memberDesc: string;
+      memberImage: string;
+    }>
+  >;
+  editMsg: { type: "success" | "error"; text: string } | null;
+  handleUpdateProfile: () => void;
+  updateLoading: boolean;
+  doDisabledCheck: () => boolean;
+  avatarSrc: string;
+  uploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <Box>
+      <SectionTitle title="Edit Profile" />
+
+      {/* Photo upload */}
+      <PanelCard sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" fontWeight={700} mb={2} color="text.secondary">
+          PROFILE PHOTO
+        </Typography>
+
+        <FlexBox alignItems="center" gap={3}>
+          <AvatarUploadWrapper>
+            <EditAvatar src={avatarSrc} alt="Profile" />
+            <label
+              htmlFor="profile-img-upload"
+              style={{
+                position: "absolute",
+                bottom: -2,
+                right: -2,
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                backgroundColor: "var(--mui-palette-primary-main, #D23F57)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 3px 5px -1px rgba(0,0,0,.2)",
+                transition: "all 0.2s",
+              }}
+            >
+              <CameraEnhance sx={{ fontSize: 16, color: "white" }} />
+            </label>
+            <input
+              type="file"
+              id="profile-img-upload"
+              accept="image/jpg, image/jpeg, image/png"
+              onChange={uploadImage}
+              style={{ display: "none" }}
+            />
+          </AvatarUploadWrapper>
+          <Box>
+            <Typography variant="body2" fontWeight={600}>
+              Upload Profile Image
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              A photo must be in JPG, JPEG or PNG format!
+            </Typography>
+          </Box>
+        </FlexBox>
+      </PanelCard>
+
+      {/* Form fields */}
+      <PanelCard>
+        <Typography variant="subtitle2" fontWeight={700} mb={2.5} color="text.secondary">
+          PERSONAL INFORMATION
+        </Typography>
+
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Username"
+              placeholder="Your username"
+              value={updateData.memberNick}
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberNick: e.target.value }))}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Full Name"
+              placeholder="Your full name"
+              value={updateData.memberFullName}
+              onChange={(e) =>
+                setUpdateData((prev) => ({ ...prev, memberFullName: e.target.value }))
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Phone"
+              placeholder="Your phone"
+              value={updateData.memberPhone}
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberPhone: e.target.value }))}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Address"
+              placeholder="Your address"
+              value={updateData.memberAddress}
+              onChange={(e) =>
+                setUpdateData((prev) => ({ ...prev, memberAddress: e.target.value }))
+              }
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Description"
+              placeholder="Tell us about yourself"
+              value={updateData.memberDesc}
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberDesc: e.target.value }))}
+              multiline
+              rows={3}
+            />
+          </Grid>
+        </Grid>
+
+        {editMsg && (
+          <Alert severity={editMsg.type} sx={{ mt: 2, borderRadius: 2 }}>
+            {editMsg.text}
+          </Alert>
+        )}
+
+        <Box mt={3}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleUpdateProfile}
+            disabled={doDisabledCheck() || updateLoading}
+            loading={updateLoading}
+            sx={{ px: 5 }}
+          >
+            Save Changes
+          </Button>
+        </Box>
+      </PanelCard>
     </Box>
   );
 }

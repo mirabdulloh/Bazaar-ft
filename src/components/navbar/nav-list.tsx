@@ -202,7 +202,7 @@ export function NavigationList({ navigation }: Props) {
     <FlexBox gap={4}>
       {renderRootLevel(withCustomerSupport(navigation))}
       {isLoggedIn && (
-        <StyledNavLink href="/profile">My Profile</StyledNavLink>
+        <StyledNavLink href="/profile">{t("My Profile", { defaultValue: "My Profile" })}</StyledNavLink>
       )}
     </FlexBox>
   );

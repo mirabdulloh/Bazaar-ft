@@ -654,6 +654,12 @@ export const GET_MEMBER_FOLLOWINGS = gql`
         followerId
         createdAt
         updatedAt
+        followingData {
+          _id
+          memberNick
+          memberImage
+          memberType
+        }
       }
       metaCounter {
         total
@@ -671,6 +677,12 @@ export const GET_MEMBER_FOLLOWERS = gql`
         followerId
         createdAt
         updatedAt
+        followerData {
+          _id
+          memberNick
+          memberImage
+          memberType
+        }
       }
       metaCounter {
         total
