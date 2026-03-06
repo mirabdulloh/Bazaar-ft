@@ -13,9 +13,10 @@ import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 // APOLLO
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { useMutation } from "@apollo/client/react";
+import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { GET_MEMBER_FOLLOWINGS, GET_BRANDS } from "../../../../apollo/user/query";
 import { UNSUBSCRIBE } from "../../../../apollo/user/mutation";
+import { userVar } from "../../../../apollo/store";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import DashboardHeader from "pages-sections/customer-dashboard/dashboard-header";
@@ -24,10 +25,13 @@ import HeartLine from "icons/HeartLine";
 import { T } from "../../../lib/types/common";
 
 export default function FollowingPage() {
+  const user = useReactiveVar(userVar);
+
   const { loading: followingsLoading, data: followingsData, refetch } = useQuery(GET_MEMBER_FOLLOWINGS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 100 } },
+    variables: { input: { page: 1, limit: 100, search: { followerId: user._id } } },
     notifyOnNetworkStatusChange: true,
+    skip: !user._id,
   });
 
   const { loading: brandsLoading, data: brandsData } = useQuery(GET_BRANDS, {
