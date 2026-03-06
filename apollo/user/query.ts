@@ -37,6 +37,16 @@ export const GET_MEMBER = gql`
       updatedAt
       accessToken
       memberProducts
+      meLiked {
+        memberId
+        likeRefId
+        myFavorite
+      }
+      meFollowed {
+        followerId
+        followingId
+        myFollowing
+      }
     }
   }
 `;
@@ -670,6 +680,11 @@ export const GET_MEMBER_FOLLOWINGS = gql`
           followingId
           myFollowing
         }
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
+        }
       }
       metaCounter {
         total
@@ -702,6 +717,11 @@ export const GET_MEMBER_FOLLOWERS = gql`
           followerId
           followingId
           myFollowing
+        }
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
         }
       }
       metaCounter {

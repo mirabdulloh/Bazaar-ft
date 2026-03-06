@@ -19,11 +19,9 @@ import Typography from "@mui/material/Typography";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 // APOLLO
 import { useReactiveVar, useMutation } from "@apollo/client/react";
@@ -74,23 +72,25 @@ const TableWrapper = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.grey[200]}`,
   borderRadius: 12,
   overflow: "hidden",
+  minHeight: 520,
+  display: "flex",
+  flexDirection: "column",
 }));
 
 const TableHeader = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "1fr 2fr 1fr",
+  gridTemplateColumns: "minmax(120px, 1.2fr) 2fr minmax(100px, 0.8fr)",
   padding: `${theme.spacing(1.5)} ${theme.spacing(2.5)}`,
   backgroundColor: theme.palette.grey[50],
   borderBottom: `1px solid ${theme.palette.grey[200]}`,
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr 1.5fr 1fr",
-    padding: `${theme.spacing(1)} ${theme.spacing(1.5)}`,
+    display: "none",
   },
 }));
 
 const TableRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "1fr 2fr 1fr",
+  gridTemplateColumns: "minmax(120px, 1.2fr) 2fr minmax(100px, 0.8fr)",
   alignItems: "center",
   padding: `${theme.spacing(2)} ${theme.spacing(2.5)}`,
   borderBottom: `1px solid ${theme.palette.grey[100]}`,
@@ -98,8 +98,11 @@ const TableRow = styled(Box)(({ theme }) => ({
   "&:last-child": { borderBottom: "none" },
   "&:hover": { backgroundColor: alpha(theme.palette.primary.main, 0.02) },
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr 1.5fr 1fr",
-    padding: `${theme.spacing(1.5)} ${theme.spacing(1.5)}`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(2),
   },
 }));
 
@@ -233,9 +236,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
   }
 
   const handleNavigate = (fd: T) => {
-    const mt = fd.memberType as string;
-    if (mt === "BRAND") router.push(`/brands/${fd._id}`);
-    else router.push(`/member/${fd._id}`);
+    router.push(`/member/${fd._id}`);
   };
 
   return (
@@ -369,8 +370,17 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
               px: 3,
               boxShadow: "none",
               ...(activeTab === tab
-                ? { backgroundColor: "primary.main", "&:hover": { boxShadow: "none" } }
-                : { borderColor: "grey.300", color: "text.secondary" }
+                ? {
+                    backgroundColor: "success.main",
+                    color: "white",
+                    "&:hover": { backgroundColor: "success.dark", boxShadow: "none" },
+                  }
+                : {
+                    borderColor: "grey.300",
+                    color: "text.secondary",
+                    backgroundColor: "transparent",
+                    "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+                  }
               ),
             }}
           >
@@ -414,6 +424,9 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
             </Typography>
           </TableHeader>
 
+          {/* Table body — grows to fill space */}
+          <Box sx={{ flex: 1 }}>
+
           {paginated.map((f: T) => {
             const fd = (f[dataKey] as T) ?? {};
             const mt = fd.memberType as string;
@@ -421,7 +434,6 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
             const fMemberId = fd._id as string;
             const fIsFollowing = myFollowingIds.has(fMemberId);
             const fIsBrandOrAdmin = mt === "BRAND" || mt === "ADMIN";
-
             return (
               <TableRow key={f._id as string}>
                 {/* Name */}
@@ -466,7 +478,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                 </Box>
 
                 {/* Details */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", pl: { xs: "60px", sm: 0 } }}>
                   <DetailBadge>
                     <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
                     <Typography variant="caption" fontWeight={600}>
@@ -477,12 +489,6 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                     <GroupsOutlinedIcon sx={{ fontSize: 15 }} />
                     <Typography variant="caption" fontWeight={600}>
                       Followings ({(fd.memberFollowings as number) ?? 0})
-                    </Typography>
-                  </DetailBadge>
-                  <DetailBadge>
-                    <FavoriteIcon sx={{ fontSize: 14, color: (fd.memberLikes as number) > 0 ? "error.main" : "text.disabled" }} />
-                    <Typography variant="caption" fontWeight={600}>
-                      ({(fd.memberLikes as number) ?? 0})
                     </Typography>
                   </DetailBadge>
                   {fIsBrandOrAdmin && (
@@ -504,7 +510,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                 </Box>
 
                 {/* Subscription */}
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: { xs: "flex-start", sm: "flex-end" }, gap: 1, pl: { xs: "60px", sm: 0 } }}>
                   {user?._id && user._id !== fMemberId ? (
                     fIsFollowing ? (
                       <>
@@ -537,46 +543,49 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
               </TableRow>
             );
           })}
+          </Box>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, gap: 1 }}>
-              <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                <ChevronLeftIcon fontSize="small" />
-              </IconButton>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <Box
-                  key={p}
-                  onClick={() => setPage(p)}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    transition: "all 0.15s ease",
-                    ...(p === page
-                      ? { backgroundColor: "success.main", color: "white" }
-                      : { "&:hover": { backgroundColor: "grey.100" } }
-                    ),
-                  }}
-                >
-                  {p}
-                </Box>
-              ))}
-              <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          )}
+          {/* Pagination — pinned at bottom */}
+          <Box sx={{ mt: "auto" }}>
+            {totalPages > 1 && (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, gap: 1 }}>
+                <IconButton size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Box
+                    key={p}
+                    onClick={() => setPage(p)}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      transition: "all 0.15s ease",
+                      ...(p === page
+                        ? { backgroundColor: "success.main", color: "white" }
+                        : { "&:hover": { backgroundColor: "grey.100" } }
+                      ),
+                    }}
+                  >
+                    {p}
+                  </Box>
+                ))}
+                <IconButton size="small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
 
-          <Typography variant="body2" color="text.secondary" textAlign="center" py={1.5}>
-            {people.length} {activeTab === "followers" ? "followers" : "followings"}
-          </Typography>
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={1.5}>
+              {people.length} {activeTab === "followers" ? "followers" : "followings"}
+            </Typography>
+          </Box>
         </TableWrapper>
       )}
     </Container>

@@ -219,23 +219,25 @@ export const PeopleTableWrapper = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.grey[200]}`,
   borderRadius: 12,
   overflow: "hidden",
+  minHeight: 520,
+  display: "flex",
+  flexDirection: "column",
 }));
 
 export const PeopleTableHeader = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "1fr 2fr 1fr",
+  gridTemplateColumns: "minmax(120px, 1.2fr) 2fr minmax(100px, 0.8fr)",
   padding: `${theme.spacing(1.5)} ${theme.spacing(2.5)}`,
   backgroundColor: theme.palette.grey[50],
   borderBottom: `1px solid ${theme.palette.grey[200]}`,
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr 1.5fr 1fr",
-    padding: `${theme.spacing(1)} ${theme.spacing(1.5)}`,
+    display: "none",
   },
 }));
 
 export const PeopleTableRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "1fr 2fr 1fr",
+  gridTemplateColumns: "minmax(120px, 1.2fr) 2fr minmax(100px, 0.8fr)",
   alignItems: "center",
   padding: `${theme.spacing(2)} ${theme.spacing(2.5)}`,
   borderBottom: `1px solid ${theme.palette.grey[100]}`,
@@ -247,8 +249,11 @@ export const PeopleTableRow = styled(Box)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.primary.main, 0.02),
   },
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr 1.5fr 1fr",
-    padding: `${theme.spacing(1.5)} ${theme.spacing(1.5)}`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(2),
   },
 }));
 
@@ -257,6 +262,7 @@ export const PeopleNameCell = styled(Box)({
   alignItems: "center",
   gap: 12,
   minWidth: 0,
+  width: "100%",
 });
 
 export const PeopleDetailsCell = styled(Box)(({ theme }) => ({
@@ -265,16 +271,23 @@ export const PeopleDetailsCell = styled(Box)(({ theme }) => ({
   gap: theme.spacing(2.5),
   flexWrap: "wrap",
   [theme.breakpoints.down("sm")]: {
-    gap: theme.spacing(1.5),
+    gap: theme.spacing(1),
+    width: "100%",
+    paddingLeft: 60,
   },
 }));
 
-export const PeopleSubscriptionCell = styled(Box)({
+export const PeopleSubscriptionCell = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-end",
   gap: 10,
-});
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    paddingLeft: 60,
+    justifyContent: "flex-start",
+  },
+}));
 
 export const DetailBadge = styled(Box)(({ theme }) => ({
   display: "flex",

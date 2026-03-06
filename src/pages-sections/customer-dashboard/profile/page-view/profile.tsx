@@ -825,7 +825,7 @@ function PeoplePanel({
   emptyMsg,
   followings,
   onFollow,
-  onUnfollow
+  onUnfollow,
 }: {
   title: string;
   people: T[];
@@ -852,12 +852,8 @@ function PeoplePanel({
   );
 
   const handleNavigate = (fd: T) => {
-    const memberType = fd.memberType as string;
-    if (memberType === "BRAND") {
-      router.push(`/brands/${fd._id}`);
-    } else {
-      router.push(`/member/${fd._id}`);
-    }
+    const isBrand = fd.memberType === "BRAND";
+    router.push(isBrand ? `/brands/${fd._id}` : `/profile/${fd._id}`);
   };
 
   return (
@@ -893,7 +889,7 @@ function PeoplePanel({
         </EmptyCard>
       ) : (
         <PeopleTableWrapper>
-          {/* Table Header */}
+          {/* Table Header (hidden on mobile) */}
           <PeopleTableHeader>
             <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.8}>
               Name
@@ -906,6 +902,8 @@ function PeoplePanel({
             </Typography>
           </PeopleTableHeader>
 
+          {/* Table body — grows to fill space */}
+          <Box sx={{ flex: 1 }}>
           {/* Rows */}
           {paginated.map((f: T) => {
             const fd = (f[dataKey] as T) ?? {};
@@ -914,7 +912,6 @@ function PeoplePanel({
             const memberId = fd._id as string;
             const isFollowing = followingIds.has(memberId);
             const isBrandOrAdmin = memberType === "BRAND" || memberType === "ADMIN";
-
             return (
               <PeopleTableRow key={f._id as string}>
                 {/* Name Cell */}
@@ -931,7 +928,7 @@ function PeoplePanel({
                     }}
                     onClick={() => handleNavigate(fd)}
                   />
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography
                       variant="body2"
                       fontWeight={600}
@@ -970,12 +967,6 @@ function PeoplePanel({
                     <GroupsOutlinedIcon sx={{ fontSize: 15 }} />
                     <Typography variant="caption" fontWeight={600}>
                       Followings ({(fd.memberFollowings as number) ?? 0})
-                    </Typography>
-                  </DetailBadge>
-                  <DetailBadge>
-                    <FavoriteIcon sx={{ fontSize: 14, color: (fd.memberLikes as number) > 0 ? "error.main" : "text.disabled" }} />
-                    <Typography variant="caption" fontWeight={600}>
-                      ({(fd.memberLikes as number) ?? 0})
                     </Typography>
                   </DetailBadge>
                   {isBrandOrAdmin && (
@@ -1046,8 +1037,10 @@ function PeoplePanel({
               </PeopleTableRow>
             );
           })}
+          </Box>
 
-          {/* Pagination + total */}
+          {/* Pagination + total — pinned at bottom */}
+          <Box sx={{ mt: "auto" }}>
           {totalPages > 1 && (
             <PaginationWrapper>
               <IconButton
@@ -1091,10 +1084,10 @@ function PeoplePanel({
             </PaginationWrapper>
           )}
 
-          {/* Total text */}
           <Typography variant="body2" color="text.secondary" textAlign="center" py={1.5}>
             {people.length} {title.toLowerCase().includes("follower") ? "followers" : "followings"}
           </Typography>
+          </Box>
         </PeopleTableWrapper>
       )}
     </Box>
