@@ -25,6 +25,7 @@ import Filters from "models/Filters";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BRANDS_PREVIEW = 4;
+const CATEGORIES_PREVIEW = 5;
 
 const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EU_SHOE_SIZES  = ["EU 36", "EU 37", "EU 38", "EU 39", "EU 40", "EU 41", "EU 42", "EU 43", "EU 44"];
@@ -47,6 +48,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
   const searchParams = useSearchParams();
 
   const [brandsHovered, setBrandsHovered] = useState(false);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
 
   const {
     sales,
@@ -132,7 +134,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
           </Typography>
 
           <FormGroup>
-            {categoryFilters.map(({ label, value }) => (
+            {categoryFilters.slice(0, CATEGORIES_PREVIEW).map(({ label, value }) => (
               <CheckboxLabel
                 key={value}
                 label={label}
@@ -141,6 +143,29 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
               />
             ))}
           </FormGroup>
+
+          <Collapse in={categoriesExpanded} timeout={250}>
+            <FormGroup>
+              {categoryFilters.slice(CATEGORIES_PREVIEW).map(({ label, value }) => (
+                <CheckboxLabel
+                  key={value}
+                  label={label}
+                  checked={categoryId === value}
+                  onChange={() => handleChangeCategory(value)}
+                />
+              ))}
+            </FormGroup>
+          </Collapse>
+
+          {categoryFilters.length > CATEGORIES_PREVIEW && (
+            <Typography
+              variant="caption"
+              sx={{ color: "grey.500", mt: 0.5, display: "block", cursor: "pointer", userSelect: "none" }}
+              onClick={() => setCategoriesExpanded((prev) => !prev)}
+            >
+              {categoriesExpanded ? "Show less" : `+${categoryFilters.length - CATEGORIES_PREVIEW} more`}
+            </Typography>
+          )}
 
           <Box component={Divider} my={3} />
         </>

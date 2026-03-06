@@ -7,6 +7,7 @@ import Add from "@mui/icons-material/Add";
 import Button from "@mui/material/Button";
 // GLOBAL CUSTOM HOOKS
 import useCart from "hooks/useCart";
+import { useVariantPicker } from "contexts/VariantPickerContext";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 
@@ -18,13 +19,17 @@ export default function AddToCartButton({ product }: Props) {
   const { thumbnail, title, price, id, slug } = product;
 
   const { dispatch } = useCart();
-
+  const { openPicker } = useVariantPicker();
   const router = useRouter();
   const [isLoading, setLoading] = useState(false);
 
   const handleAddToCart = () => {
-    setLoading(true);
+    if (product.size?.length || product.colors?.length) {
+      openPicker(product);
+      return;
+    }
 
+    setLoading(true);
     setTimeout(() => {
       dispatch({
         type: "CHANGE_CART_AMOUNT",

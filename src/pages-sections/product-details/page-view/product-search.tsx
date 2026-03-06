@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // MUI
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
@@ -422,13 +423,21 @@ export default function ProductSearchPageView({
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", value);
     params.delete("page");
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleChangeCategory = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set("categoryId", value);
+    else params.delete("categoryId");
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleChangeView = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", value);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -460,9 +469,36 @@ export default function ProductSearchPageView({
             </Typography>
           </div>
 
-          <FlexBox alignItems="center" columnGap={4} flexWrap="wrap">
+          <FlexBox
+            alignItems="center"
+            columnGap={4}
+            flexWrap="wrap"
+            sx={{ width: { xs: "100%", md: "auto" }, flexDirection: { xs: "column", md: "row" }, alignItems: { xs: "stretch", md: "center" }, rowGap: 1.5 }}
+          >
+            {/* CATEGORY CHIPS — right side before sort */}
+            {fixedBrandId && categoryFilters.length > 0 && (
+              <FlexBox alignItems="center" gap={1} sx={{ display: "flex", width: { xs: "100%", md: "auto" } }}>
+                <TextField
+                  select
+                  size="small"
+                  value={categoryId || "all"}
+                  onChange={(e) =>
+                    handleChangeCategory(e.target.value === "all" ? "" : e.target.value)
+                  }
+                  sx={{ minWidth: 180, width: { xs: "100%", md: "auto" } }}
+                >
+                  <MenuItem value="all">Categories</MenuItem>
+                  {categoryFilters.map(({ label, value }) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </FlexBox>
+            )}
+
             {/* SORT */}
-            <FlexBox alignItems="center" gap={1} flex="1 1 0">
+            <FlexBox alignItems="center" gap={1} flex="1 1 0" sx={{ width: { xs: "100%", md: "auto" } }}>
               <Typography variant="body1" sx={{ color: "grey.600", whiteSpace: "pre" }}>
                 Sort by:
               </Typography>
@@ -485,7 +521,7 @@ export default function ProductSearchPageView({
             </FlexBox>
 
             {/* VIEW TOGGLE */}
-            <FlexBox alignItems="center" my="0.25rem">
+            <FlexBox alignItems="center" my="0.25rem" sx={{ width: { xs: "100%", md: "auto" } }}>
               <Typography variant="body1" sx={{ color: "grey.600", mr: 1 }}>
                 View:
               </Typography>
