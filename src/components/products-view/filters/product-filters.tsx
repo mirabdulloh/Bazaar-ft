@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 // MUI
 import Box from "@mui/material/Box";
@@ -40,7 +40,7 @@ const MATERIALS = ["Cotton", "Leather", "Wool", "Denim", "Polyester", "Silk", "S
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProductFilters({ filters }: { filters: Filters }) {
-  const { brands: BRANDS, others: OTHERS, colors: COLORS } = filters;
+  const { brands: BRANDS, others: OTHERS, colors: COLORS, categoryFilters } = filters;
 
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +56,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
     prices,
     sizes,
     materials,
+    categoryId,
     discount,
     handleChangeBrand,
     handleChangeColor,
@@ -63,6 +64,7 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
     handleChangeSales,
     handleChangeSize,
     handleChangeMaterial,
+    handleChangeCategory,
     handleChangeDiscount,
     handleChangeSearchParams,
   } = useProductFilterCard();
@@ -72,7 +74,8 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
   };
 
   const normalizePriceValue = (value: string): number => {
-    const normalized = value.replace(/^0+(?=\d)/, "");
+    const digitsOnly = value.replace(/[^\d]/g, "");
+    const normalized = digitsOnly.replace(/^0+(?=\d)/, "");
     return Number(normalized || 0);
   };
 
@@ -120,6 +123,28 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
       </FlexBetween>
 
       <Box component={Divider} my={3} />
+
+      {categoryFilters && categoryFilters.length > 0 && (
+        <>
+          {/* ── CATEGORIES ───────────────────────────────────────── */}
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Categories
+          </Typography>
+
+          <FormGroup>
+            {categoryFilters.map(({ label, value }) => (
+              <CheckboxLabel
+                key={value}
+                label={label}
+                checked={categoryId === value}
+                onChange={() => handleChangeCategory(value)}
+              />
+            ))}
+          </FormGroup>
+
+          <Box component={Divider} my={3} />
+        </>
+      )}
 
       {/* ── SIZE ─────────────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 1.5 }}>
@@ -179,50 +204,54 @@ export default function ProductFilters({ filters }: { filters: Filters }) {
 
       <Box component={Divider} my={3} />
 
-      {/* ── BRANDS ───────────────────────────────────────────── */}
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Brands
-      </Typography>
-
-      <Box
-        onMouseEnter={() => setBrandsHovered(true)}
-        onMouseLeave={() => setBrandsHovered(false)}
-      >
-        <FormGroup>
-          {BRANDS.slice(0, BRANDS_PREVIEW).map(({ label, value }) => (
-            <CheckboxLabel
-              key={value}
-              label={label}
-              checked={brands.includes(value)}
-              onChange={() => handleChangeBrand(value)}
-            />
-          ))}
-        </FormGroup>
-
-        <Collapse in={brandsHovered} timeout={300}>
-          <FormGroup>
-            {BRANDS.slice(BRANDS_PREVIEW).map(({ label, value }) => (
-              <CheckboxLabel
-                key={value}
-                label={label}
-                checked={brands.includes(value)}
-                onChange={() => handleChangeBrand(value)}
-              />
-            ))}
-          </FormGroup>
-        </Collapse>
-
-        {!brandsHovered && BRANDS.length > BRANDS_PREVIEW && (
-          <Typography
-            variant="caption"
-            sx={{ color: "grey.400", mt: 0.5, display: "block", userSelect: "none" }}
-          >
-            +{BRANDS.length - BRANDS_PREVIEW} more
+      {BRANDS.length > 0 && (
+        <>
+          {/* ── BRANDS ───────────────────────────────────────────── */}
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Brands
           </Typography>
-        )}
-      </Box>
 
-      <Box component={Divider} my={3} />
+          <Box
+            onMouseEnter={() => setBrandsHovered(true)}
+            onMouseLeave={() => setBrandsHovered(false)}
+          >
+            <FormGroup>
+              {BRANDS.slice(0, BRANDS_PREVIEW).map(({ label, value }) => (
+                <CheckboxLabel
+                  key={value}
+                  label={label}
+                  checked={brands.includes(value)}
+                  onChange={() => handleChangeBrand(value)}
+                />
+              ))}
+            </FormGroup>
+
+            <Collapse in={brandsHovered} timeout={300}>
+              <FormGroup>
+                {BRANDS.slice(BRANDS_PREVIEW).map(({ label, value }) => (
+                  <CheckboxLabel
+                    key={value}
+                    label={label}
+                    checked={brands.includes(value)}
+                    onChange={() => handleChangeBrand(value)}
+                  />
+                ))}
+              </FormGroup>
+            </Collapse>
+
+            {!brandsHovered && BRANDS.length > BRANDS_PREVIEW && (
+              <Typography
+                variant="caption"
+                sx={{ color: "grey.400", mt: 0.5, display: "block", userSelect: "none" }}
+              >
+                +{BRANDS.length - BRANDS_PREVIEW} more
+              </Typography>
+            )}
+          </Box>
+
+          <Box component={Divider} my={3} />
+        </>
+      )}
 
       {/* ── COLORS ───────────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 2 }}>

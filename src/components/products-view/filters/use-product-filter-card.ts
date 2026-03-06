@@ -7,9 +7,21 @@ export default function useProductFilterCard() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(true);
-  const [prices, setPrices] = useState<number[]>(
-    JSON.parse(searchParams.get("prices") || "[0, 300]")
-  );
+  const safeParsePrices = (raw: string | null): number[] => {
+    try {
+      const parsed = JSON.parse(raw || "[0, 300]");
+      const min = Number(Array.isArray(parsed) ? parsed[0] : 0);
+      const max = Number(Array.isArray(parsed) ? parsed[1] : 300);
+      return [
+        Number.isFinite(min) ? min : 0,
+        Number.isFinite(max) ? max : 300,
+      ];
+    } catch {
+      return [0, 300];
+    }
+  };
+
+  const [prices, setPrices] = useState<number[]>(safeParsePrices(searchParams.get("prices")));
 
   const rating = useMemo<number>(
     () => JSON.parse(searchParams.get("rating") || "0"),
@@ -41,23 +53,29 @@ export default function useProductFilterCard() {
     [searchParams]
   );
 
+  const categoryId = useMemo<string>(
+    () => searchParams.get("categoryId") || "",
+    [searchParams]
+  );
+
   const discount = useMemo<number>(
     () => Number(searchParams.get("discount") || "0"),
     [searchParams]
   );
 
-  const handleChangeSearchParams = useCallback(
-    (key: string, value: string) => {
-      if (!key || !value) return;
+  const setSearchParam = useCallback(
+    (key: string, value?: string) => {
+      if (!key) return;
       const params = new URLSearchParams(searchParams);
-      params.set(key, value);
+      if (value == null || value === "") params.delete(key);
+      else params.set(key, value);
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [router, pathname, searchParams]
   );
 
   const debouncedChangePrice = debounce((values: number[]) => {
-    handleChangeSearchParams("prices", JSON.stringify(values));
+    setSearchParam("prices", JSON.stringify(values));
   }, 500);
 
   const handleChangePrice = useCallback(
@@ -72,41 +90,46 @@ export default function useProductFilterCard() {
     const values = colors.includes(value)
       ? colors.filter((item) => item !== value)
       : [...colors, value];
-    handleChangeSearchParams("colors", JSON.stringify(values));
-  }, [colors, handleChangeSearchParams]);
+    setSearchParam("colors", JSON.stringify(values));
+  }, [colors, setSearchParam]);
 
   const handleChangeBrand = useCallback((value: string) => {
     const values = brands.includes(value)
       ? brands.filter((item) => item !== value)
       : [...brands, value];
-    handleChangeSearchParams("brands", JSON.stringify(values));
-  }, [brands, handleChangeSearchParams]);
+    setSearchParam("brands", JSON.stringify(values));
+  }, [brands, setSearchParam]);
 
   const handleChangeSales = useCallback((value: string) => {
     const values = sales.includes(value)
       ? sales.filter((item) => item !== value)
       : [...sales, value];
-    handleChangeSearchParams("sales", JSON.stringify(values));
-  }, [sales, handleChangeSearchParams]);
+    setSearchParam("sales", JSON.stringify(values));
+  }, [sales, setSearchParam]);
 
   const handleChangeSize = useCallback((value: string) => {
     const values = sizes.includes(value)
       ? sizes.filter((item) => item !== value)
       : [...sizes, value];
-    handleChangeSearchParams("sizes", JSON.stringify(values));
-  }, [sizes, handleChangeSearchParams]);
+    setSearchParam("sizes", JSON.stringify(values));
+  }, [sizes, setSearchParam]);
 
   const handleChangeMaterial = useCallback((value: string) => {
     const values = materials.includes(value)
       ? materials.filter((item) => item !== value)
       : [...materials, value];
-    handleChangeSearchParams("materials", JSON.stringify(values));
-  }, [materials, handleChangeSearchParams]);
+    setSearchParam("materials", JSON.stringify(values));
+  }, [materials, setSearchParam]);
+
+  const handleChangeCategory = useCallback((value: string) => {
+    const next = categoryId === value ? "" : value;
+    setSearchParam("categoryId", next);
+  }, [categoryId, setSearchParam]);
 
   const handleChangeDiscount = useCallback((value: number) => {
     const next = discount === value ? 0 : value;
-    handleChangeSearchParams("discount", next.toString());
-  }, [discount, handleChangeSearchParams]);
+    setSearchParam("discount", next.toString());
+  }, [discount, setSearchParam]);
 
   return {
     sales,
@@ -116,6 +139,7 @@ export default function useProductFilterCard() {
     prices,
     sizes,
     materials,
+    categoryId,
     discount,
     collapsed,
     setCollapsed,
@@ -125,7 +149,8 @@ export default function useProductFilterCard() {
     handleChangeSales,
     handleChangeSize,
     handleChangeMaterial,
+    handleChangeCategory,
     handleChangeDiscount,
-    handleChangeSearchParams,
+    handleChangeSearchParams: setSearchParam,
   };
 }

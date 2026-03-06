@@ -83,7 +83,7 @@ function toProductModel(p: GqlProduct): Product {
     productViews: p.productViews,
     productRank: p.productRank,
     meLiked: p.meLiked?.[0]?.myFavorite ?? false,
-    productStockQuantity: p.productStockQuantity,
+    productStockQuantity: p.productStockQuantity
   };
 }
 
@@ -105,11 +105,10 @@ const COLOR_NAME_MAP: Record<string, string[]> = {
   "#FF8C00": ["orange", "coral", "peach", "apricot"],
   "#808080": ["gray", "grey", "silver", "graphite"],
   "#FFC0CB": ["pink", "rose", "blush", "fuchsia", "magenta"],
-  "#A52A2A": ["brown", "tan", "camel", "beige", "ecru", "khaki", "chocolate", "coffee"],
+  "#A52A2A": ["brown", "tan", "camel", "beige", "ecru", "khaki", "chocolate", "coffee"]
 };
 
-const normalizeColorToken = (value: string) =>
-  value.toLowerCase().replace(/[^a-z]/g, "");
+const normalizeColorToken = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
 
 const splitProductColors = (value: string) =>
   value
@@ -126,115 +125,121 @@ type SortOption = {
 };
 
 const SORT_OPTIONS: SortOption[] = [
-  { label: "Newest First",       value: "newest",       Icon: FiberNew,      iconColor: "#1976d2" },
-  { label: "Best Sellers",       value: "best_sellers", Icon: EmojiEvents,   iconColor: "#f9a825" },
-  { label: "Most Popular",       value: "popular",      Icon: Favorite,      iconColor: "#e91e63" },
-  { label: "Trending",           value: "trending",     Icon: TrendingUp,    iconColor: "#00897b" },
-  { label: "Flash Deals",        value: "flash_deals",  Icon: FlashOn,       iconColor: "#f44336" },
-  { label: "Price: Low to High", value: "price_asc",    Icon: ArrowUpward,   iconColor: "#555" },
-  { label: "Price: High to Low", value: "price_desc",   Icon: ArrowDownward, iconColor: "#555" },
+  { label: "Newest First", value: "newest", Icon: FiberNew, iconColor: "#1976d2" },
+  { label: "Best Sellers", value: "best_sellers", Icon: EmojiEvents, iconColor: "#f9a825" },
+  { label: "Most Popular", value: "popular", Icon: Favorite, iconColor: "#e91e63" },
+  { label: "Trending", value: "trending", Icon: TrendingUp, iconColor: "#00897b" },
+  { label: "Flash Deals", value: "flash_deals", Icon: FlashOn, iconColor: "#f44336" },
+  { label: "Price: Low to High", value: "price_asc", Icon: ArrowUpward, iconColor: "#555" },
+  { label: "Price: High to Low", value: "price_desc", Icon: ArrowDownward, iconColor: "#555" }
 ];
 
 const SORT_MAP: Record<string, { sort: string; direction: string }> = {
-  newest:       { sort: "createdAt",    direction: "DESC" },
-  best_sellers: { sort: "productRank",  direction: "DESC" },
-  popular:      { sort: "productLikes", direction: "DESC" },
-  trending:     { sort: "productViews", direction: "DESC" },
-  flash_deals:  { sort: "productLikes", direction: "DESC" },
-  price_asc:    { sort: "productPrice", direction: "ASC" },
-  price_desc:   { sort: "productPrice", direction: "DESC" },
+  newest: { sort: "createdAt", direction: "DESC" },
+  best_sellers: { sort: "productRank", direction: "DESC" },
+  popular: { sort: "productLikes", direction: "DESC" },
+  trending: { sort: "productViews", direction: "DESC" },
+  flash_deals: { sort: "productLikes", direction: "DESC" },
+  price_asc: { sort: "productPrice", direction: "ASC" },
+  price_desc: { sort: "productPrice", direction: "DESC" }
 };
 
 // Static parts — colors/others never change
 const BASE_FILTER_COLORS = [
-  "#1C1C1C", "#FFFFFF", "#8B0000", "#00008B",
-  "#006400", "#FFD700", "#FF8C00", "#808080",
-  "#FFC0CB", "#A52A2A",
+  "#1C1C1C",
+  "#FFFFFF",
+  "#8B0000",
+  "#00008B",
+  "#006400",
+  "#FFD700",
+  "#FF8C00",
+  "#808080",
+  "#FFC0CB",
+  "#A52A2A"
 ];
 const BASE_FILTER_OTHERS = [
-  { label: "On Sale",  value: "sale" },
-  { label: "In Stock", value: "instock" },
+  { label: "On Sale", value: "sale" },
+  { label: "In Stock", value: "instock" }
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProductSearchPageView() {
+export default function ProductSearchPageView({
+  fixedBrandId,
+  showMobileFilter = true
+}: { fixedBrandId?: string; showMobileFilter?: boolean } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const q          = searchParams.get("q") || "";
-  const page       = Number(searchParams.get("page") || "1");
-  const sort       = searchParams.get("sort") || "newest";
-  const view       = searchParams.get("view") || "grid";
-  const categoryId   = searchParams.get("categoryId")   || "";
+  const q = searchParams.get("q") || "";
+  const page = Number(searchParams.get("page") || "1");
+  const sort = searchParams.get("sort") || "newest";
+  const view = searchParams.get("view") || "grid";
+  const categoryId = searchParams.get("categoryId") || "";
   const categoryName = searchParams.get("categoryName") || "";
+  const brandIdParam = fixedBrandId ?? searchParams.get("brandId") ?? "";
 
   // Sidebar filter values (set by useProductFilterCard inside ProductFilters)
-  const prices    = JSON.parse(searchParams.get("prices")    || "[0,300]") as number[];
-  const brands    = JSON.parse(searchParams.get("brands")    || "[]")      as string[];
-  const colors    = JSON.parse(searchParams.get("colors")    || "[]")      as string[];
-  const rating    = Number(searchParams.get("rating")        || "0");
-  const sales     = JSON.parse(searchParams.get("sales")     || "[]")      as string[];
-  const sizes     = JSON.parse(searchParams.get("sizes")     || "[]")      as string[];
-  const materials = JSON.parse(searchParams.get("materials") || "[]")      as string[];
-  const discount  = Number(searchParams.get("discount")      || "0");
+  const prices = JSON.parse(searchParams.get("prices") || "[0,300]") as number[];
+  const brands = JSON.parse(searchParams.get("brands") || "[]") as string[];
+  const colors = JSON.parse(searchParams.get("colors") || "[]") as string[];
+  const rating = Number(searchParams.get("rating") || "0");
+  const sales = JSON.parse(searchParams.get("sales") || "[]") as string[];
+  const sizes = JSON.parse(searchParams.get("sizes") || "[]") as string[];
+  const materials = JSON.parse(searchParams.get("materials") || "[]") as string[];
+  const discount = Number(searchParams.get("discount") || "0");
 
   const { sort: backendSort, direction } = SORT_MAP[sort] ?? SORT_MAP.newest;
 
   // Only pass text search to backend — all other filters are applied client-side
   const search: Record<string, unknown> = {};
   if (q) search.text = q;
+  if (brandIdParam) search.memberId = brandIdParam;
 
   /** APOLLO REQUESTS **/
   const {
     loading: getProductsLoading,
     data: getProductsData,
     error: _getProductsError,
-    refetch: _getProductsRefetch,
+    refetch: _getProductsRefetch
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: BACKEND_LIMIT, sort: backendSort, direction, search } },
-    notifyOnNetworkStatusChange: true,
+    notifyOnNetworkStatusChange: true
   });
 
   const {
     loading: _getBrandsLoading,
     data: getBrandsData,
     error: _getBrandsError,
-    refetch: _getBrandsRefetch,
+    refetch: _getBrandsRefetch
   } = useQuery(GET_BRANDS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 100 } },
-    notifyOnNetworkStatusChange: true,
+    notifyOnNetworkStatusChange: true
   });
 
   const {
     loading: _getCategoriesLoading,
     data: getCategoriesData,
     error: _getCategoriesError,
-    refetch: _getCategoriesRefetch,
+    refetch: _getCategoriesRefetch
   } = useQuery(GET_CATEGORIES, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 200 } },
-    notifyOnNetworkStatusChange: true,
+    notifyOnNetworkStatusChange: true
   });
 
   // Build dynamic brands list from real backend data
+  const brandFilterEnabled = !brandIdParam;
   const dynamicBrands = useMemo(() => {
+    if (!brandFilterEnabled) return [];
     const list = (getBrandsData as T)?.getBrands?.brands ?? [];
     return list
       .filter((b: T) => b.memberData?.memberNick)
       .map((b: T) => ({ label: b.brandName as string, value: b.memberData.memberNick as string }));
-  }, [getBrandsData]);
-
-  // Build full filters object — brands from backend, rest static
-  const filters: Filters = useMemo(() => ({
-    brands: dynamicBrands,
-    categories: [],
-    colors: BASE_FILTER_COLORS,
-    others: BASE_FILTER_OTHERS,
-  }), [dynamicBrands]);
+  }, [getBrandsData, brandFilterEnabled]);
 
   // Build a set of category IDs to include when a category is selected.
   // If the selected category has children, include parent + all children.
@@ -253,14 +258,17 @@ export default function ProductSearchPageView() {
     if (categoryName) {
       const nameLower = categoryName.toLowerCase();
       // Match any category whose name contains the search term
-      const matched = allCats.filter(
-        (c: T) => (c.categoryName as string)?.toLowerCase().includes(nameLower)
+      const matched = allCats.filter((c: T) =>
+        (c.categoryName as string)?.toLowerCase().includes(nameLower)
       );
       const ids = new Set<string>(matched.map((c: T) => (c._id as string).toString()));
       // Also include children of matched parent categories
       matched.forEach((parent: T) => {
         allCats.forEach((c: T) => {
-          if (c.parentCategoryId && c.parentCategoryId.toString() === (parent._id as string).toString()) {
+          if (
+            c.parentCategoryId &&
+            c.parentCategoryId.toString() === (parent._id as string).toString()
+          ) {
             ids.add((c._id as string).toString());
           }
         });
@@ -277,20 +285,52 @@ export default function ProductSearchPageView() {
     [getProductsData]
   );
 
+  // Build category options based on products currently available
+  const categoryFilters = useMemo(() => {
+    const list: T[] = (getCategoriesData as T)?.getCategories?.list ?? [];
+    if (list.length === 0) return [];
+    const ids = new Set<string>(
+      rawProducts
+        .map((p) => (p.productCategoryId as string | undefined))
+        .filter(Boolean)
+        .map((id) => id!.toString())
+    );
+    return list
+      .filter((c: T) => ids.has((c._id as string).toString()))
+      .map((c: T) => ({ label: c.categoryName as string, value: (c._id as string).toString() }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [getCategoriesData, rawProducts]);
+
+  // Build full filters object — brands from backend, rest static
+  const filters: Filters = useMemo(
+    () => ({
+      brands: dynamicBrands,
+      categories: [],
+      categoryFilters,
+      colors: BASE_FILTER_COLORS,
+      others: BASE_FILTER_OTHERS
+    }),
+    [dynamicBrands, categoryFilters]
+  );
+
   // Client-side filters applied to ALL fetched products
   const filteredProducts: Product[] = useMemo(() => {
     let list = rawProducts;
 
     // Category filter — supports parent categories by including all children
     if (activeCategoryIds.size > 0) {
-      list = list.filter((p) => p.productCategoryId && activeCategoryIds.has(p.productCategoryId.toString()));
+      list = list.filter(
+        (p) => p.productCategoryId && activeCategoryIds.has(p.productCategoryId.toString())
+      );
     }
 
     if (prices[0] > 0 || prices[1] < 300) {
       list = list.filter((p) => p.productPrice >= prices[0] && p.productPrice <= prices[1]);
     }
-    if (brands.length > 0) {
-      list = list.filter((p) => p.memberData?.memberNick && brands.includes(p.memberData.memberNick));
+    if (brands.length > 0 && brandFilterEnabled) {
+      list = list.filter(
+        (p) => p.memberData?.memberNick && brands.includes(p.memberData.memberNick)
+      );
     }
     if (colors.length > 0) {
       list = list.filter((p) => {
@@ -308,9 +348,7 @@ export default function ProductSearchPageView() {
       list = list.filter((p) => p.productSize && sizes.includes(p.productSize));
     }
     if (materials.length > 0) {
-      list = list.filter((p) =>
-        p.productMaterials && materials.includes(p.productMaterials)
-      );
+      list = list.filter((p) => p.productMaterials && materials.includes(p.productMaterials));
     }
     if (discount > 0) {
       list = list.filter((p) => {
@@ -335,14 +373,18 @@ export default function ProductSearchPageView() {
           (p.productStockQuantity ?? 0) > 0
       );
     } else if (saleSelected) {
-      list = list.filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice);
+      list = list.filter(
+        (p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice
+      );
     } else if (inStockSelected) {
       list = list.filter((p) => (p.productStockQuantity ?? 0) > 0);
     }
 
     // Flash Deals: keep only discounted items, then sort by discount % descending
     if (sort === "flash_deals") {
-      list = list.filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice);
+      list = list.filter(
+        (p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice
+      );
       list = [...list].sort((a, b) => {
         const discA = ((a.productPrice - a.productDiscountPrice) / a.productPrice) * 100;
         const discB = ((b.productPrice - b.productDiscountPrice) / b.productPrice) * 100;
@@ -351,14 +393,26 @@ export default function ProductSearchPageView() {
     }
 
     return list.map(toProductModel);
-  }, [rawProducts, activeCategoryIds, prices, brands, colors, sizes, materials, discount, rating, sales, sort]);
+  }, [
+    rawProducts,
+    activeCategoryIds,
+    prices,
+    brands,
+    colors,
+    sizes,
+    materials,
+    discount,
+    rating,
+    sales,
+    sort
+  ]);
 
   // Client-side pagination on filtered results
-  const total      = filteredProducts.length;
-  const pageCount  = Math.max(1, Math.ceil(total / DISPLAY_LIMIT));
-  const safePage   = Math.min(page, pageCount);
+  const total = filteredProducts.length;
+  const pageCount = Math.max(1, Math.ceil(total / DISPLAY_LIMIT));
+  const safePage = Math.min(page, pageCount);
   const firstIndex = total === 0 ? 0 : (safePage - 1) * DISPLAY_LIMIT + 1;
-  const lastIndex  = Math.min(safePage * DISPLAY_LIMIT, total);
+  const lastIndex = Math.min(safePage * DISPLAY_LIMIT, total);
   const displayProducts = useMemo(
     () => filteredProducts.slice((safePage - 1) * DISPLAY_LIMIT, safePage * DISPLAY_LIMIT),
     [filteredProducts, safePage]
@@ -423,7 +477,9 @@ export default function ProductSearchPageView() {
                 sx={{ flex: "1 1 0", minWidth: "150px" }}
               >
                 {SORT_OPTIONS.map(({ value, label }) => (
-                  <MenuItem value={value} key={value}>{label}</MenuItem>
+                  <MenuItem value={value} key={value}>
+                    {label}
+                  </MenuItem>
                 ))}
               </TextField>
             </FlexBox>
@@ -441,19 +497,21 @@ export default function ProductSearchPageView() {
               </IconButton>
 
               {/* MOBILE FILTER BUTTON */}
-              <Box display={{ md: "none", xs: "block" }}>
-                <Sidenav
-                  handler={(close) => (
-                    <IconButton onClick={close}>
-                      <FilterList fontSize="small" />
-                    </IconButton>
-                  )}
-                >
-                  <Box px={3} py={2}>
-                    <ProductFilters filters={filters} />
-                  </Box>
-                </Sidenav>
-              </Box>
+              {showMobileFilter && (
+                <Box display={{ md: "none", xs: "block" }}>
+                  <Sidenav
+                    handler={(close) => (
+                      <IconButton onClick={close}>
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                    )}
+                  >
+                    <Box px={3} py={2}>
+                      <ProductFilters filters={filters} />
+                    </Box>
+                  </Sidenav>
+                </Box>
+              )}
             </FlexBox>
           </FlexBox>
         </FlexBetween>
@@ -478,7 +536,9 @@ export default function ProductSearchPageView() {
               </Grid>
             ) : displayProducts.length === 0 ? (
               <Box py={10} textAlign="center">
-                <Typography variant="h6" color="text.secondary">No products found.</Typography>
+                <Typography variant="h6" color="text.secondary">
+                  No products found.
+                </Typography>
               </Box>
             ) : view === "grid" ? (
               <ProductsGridView products={displayProducts} />

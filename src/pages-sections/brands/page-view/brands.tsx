@@ -218,12 +218,24 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 									</Link>
 
 									<CardContent sx={{ p: 3 }}>
-										<Stack direction="row" alignItems="center" justifyContent="space-between">
+										<Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
 											<Link href={`/brands/${brand._id}`} style={{ textDecoration: "none", color: "inherit" }}>
 												<Typography variant="h6" fontWeight={700} noWrap>
 													{brand.brandName}
 												</Typography>
 											</Link>
+											<Stack
+												alignItems="center"
+												direction="row"
+												gap={0.5}
+												flexShrink={0}
+												sx={{ display: { xs: "flex", md: "none" } }}
+											>
+												<GroupIcon sx={{ fontSize: 24, color: "text.secondary" }} />
+												<Typography variant="caption" color="text.secondary" noWrap>
+													{brand.brandFollowersCount?.toLocaleString()} followers
+												</Typography>
+											</Stack>
 										</Stack>
 												<Typography
 													variant="body2"
@@ -240,32 +252,43 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 													{brand.brandDesc}
 												</Typography>
 
-										<Stack direction="row" spacing={2} mt={2} flexWrap="wrap">
-													<Stack alignItems="center" direction="row" gap={0.5}>
-														<GroupIcon sx={{ fontSize: 24, color: "text.secondary" }} />
-														<Typography variant="caption" color="text.secondary">
-															{brand.brandFollowersCount?.toLocaleString()} followers
-														</Typography>
-													</Stack>
-													<Stack alignItems="center" direction="row" gap={0.5}>
-														<IconButton size="small" onClick={(e) => likeBrandHandler(e, brand)} sx={{ p: 0.2 }}>
-															{brand.meLiked?.[0]?.myFavorite ? (
-																<Favorite sx={{ fontSize: 24, color: "error.main" }} />
-															) : (
-																<FavoriteBorder sx={{ fontSize: 24, color: "text.secondary" }} />
-															)}
-														</IconButton>
-														<Typography variant="caption" color="text.secondary">
-															{brand.memberData?.memberLikes?.toLocaleString() ?? 0} likes
-														</Typography>
-													</Stack>
-													<Stack alignItems="center" direction="row" gap={0.5}>
-														<StarIcon sx={{ fontSize: 24, color: "warning.main" }} />
-														<Typography variant="caption" color="text.secondary">
-															{brand.brandRating?.toFixed(1) ?? "—"}
-														</Typography>
-													</Stack>
-												</Stack>
+										<Stack
+											direction={{ xs: "column", sm: "row" }}
+											spacing={2}
+											mt={2}
+											alignItems={{ xs: "flex-start", sm: "center" }}
+											justifyContent="flex-start"
+										>
+											<Stack
+												alignItems="center"
+												direction="row"
+												gap={0.5}
+												sx={{ display: { xs: "none", md: "flex" } }}
+											>
+												<GroupIcon sx={{ fontSize: 24, color: "text.secondary" }} />
+												<Typography variant="caption" color="text.secondary">
+													{brand.brandFollowersCount?.toLocaleString()} followers
+												</Typography>
+											</Stack>
+											<Stack alignItems="center" direction="row" gap={0.5}>
+												<IconButton size="small" onClick={(e) => likeBrandHandler(e, brand)} sx={{ p: 0.2 }}>
+													{brand.meLiked?.[0]?.myFavorite ? (
+														<Favorite sx={{ fontSize: 24, color: "error.main" }} />
+													) : (
+														<FavoriteBorder sx={{ fontSize: 24, color: "text.secondary" }} />
+													)}
+												</IconButton>
+												<Typography variant="caption" color="text.secondary">
+													{brand.memberData?.memberLikes?.toLocaleString() ?? 0} likes
+												</Typography>
+											</Stack>
+											<Stack alignItems="center" direction="row" gap={0.5}>
+												<StarIcon sx={{ fontSize: 24, color: "warning.main" }} />
+												<Typography variant="caption" color="text.secondary">
+													{brand.brandRating?.toFixed(1) ?? "—"}
+												</Typography>
+											</Stack>
+										</Stack>
 									</CardContent>
 								</Card>
 							</Grid>

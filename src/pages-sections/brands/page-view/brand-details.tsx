@@ -6,42 +6,22 @@ import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
-import CardMedia from "@mui/material/CardMedia";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Divider from "@mui/material/Divider";
-import Grid from "@mui/material/Grid";
-import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
-import Link from "next/link";
 import { GET_BRAND } from "../../../../apollo/user/query";
-import { GET_PRODUCTS } from "../../../../apollo/user/query";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
-import { FadeInCard } from "../../../components/scroll-reveal";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface Product {
-	_id: string;
-	productTitle: string;
-	productPrice: number;
-	productDiscountPrice: number;
-	productImages: string[];
-	productType: string;
-	productStatus: string;
-}
+import ProductSearchPageView from "../../product-details/page-view/product-search";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 	const [brand, setBrand] = useState<Brand | null>(null);
-	const [products, setProducts] = useState<Product[]>([]);
-	const [totalProducts, setTotalProducts] = useState(0);
-	const [productPage, setProductPage] = useState(1);
-	const PRODUCT_LIMIT = 9;
 
 	/** APOLLO REQUESTS **/
 	const { loading: brandLoading, error: brandError } = useQuery(GET_BRAND, {
@@ -49,22 +29,6 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 		fetchPolicy: "cache-and-network",
 		onCompleted: (data: T) => {
 			setBrand(data?.getBrand ?? null);
-		},
-	});
-
-	const { loading: productsLoading } = useQuery(GET_PRODUCTS, {
-		variables: {
-			input: {
-				page: productPage,
-				limit: PRODUCT_LIMIT,
-				search: { memberId: brandId },
-			},
-		},
-		fetchPolicy: "cache-and-network",
-		notifyOnNetworkStatusChange: true,
-		onCompleted: (data: T) => {
-			setProducts(data?.getProducts?.products ?? []);
-			setTotalProducts(data?.getProducts?.metaData?.total ?? 0);
 		},
 	});
 
@@ -135,89 +99,7 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 			</Card>
 
 			<Divider sx={{ mb: 4 }} />
-
-			{/* ── Products Grid ────────────────────────────────────────────── */}
-			<Typography variant="h5" fontWeight={700} mb={3}>
-				Products
-			</Typography>
-
-			{productsLoading ? (
-				<Box display="flex" justifyContent="center" py={6}>
-					<CircularProgress />
-				</Box>
-			) : products.length === 0 ? (
-				<Typography color="text.secondary">No products yet.</Typography>
-			) : (
-				<>
-					<Grid container spacing={3}>
-						{products.map((product: Product, i: number) => (
-							<Grid size={{ xs: 12, sm: 6, md: 4 }} key={product._id}>
-								<FadeInCard index={i}>
-									<Link
-										href={`/products/${product._id}`}
-										style={{ textDecoration: "none", display: "block", height: "100%" }}
-									>
-										<Card
-											sx={{
-												height: "100%",
-												transition: "box-shadow 0.2s",
-												"&:hover": { boxShadow: 4 },
-											}}
-										>
-											<CardMedia
-												component="img"
-												height="240"
-												image={
-													product.productImages?.[0] ??
-													"/assets/images/products/product-1.png"
-												}
-												alt={product.productTitle}
-												sx={{ objectFit: "cover" }}
-											/>
-											<CardContent>
-												<Typography
-													variant="subtitle2"
-													fontWeight={600}
-													noWrap
-													mb={0.5}
-												>
-													{product.productTitle}
-												</Typography>
-												<Stack direction="row" alignItems="center" gap={1}>
-													{product.productDiscountPrice < product.productPrice && (
-														<Typography
-															variant="body2"
-															color="text.disabled"
-															sx={{ textDecoration: "line-through" }}
-														>
-															${product.productPrice}
-														</Typography>
-													)}
-													<Typography variant="body1" fontWeight={700} color="primary.main">
-														${product.productDiscountPrice ?? product.productPrice}
-													</Typography>
-												</Stack>
-											</CardContent>
-										</Card>
-									</Link>
-								</FadeInCard>
-							</Grid>
-						))}
-					</Grid>
-
-					{totalProducts > PRODUCT_LIMIT && (
-						<Stack alignItems="center" mt={5}>
-							<Pagination
-								count={Math.ceil(totalProducts / PRODUCT_LIMIT)}
-								page={productPage}
-								shape="circular"
-								color="primary"
-								onChange={(_e, value) => setProductPage(value)}
-							/>
-						</Stack>
-					)}
-				</>
-			)}
+			<ProductSearchPageView fixedBrandId={brandId} showMobileFilter />
 		</Container>
 	);
 };
