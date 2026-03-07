@@ -15,6 +15,17 @@ export function setJwtToken(token: string) {
 	localStorage.setItem('accessToken', token);
 }
 
+export function getRefreshToken(): string {
+	if (typeof window !== 'undefined') {
+		return localStorage.getItem('refreshToken') ?? '';
+	}
+	return '';
+}
+
+export function setRefreshToken(token: string) {
+	localStorage.setItem('refreshToken', token);
+}
+
 export const logIn = async (nick: string, password: string): Promise<void> => {
 	try {
 		const { jwtToken, memberData } = await requestJwtToken({ nick, password });
@@ -46,6 +57,7 @@ const requestJwtToken = async ({
 		});
 
 		const loginData = (result?.data as any)?.login;
+		if (loginData.refreshToken) setRefreshToken(loginData.refreshToken);
 		return { jwtToken: loginData.accessToken, memberData: loginData };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
@@ -98,6 +110,7 @@ const requestSignUpJwtToken = async ({
 		});
 
 		const signupData = (result?.data as any)?.signup;
+		if (signupData.refreshToken) setRefreshToken(signupData.refreshToken);
 		return { jwtToken: signupData.accessToken, memberData: signupData };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
@@ -199,6 +212,7 @@ export const logOut = () => {
 
 const deleteStorage = () => {
 	localStorage.removeItem('accessToken');
+	localStorage.removeItem('refreshToken');
 	localStorage.removeItem('memberData');
 	window.localStorage.setItem('logout', Date.now().toString());
 };

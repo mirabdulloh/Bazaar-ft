@@ -2,6 +2,37 @@ import { gql } from "@apollo/client";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
+export const REFRESH_TOKEN = gql`
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
+      _id
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
+      memberNick
+      memberFullName
+      memberEmail
+      memberImage
+      memberAddress
+      memberDesc
+      memberArticles
+      memberFollowers
+      memberFollowings
+      memberPoints
+      memberLikes
+      memberViews
+      memberComments
+      memberRank
+      memberWarnings
+      memberBlocks
+      memberProducts
+      accessToken
+      refreshToken
+    }
+  }
+`;
+
 export const SIGN_UP = gql`
   mutation Signup($input: MemberInput!) {
     signup(input: $input) {
