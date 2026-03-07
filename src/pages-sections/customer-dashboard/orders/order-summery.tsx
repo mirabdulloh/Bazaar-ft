@@ -14,8 +14,11 @@ type Props = { order: T };
 // ==============================================================
 
 const PAYMENT_LABEL: Record<string, string> = {
-  CASH: "Cash on Delivery",
-  CARD: "Card",
+  CREDIT_CARD: "Credit Card",
+  DEBIT_CARD: "Debit Card",
+  BANK_TRANSFER: "Bank Transfer",
+  MOBILE_PAYMENT: "Mobile Payment",
+  POINTS: "Points",
 };
 
 export default function OrderSummery({ order }: Props) {

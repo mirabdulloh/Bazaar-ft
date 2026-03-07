@@ -76,11 +76,18 @@ type Props = { order: T };
 // ==============================================================
 
 const STEP_ICONS = [PackageBox, TruckFilled, Delivery];
-const ORDER_STATUS_LIST = ["PENDING", "PROCESSING", "DELIVERED"];
+
+// Maps real OrderStatus enum values to stepper step index (0-2)
+const STATUS_STEP: Record<string, number> = {
+  PENDING: 0,
+  CONFIRMED: 0,
+  SHIPPED: 1,
+  DELIVERED: 2,
+};
 
 export default function OrderProgress({ order }: Props) {
   const status = (order.orderStatus as string) ?? "PENDING";
-  const statusIndex = ORDER_STATUS_LIST.indexOf(status);
+  const statusIndex = STATUS_STEP[status] ?? -1;
   const isDelivered = order.orderDeliveryStatus === "DELIVERED";
 
   return (

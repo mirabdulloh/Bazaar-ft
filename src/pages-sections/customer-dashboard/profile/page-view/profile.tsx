@@ -13,6 +13,9 @@ import Button from "@mui/material/Button";
 import InputAdornment from "@mui/material/InputAdornment";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
@@ -57,7 +60,9 @@ import {
   GET_ADDRESSES,
   GET_BOARD_ARTICLES,
 } from "../../../../../apollo/user/query";
-import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD } from "../../../../../apollo/user/mutation";
+import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS } from "../../../../../apollo/user/mutation";
+// CUSTOM COMPONENTS
+import AddressForm from "../../address/address-form";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import ProductCard1 from "components/product-cards/product-card-1/product-card";
@@ -69,7 +74,7 @@ import { T } from "../../../../lib/types/common";
 // UTILS
 import { currency } from "lib";
 import { getJwtToken, logOut, updateStorage, setUserFromMemberData } from "lib/auth";
-import { sweetMixinSuccessAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert, sweetTopSmallErrorAlert } from "../../../../lib/sweetAlert";
+import { sweetMixinSuccessAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert, sweetTopSmallErrorAlert, sweetConfirmAlert } from "../../../../lib/sweetAlert";
 // STYLED COMPONENTS
 import {
   ProfileCard,
@@ -408,7 +413,7 @@ export function ProfilePageView() {
     skip: !user._id || !isBrandOrAdmin
   });
 
-  const { loading: addressesLoading, data: addressesData } = useQuery(GET_ADDRESSES, {
+  const { loading: addressesLoading, data: addressesData, refetch: refetchAddresses } = useQuery(GET_ADDRESSES, {
     fetchPolicy: "cache-and-network",
     skip: !user._id || !isCustomer
   });
@@ -495,7 +500,7 @@ export function ProfilePageView() {
         );
       case "addresses":
         return (
-          <AddressesPanel addresses={addresses} loading={addressesLoading} />
+          <AddressesPanel addresses={addresses} loading={addressesLoading} refetch={refetchAddresses} />
         );
       case "claim-coupon":
         return (
@@ -1838,17 +1843,35 @@ function ArticlesPanel({ articles, loading }: { articles: T[]; loading: boolean 
 }
 
 // ━━━ ADDRESSES PANEL (CUSTOMER) ━━━
-function AddressesPanel({ addresses, loading }: { addresses: T[]; loading: boolean }) {
+function AddressesPanel({ addresses, loading, refetch }: { addresses: T[]; loading: boolean; refetch: () => void }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<T | null>(null);
+  const [deleteAddress, { loading: deleting }] = useMutation(DELETE_ADDRESS);
+
+  const openAdd = () => { setEditingAddress(null); setDialogOpen(true); };
+  const openEdit = (addr: T) => { setEditingAddress(addr); setDialogOpen(true); };
+  const closeDialog = () => { setDialogOpen(false); setEditingAddress(null); };
+  const onSaved = () => { closeDialog(); refetch(); };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = await sweetConfirmAlert("Delete address?", "This address will be permanently removed.", "Yes, delete");
+    if (!confirmed) return;
+    try {
+      await deleteAddress({ variables: { input: id } });
+      refetch();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? "Failed to delete address.");
+    }
+  };
+
   return (
     <Box>
       <SectionTitle
         title="My Addresses"
         action={
-          <Link href="/address">
-            <Button size="small" variant="outlined" sx={{ fontSize: 12 }}>
-              + Add Address
-            </Button>
-          </Link>
+          <Button size="small" variant="outlined" sx={{ fontSize: 12 }} onClick={openAdd}>
+            + Add Address
+          </Button>
         }
       />
 
@@ -1864,11 +1887,9 @@ function AddressesPanel({ addresses, loading }: { addresses: T[]; loading: boole
           <Typography variant="body1" color="text.secondary">
             No addresses saved yet.
           </Typography>
-          <Link href="/address">
-            <Button variant="contained" size="small" sx={{ mt: 2 }}>
-              Add Your First Address
-            </Button>
-          </Link>
+          <Button variant="contained" size="small" sx={{ mt: 2 }} onClick={openAdd}>
+            Add Your First Address
+          </Button>
         </EmptyCard>
       ) : (
         <Stack spacing={1.5}>
@@ -1897,16 +1918,33 @@ function AddressesPanel({ addresses, loading }: { addresses: T[]; loading: boole
                     </Typography>
                   )}
                 </Box>
-                <Link href="/address">
-                  <Button size="small" variant="text" sx={{ fontSize: 12 }}>
+                <FlexBox gap={0.5}>
+                  <Button size="small" variant="text" sx={{ fontSize: 12 }} onClick={() => openEdit(addr)}>
                     Edit
                   </Button>
-                </Link>
+                  <Button
+                    size="small"
+                    variant="text"
+                    color="error"
+                    sx={{ fontSize: 12 }}
+                    onClick={() => handleDelete(String(addr._id))}
+                    disabled={deleting}
+                  >
+                    Delete
+                  </Button>
+                </FlexBox>
               </FlexBetween>
             </PanelCard>
           ))}
         </Stack>
       )}
+
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingAddress ? "Edit Address" : "Add New Address"}</DialogTitle>
+        <DialogContent>
+          <AddressForm address={editingAddress} onSuccess={onSaved} onCancel={closeDialog} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

@@ -1,29 +1,6 @@
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { AddressDetailsPageView } from "pages-sections/customer-dashboard/address/page-view";
-// API FUNCTIONS
-import api from "utils/__api__/address";
-// CUSTOM DATA MODEL
-import { IdParams } from "models/Common";
+import { redirect } from "next/navigation";
 
-export async function generateMetadata({ params }: IdParams): Promise<Metadata> {
-  const { id } = await params;
-  const address = await api.getAddress(id);
-  if (!address) notFound();
-
-  return {
-    title: address.title + " - Seoulé",
-    description: "Seoulé — Fashion platform connecting brands and shoppers.",
-    
-    keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
-  };
-}
-
-export default async function Address({ params }: IdParams) {
-  const { id } = await params;
-  const address = await api.getAddress(id);
-
-  if (!address) notFound();
-
-  return <AddressDetailsPageView address={address} />;
+// No single-address query exists — editing is handled via dialog on /address
+export default async function AddressEditPage() {
+  redirect("/address");
 }

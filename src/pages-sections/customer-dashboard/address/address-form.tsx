@@ -1,74 +1,237 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { useState } from "react";
 // MUI
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
-// GLOBAL CUSTOM COMPONENTS
-import { FormProvider, TextField } from "components/form-hook";
-// CUSTOM DATA MODEL
-import Address from "models/Address.model";
+import Checkbox from "@mui/material/Checkbox";
+import TextField from "@mui/material/TextField";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Box from "@mui/material/Box";
+// APOLLO
+import { useMutation } from "@apollo/client/react";
+import { CREATE_ADDRESS, UPDATE_ADDRESS } from "../../../../apollo/user/mutation";
+// UTILS
+import { sweetMixinErrorAlert } from "lib/sweetAlert";
+import { T } from "../../../lib/types/common";
 
-const validationSchema = yup.object().shape({
-  name: yup.string().required("Name is required"),
-  address: yup.string().required("Address is required"),
-  contact: yup.string().required("Contact is required")
-});
+// ==============================================================
+type Props = { address: T | null; onSuccess: () => void; onCancel: () => void };
+// ==============================================================
 
-// =============================================================
-type Props = { address: Address };
-// =============================================================
+type FormState = {
+  addressName: string;
+  addressPhone: string;
+  addressLine1: string;
+  addressLine2: string;
+  addressCity: string;
+  addressZipCode: string;
+  addressCountry: string;
+  isDefault: boolean;
+};
 
-export default function AddressForm({ address }: Props) {
-  const initialValues = {
-    name: address.title || "",
-    contact: address.phone || "",
-    address: address.street || ""
+function emptyForm(): FormState {
+  return {
+    addressName: "",
+    addressPhone: "",
+    addressLine1: "",
+    addressLine2: "",
+    addressCity: "",
+    addressZipCode: "",
+    addressCountry: "",
+    isDefault: false,
+  };
+}
+
+function fromAddress(addr: T): FormState {
+  return {
+    addressName: (addr.addressName as string) ?? "",
+    addressPhone: (addr.addressPhone as string) ?? "",
+    addressLine1: (addr.addressLine1 as string) ?? "",
+    addressLine2: (addr.addressLine2 as string) ?? "",
+    addressCity: (addr.addressCity as string) ?? "",
+    addressZipCode: (addr.addressZipCode as string) ?? "",
+    addressCountry: (addr.addressCountry as string) ?? "",
+    isDefault: (addr.isDefault as boolean) ?? false,
+  };
+}
+
+export default function AddressForm({ address, onSuccess, onCancel }: Props) {
+  const isEdit = !!address?._id;
+  const [form, setForm] = useState<FormState>(address ? fromAddress(address) : emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const [createAddress] = useMutation(CREATE_ADDRESS);
+  const [updateAddress] = useMutation(UPDATE_ADDRESS);
+
+  const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const methods = useForm({
-    defaultValues: initialValues,
-    resolver: yupResolver(validationSchema)
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting }
-  } = methods;
+    const required: (keyof FormState)[] = [
+      "addressName",
+      "addressPhone",
+      "addressLine1",
+      "addressCity",
+      "addressZipCode",
+      "addressCountry",
+    ];
+    for (const key of required) {
+      if (!String(form[key]).trim()) {
+        sweetMixinErrorAlert(`${key.replace("address", "")} is required.`);
+        return;
+      }
+    }
 
-  const handleSubmitForm = handleSubmit((values) => {
-    alert(JSON.stringify(values, null, 2));
-  });
+    setSaving(true);
+    try {
+      if (isEdit) {
+        await updateAddress({
+          variables: {
+            input: {
+              _id: String(address!._id),
+              addressName: form.addressName,
+              addressPhone: form.addressPhone,
+              addressLine1: form.addressLine1,
+              addressLine2: form.addressLine2 || undefined,
+              addressCity: form.addressCity,
+              addressZipCode: form.addressZipCode,
+              addressCountry: form.addressCountry,
+              isDefault: form.isDefault,
+            },
+          },
+        });
+      } else {
+        await createAddress({
+          variables: {
+            input: {
+              addressName: form.addressName,
+              addressPhone: form.addressPhone,
+              addressLine1: form.addressLine1,
+              addressLine2: form.addressLine2 || undefined,
+              addressCity: form.addressCity,
+              addressZipCode: form.addressZipCode,
+              addressCountry: form.addressCountry,
+              isDefault: form.isDefault,
+            },
+          },
+        });
+      }
+      onSuccess();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? "Failed to save address.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <FormProvider methods={methods} onSubmit={handleSubmitForm}>
-      <Grid container spacing={3}>
-        <Grid size={{ md: 6, xs: 12 }}>
-          <TextField fullWidth size="medium" name="name" label="Name" />
+    <Box component="form" onSubmit={handleSubmit} sx={{ pt: 1 }}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Label (e.g. Home, Work)"
+            value={form.addressName}
+            onChange={set("addressName")}
+            required
+          />
         </Grid>
 
-        <Grid size={{ md: 6, xs: 12 }}>
-          <TextField fullWidth size="medium" name="address" label="Address Line" />
-        </Grid>
-
-        <Grid size={{ md: 6, xs: 12 }}>
-          <TextField fullWidth size="medium" label="Phone" name="contact" />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Phone"
+            value={form.addressPhone}
+            onChange={set("addressPhone")}
+            required
+          />
         </Grid>
 
         <Grid size={12}>
-          <Button
-            size="large"
-            type="submit"
-            color="primary"
-            variant="contained"
-            loading={isSubmitting}
-          >
-            Save Changes
-          </Button>
+          <TextField
+            fullWidth
+            size="small"
+            label="Address Line 1"
+            value={form.addressLine1}
+            onChange={set("addressLine1")}
+            required
+          />
+        </Grid>
+
+        <Grid size={12}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Address Line 2 (optional)"
+            value={form.addressLine2}
+            onChange={set("addressLine2")}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="City"
+            value={form.addressCity}
+            onChange={set("addressCity")}
+            required
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="ZIP / Postal Code"
+            value={form.addressZipCode}
+            onChange={set("addressZipCode")}
+            required
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Country"
+            value={form.addressCountry}
+            onChange={set("addressCountry")}
+            required
+          />
+        </Grid>
+
+        <Grid size={12}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={form.isDefault}
+                onChange={(e) => setForm((prev) => ({ ...prev, isDefault: e.target.checked }))}
+                size="small"
+                color="primary"
+              />
+            }
+            label="Set as default address"
+          />
+        </Grid>
+
+        <Grid size={12}>
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+            <Button variant="outlined" onClick={onCancel} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" loading={saving}>
+              {isEdit ? "Save Changes" : "Add Address"}
+            </Button>
+          </Box>
         </Grid>
       </Grid>
-    </FormProvider>
+    </Box>
   );
 }

@@ -13,8 +13,9 @@ import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import CreditCardOutlined from "@mui/icons-material/CreditCardOutlined";
+import AccountBalanceOutlined from "@mui/icons-material/AccountBalanceOutlined";
+import PhoneAndroidOutlined from "@mui/icons-material/PhoneAndroidOutlined";
 import AddLocationAltOutlined from "@mui/icons-material/AddLocationAltOutlined";
 // APOLLO
 import { useMutation, useReactiveVar } from "@apollo/client/react";
@@ -35,7 +36,7 @@ export default function CheckoutForm() {
   const cart = state.cart;
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<string>("CREDIT_CARD");
   const [placing, setPlacing] = useState(false);
 
   const { data: addressData, loading: addressLoading } = useQuery(GET_ADDRESSES, {
@@ -192,14 +193,16 @@ export default function CheckoutForm() {
 
         <RadioGroup
           value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD")}
+          onChange={(e) => setPaymentMethod(e.target.value)}
         >
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             {(
               [
-                { value: "CASH", label: "Cash on Delivery", Icon: LocalShippingOutlined },
-                { value: "CARD", label: "Pay by Card", Icon: CreditCardOutlined },
-              ] as const
+                { value: "CREDIT_CARD", label: "Credit Card", Icon: CreditCardOutlined },
+                { value: "DEBIT_CARD", label: "Debit Card", Icon: CreditCardOutlined },
+                { value: "BANK_TRANSFER", label: "Bank Transfer", Icon: AccountBalanceOutlined },
+                { value: "MOBILE_PAYMENT", label: "Mobile Payment", Icon: PhoneAndroidOutlined },
+              ] as { value: string; label: string; Icon: React.ElementType }[]
             ).map(({ value, label, Icon }) => {
               const isSelected = paymentMethod === value;
               return (

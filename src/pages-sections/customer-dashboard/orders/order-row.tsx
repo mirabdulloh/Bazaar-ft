@@ -21,11 +21,13 @@ type OrderRowData = {
 type Props = { order: OrderRowData };
 // =================================================
 
-const STATUS_COLOR: Record<string, "secondary" | "info" | "success" | "error" | "default"> = {
+const STATUS_COLOR: Record<string, "secondary" | "info" | "success" | "error" | "warning" | "default"> = {
   PENDING: "secondary",
-  PROCESSING: "info",
+  CONFIRMED: "info",
+  SHIPPED: "warning",
   DELIVERED: "success",
   CANCELLED: "error",
+  REFUNDED: "default",
 };
 
 export default function OrderRow({ order }: Props) {
