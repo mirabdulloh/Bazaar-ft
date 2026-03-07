@@ -5,131 +5,238 @@ import { format } from "date-fns/format";
 // MUI
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
+import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
+import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import Done from "@mui/icons-material/Done";
-// CUSTOM ICON COMPONENTS
-import Delivery from "icons/Delivery";
-import PackageBox from "icons/PackageBox";
-import TruckFilled from "icons/TruckFilled";
+import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
+import VerifiedOutlined from "@mui/icons-material/VerifiedOutlined";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import CancelOutlined from "@mui/icons-material/CancelOutlined";
+import ReplayOutlined from "@mui/icons-material/ReplayOutlined";
 // GLOBAL CUSTOM COMPONENTS
-import { FlexBetween, FlexBox } from "components/flex-box";
+import { FlexBetween } from "components/flex-box";
 import { T } from "../../../lib/types/common";
 
-// STYLED COMPONENTS
-const StyledFlexbox = styled(FlexBetween)(({ theme }) => ({
+// ─── STYLED ──────────────────────────────────────────────────────────────────
+
+const StepRow = styled(FlexBetween)(({ theme }) => ({
+  alignItems: "flex-start",
   flexWrap: "wrap",
-  marginTop: "2rem",
-  marginBottom: "2rem",
   [theme.breakpoints.down("sm")]: {
-    flexDirection: "column"
+    flexDirection: "column",
+    alignItems: "center",
   },
   "& .line": {
     height: 2,
-    minWidth: 50,
+    minWidth: 40,
     flex: "1 1 0",
+    alignSelf: "flex-start",
+    marginTop: 31,
     [theme.breakpoints.down("sm")]: {
       flex: "unset",
-      height: 50,
-      minWidth: 4
-    }
-  }
+      width: 2,
+      height: 28,
+      minWidth: "unset",
+      marginTop: 0,
+      alignSelf: "unset",
+    },
+  },
 }));
 
-const StyledAvatar = styled(Avatar)(({ theme }) => ({
-  top: -5,
-  right: -5,
+const StatusAvatar = styled(Avatar)(({ theme }) => ({
+  width: 64,
+  height: 64,
+  transition: "all 0.3s ease",
+  "&.done": {
+    color: theme.palette.common.white,
+    backgroundColor: theme.palette.primary.main,
+  },
+  "&.active": {
+    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.primary.light,
+    boxShadow: `0 0 0 4px ${theme.palette.primary.light}`,
+  },
+  "&.idle": {
+    color: theme.palette.text.disabled,
+    backgroundColor: theme.palette.grey[100],
+  },
+}));
+
+const CheckBadge = styled(Avatar)(({ theme }) => ({
+  top: -4,
+  right: -4,
   width: 20,
   height: 20,
   position: "absolute",
   color: theme.palette.primary.main,
   backgroundColor: theme.palette.primary.light,
   boxShadow: theme.shadows[1],
-  "& svg": { fontSize: 16 }
+  "& svg": { fontSize: 14 },
 }));
 
-const StyledStatusAvatar = styled(Avatar)(({ theme }) => ({
-  width: 64,
-  height: 64,
-  transition: "all 0.3s ease",
-  "&.completed": {
-    color: theme.palette.common.white,
-    backgroundColor: theme.palette.primary.main
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+
+const STEPS = [
+  {
+    key: "PENDING",
+    label: "Order Placed",
+    desc: "Your order has been received and is awaiting payment verification.",
+    Icon: Inventory2Outlined,
   },
-  "&.pending": {
-    color: theme.palette.primary.main,
-    backgroundColor: theme.palette.grey[100]
-  }
-}));
+  {
+    key: "CONFIRMED",
+    label: "Confirmed",
+    desc: "Payment verified by our team. Your order is being prepared.",
+    Icon: VerifiedOutlined,
+  },
+  {
+    key: "SHIPPED",
+    label: "Shipped",
+    desc: "Your package has been dispatched and is on its way.",
+    Icon: LocalShippingOutlined,
+  },
+  {
+    key: "DELIVERED",
+    label: "Delivered",
+    desc: "Your order has been delivered successfully.",
+    Icon: HomeOutlined,
+  },
+];
 
-const DeliveryDateBox = styled("div")(({ theme }) => ({
-  textAlign: "center",
-  padding: "0.5rem 1rem",
-  transition: "all 0.3s ease",
-  color: theme.palette.primary.main,
-  borderRadius: Number(theme.shape.borderRadius) * 3,
-  backgroundColor: theme.palette.primary.light
-}));
-
-// ==============================================================
-type Props = { order: T };
-// ==============================================================
-
-const STEP_ICONS = [PackageBox, TruckFilled, Delivery];
-
-// Maps real OrderStatus enum values to stepper step index (0-2)
-const STATUS_STEP: Record<string, number> = {
+const STATUS_INDEX: Record<string, number> = {
   PENDING: 0,
-  CONFIRMED: 0,
-  SHIPPED: 1,
-  DELIVERED: 2,
+  CONFIRMED: 1,
+  SHIPPED: 2,
+  DELIVERED: 3,
 };
+
+const TERMINAL: Record<string, { label: string; severity: "error" | "warning"; Icon: React.ElementType }> = {
+  CANCELLED: { label: "Order Cancelled", severity: "error", Icon: CancelOutlined },
+  REFUNDED: { label: "Order Refunded", severity: "warning", Icon: ReplayOutlined },
+};
+
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
+
+type Props = { order: T };
 
 export default function OrderProgress({ order }: Props) {
   const status = (order.orderStatus as string) ?? "PENDING";
-  const statusIndex = STATUS_STEP[status] ?? -1;
-  const isDelivered = order.orderDeliveryStatus === "DELIVERED";
+  const terminal = TERMINAL[status] ?? null;
+  const currentIndex = STATUS_INDEX[status] ?? 0;
+
+  const fmtDate = (d: unknown, withTime = false): string | null => {
+    if (!d) return null;
+    try {
+      return format(new Date(d as string), withTime ? "dd MMM yyyy, HH:mm" : "dd MMM yyyy");
+    } catch {
+      return null;
+    }
+  };
+
+  const getStepDate = (idx: number): string | null => {
+    if (idx === 0) return fmtDate(order.createdAt);
+    if (!terminal && idx === currentIndex) return fmtDate(order.updatedAt);
+    return null;
+  };
 
   return (
-    <Card
-      elevation={0}
-      sx={{ mb: 4, p: "2rem 1.5rem", border: "1px solid", borderColor: "grey.100" }}
-    >
-      <StyledFlexbox>
-        {STEP_ICONS.map((Icon, ind) => (
-          <Fragment key={`step-${ind}`}>
-            <Box position="relative">
-              <StyledStatusAvatar
-                alt={`shipping-step-${ind + 1}`}
-                className={ind <= statusIndex ? "completed" : "pending"}
-              >
-                <Icon color="inherit" fontSize="large" />
-              </StyledStatusAvatar>
+    <Card elevation={0} sx={{ mb: 4, p: 3, border: "1px solid", borderColor: "grey.100" }}>
+      {/* ── Terminal state banner ── */}
+      {terminal && (
+        <Alert
+          severity={terminal.severity}
+          icon={<terminal.Icon fontSize="small" />}
+          sx={{ mb: 3, borderRadius: 2 }}
+        >
+          <Typography variant="body2" fontWeight={700}>
+            {terminal.label}
+          </Typography>
+          {order.updatedAt && (
+            <Typography variant="caption" display="block" sx={{ mt: 0.25 }}>
+              {fmtDate(order.updatedAt, true)}
+            </Typography>
+          )}
+        </Alert>
+      )}
 
-              {ind < statusIndex && (
-                <StyledAvatar alt="completed-step">
-                  <Done color="inherit" />
-                </StyledAvatar>
+      {/* ── Step icons ── */}
+      <StepRow>
+        {STEPS.map((step, idx) => {
+          const { label, Icon } = step;
+          const isDone = !terminal && idx < currentIndex;
+          const isActive = !terminal && idx === currentIndex;
+          const avatarClass = isDone ? "done" : isActive ? "active" : "idle";
+          const stepDate = getStepDate(idx);
+
+          return (
+            <Fragment key={step.key}>
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, minWidth: 76 }}>
+                <Box position="relative">
+                  <StatusAvatar className={avatarClass}>
+                    <Icon color="inherit" fontSize="large" />
+                  </StatusAvatar>
+
+                  {isDone && (
+                    <CheckBadge>
+                      <Done color="inherit" />
+                    </CheckBadge>
+                  )}
+                </Box>
+
+                <Typography
+                  variant="caption"
+                  fontWeight={isActive ? 700 : 500}
+                  color={isActive ? "primary.main" : "text.secondary"}
+                  textAlign="center"
+                  sx={{ lineHeight: 1.3, maxWidth: 76 }}
+                >
+                  {label}
+                </Typography>
+
+                {stepDate && (
+                  <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    textAlign="center"
+                    sx={{ fontSize: "0.65rem", lineHeight: 1.2 }}
+                  >
+                    {stepDate}
+                  </Typography>
+                )}
+              </Box>
+
+              {idx < STEPS.length - 1 && (
+                <Box className="line" bgcolor={isDone ? "primary.main" : "grey.100"} />
               )}
-            </Box>
+            </Fragment>
+          );
+        })}
+      </StepRow>
 
-            {ind < STEP_ICONS.length - 1 && (
-              <Box className="line" bgcolor={ind < statusIndex ? "primary.main" : "grey.100"} />
-            )}
-          </Fragment>
-        ))}
-      </StyledFlexbox>
-
-      <FlexBox justifyContent={{ xs: "center", sm: "flex-end" }}>
-        <DeliveryDateBox>
-          Estimated Delivery Date{" "}
-          <b>
-            {isDelivered && order.updatedAt
-              ? format(new Date(order.updatedAt as string), "dd MMM yyyy")
-              : "N/A"}
-          </b>
-        </DeliveryDateBox>
-      </FlexBox>
+      {/* ── Current status description ── */}
+      {!terminal && (
+        <Box
+          sx={{
+            mt: 2.5,
+            px: 2,
+            py: 1.5,
+            bgcolor: "primary.50",
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "primary.light",
+          }}
+        >
+          <Typography variant="body2" fontWeight={700} color="primary.main">
+            {STEPS[currentIndex]?.label ?? status}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {STEPS[currentIndex]?.desc ?? ""}
+          </Typography>
+        </Box>
+      )}
     </Card>
   );
 }
