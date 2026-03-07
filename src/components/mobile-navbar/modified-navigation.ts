@@ -27,7 +27,7 @@ export const updateNavigation = (navigation: Menu[]) => {
 
   const merged = exists ? withCsNormalized : [...withCsNormalized, csMenu];
 
-  return merged.map((curr) => {
+  const result = merged.map((curr) => {
     if (curr.megaMenu || curr.megaMenuWithSub) {
       const flatChild = curr.child.flat();
       return { title: curr.title, child: flatChild };
@@ -43,4 +43,7 @@ export const updateNavigation = (navigation: Menu[]) => {
 
     return { title: curr.title, child: [] };
   });
+
+  // Add My Profile link to mobile menu
+  return [...result, { title: "My Profile", url: "/profile" }];
 };

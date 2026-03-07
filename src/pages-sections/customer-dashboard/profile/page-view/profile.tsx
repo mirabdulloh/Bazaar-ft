@@ -12,11 +12,14 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 // MUI ICONS
 import CardGiftcardOutlined from "@mui/icons-material/CardGiftcardOutlined";
 import CameraEnhance from "@mui/icons-material/CameraEnhance";
@@ -24,6 +27,7 @@ import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOu
 import EditOutlined from "@mui/icons-material/EditOutlined";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import MenuIcon from "@mui/icons-material/Menu";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -43,6 +47,7 @@ import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import {
   GET_MY_ORDERS,
+  GET_MEMBER,
   GET_MEMBER_FOLLOWINGS,
   GET_MEMBER_FOLLOWERS,
   GET_VISITED_PRODUCTS,
@@ -165,8 +170,17 @@ export function ProfilePageView() {
   const { t } = useTranslation();
   const user = useReactiveVar(userVar);
   const token = getJwtToken();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Switch tab + auto-close drawer on mobile
+  const handleTabChange = useCallback((key: TabKey) => {
+    setActiveTab(key);
+    if (isMobile) setDrawerOpen(false);
+  }, [isMobile]);
 
   // ── Edit Profile state ──
   const [updateData, setUpdateData] = useState({
@@ -228,13 +242,34 @@ export function ProfilePageView() {
 
         const responseImage = response.data.data.imageUploader;
         setUpdateData((prev) => ({ ...prev, memberImage: responseImage }));
+
+        // Auto-save the new image immediately so the avatar updates everywhere
+        const saveResult = await updateMember({
+          variables: {
+            input: {
+              _id: user._id,
+              memberNick: updateData.memberNick.trim() || undefined,
+              memberFullName: updateData.memberFullName.trim() || undefined,
+              memberPhone: updateData.memberPhone.trim() || undefined,
+              memberAddress: updateData.memberAddress.trim() || undefined,
+              memberDesc: updateData.memberDesc.trim() || undefined,
+              memberImage: responseImage
+            }
+          }
+        });
+        const jwtToken = (saveResult?.data as T)?.updateMember?.accessToken;
+        if (jwtToken) {
+          updateStorage({ jwtToken });
+          updateUserInfo(jwtToken);
+        }
+        setProfileImagePreview(null);
       } catch (err) {
         console.error("Error uploading image:", err);
         await sweetMixinErrorAlert("Image upload failed");
         setProfileImagePreview(null);
       }
     },
-    [token]
+    [token, user._id, updateData, updateMember]
   );
 
   /** Save profile changes **/
@@ -271,11 +306,7 @@ export function ProfilePageView() {
   }, [updateData, user._id, updateMember]);
 
   const doDisabledCheck = () => {
-    return (
-      !updateData.memberNick.trim() ||
-      !updateData.memberPhone.trim() ||
-      !updateData.memberAddress.trim()
-    );
+    return !updateData.memberNick.trim();
   };
 
   // ── Coupon state ──
@@ -308,6 +339,14 @@ export function ProfilePageView() {
   }, [couponCode, claimCoupon]);
 
   /** APOLLO QUERIES **/
+  // Fetch full member profile to get email (not in JWT)
+  const { data: memberData } = useQuery(GET_MEMBER, {
+    variables: { input: user._id },
+    skip: !user._id,
+    fetchPolicy: "cache-and-network",
+  });
+  const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
+
   const { loading: ordersLoading, data: ordersData } = useQuery(GET_MY_ORDERS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 10 } },
@@ -431,6 +470,7 @@ export function ProfilePageView() {
             doDisabledCheck={doDisabledCheck}
             avatarSrc={avatarSrc}
             uploadImage={uploadImage}
+            memberEmail={memberEmail}
           />
         );
       default:
@@ -438,96 +478,156 @@ export function ProfilePageView() {
     }
   };
 
+  // ── Sidebar content (shared between drawer & inline) ──
+  const sidebarContent = (
+    <SidebarWrapper>
+      {/* Profile card in sidebar */}
+      <SidebarProfileBox>
+        <SidebarAvatar src={avatarSrc} alt={user.memberNick} />
+        <Typography variant="subtitle1" fontWeight={700} noWrap>
+          {user.memberNick}
+        </Typography>
+        {user.memberFullName && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+            {user.memberFullName}
+          </Typography>
+        )}
+        <Chip
+          label={user.memberType}
+          size="small"
+          color="primary"
+          sx={{ mt: 1, fontSize: 10, fontWeight: 700 }}
+        />
+        <FlexBox justifyContent="center" gap={3} mt={1.5}>
+          <Box textAlign="center">
+            <Typography variant="subtitle2" fontWeight={700}>
+              {(user as T).memberFollowers ?? 0}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontSize={10}>
+              Followers
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem />
+          <Box textAlign="center">
+            <Typography variant="subtitle2" fontWeight={700}>
+              {(user as T).memberFollowings ?? 0}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontSize={10}>
+              Following
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem />
+          <Box textAlign="center">
+            <Typography variant="subtitle2" fontWeight={700}>
+              {user.memberPoints ?? 0}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontSize={10}>
+              Points
+            </Typography>
+          </Box>
+        </FlexBox>
+      </SidebarProfileBox>
+
+      {/* Navigation tabs */}
+      <SidebarNav>
+        {TABS.map((tab, index) => {
+          const isActive = activeTab === tab.key;
+          const showSection =
+            tab.section && (index === 0 || TABS[index - 1]?.section !== tab.section);
+
+          return (
+            <Box key={tab.key}>
+              {showSection && (
+                <SectionLabel sx={{ pt: index === 0 ? 0.5 : 1.5 }}>
+                  {tab.section}
+                </SectionLabel>
+              )}
+              <NavItem isActive={isActive} onClick={() => handleTabChange(tab.key)}>
+                {tab.icon}
+                <Typography variant="body2" fontWeight={isActive ? 600 : 400}>
+                  {tab.label}
+                </Typography>
+              </NavItem>
+            </Box>
+          );
+        })}
+
+        {/* Logout */}
+        <Divider sx={{ my: 1.5 }} />
+        <LogoutNavItem onClick={logOut}>
+          <LogoutOutlinedIcon sx={ICON_SZ} />
+          <Typography variant="body2" fontWeight={500}>
+            Logout
+          </Typography>
+        </LogoutNavItem>
+      </SidebarNav>
+    </SidebarWrapper>
+  );
+
+  // Find the label for the active tab
+  const activeTabLabel = TABS.find((t) => t.key === activeTab)?.label ?? "Profile";
+  const activeTabIcon = TABS.find((t) => t.key === activeTab)?.icon;
+
   return (
     <Box>
       <DashboardHeader title={t("My Profile", { defaultValue: "My Profile" })} Icon={User3} />
 
+      {/* ── Mobile: floating tab selector bar ── */}
+      {isMobile && (
+        <Box
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            mb: 2,
+            px: 2,
+            py: 1.5,
+            bgcolor: "grey.50",
+            border: "1px solid",
+            borderColor: "grey.200",
+            borderRadius: 2,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            "&:hover": { borderColor: "primary.main", bgcolor: "grey.100" },
+          }}
+        >
+          <MenuIcon sx={{ fontSize: 20, color: "text.secondary" }} />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1 }}>
+            {activeTabIcon}
+            <Typography variant="body2" fontWeight={600}>
+              {activeTabLabel}
+            </Typography>
+          </Box>
+          <ChevronRightIcon sx={{ fontSize: 18, color: "text.disabled" }} />
+        </Box>
+      )}
+
+      {/* ── Mobile Drawer ── */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: 280,
+            borderTopRightRadius: 16,
+            borderBottomRightRadius: 16,
+          },
+        }}
+      >
+        {sidebarContent}
+      </Drawer>
+
       <ProfileCard>
-        <Grid container sx={{ minHeight: 600 }}>
-          {/* ── LEFT SIDEBAR ── */}
-          <Grid size={{ xs: 12, md: 3 }}>
-            <SidebarWrapper>
-              {/* Profile card in sidebar */}
-              <SidebarProfileBox>
-                <SidebarAvatar src={avatarSrc} alt={user.memberNick} />
-                <Typography variant="subtitle1" fontWeight={700} noWrap>
-                  {user.memberNick}
-                </Typography>
-                {user.memberFullName && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                    {user.memberFullName}
-                  </Typography>
-                )}
-                <Chip
-                  label={user.memberType}
-                  size="small"
-                  color="primary"
-                  sx={{ mt: 1, fontSize: 10, fontWeight: 700 }}
-                />
-                <FlexBox justifyContent="center" gap={3} mt={1.5}>
-                  <Box textAlign="center">
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      {(user as T).memberFollowers ?? 0}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontSize={10}>
-                      Followers
-                    </Typography>
-                  </Box>
-                  <Divider orientation="vertical" flexItem />
-                  <Box textAlign="center">
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      {(user as T).memberFollowings ?? 0}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontSize={10}>
-                      Following
-                    </Typography>
-                  </Box>
-                  <Divider orientation="vertical" flexItem />
-                  <Box textAlign="center">
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      {user.memberPoints ?? 0}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontSize={10}>
-                      Points
-                    </Typography>
-                  </Box>
-                </FlexBox>
-              </SidebarProfileBox>
-
-              {/* Navigation tabs */}
-              <SidebarNav>
-                {TABS.map((tab, index) => {
-                  const isActive = activeTab === tab.key;
-                  const showSection =
-                    tab.section && (index === 0 || TABS[index - 1]?.section !== tab.section);
-
-                  return (
-                    <Box key={tab.key}>
-                      {showSection && (
-                        <SectionLabel sx={{ pt: index === 0 ? 0.5 : 1.5 }}>
-                          {tab.section}
-                        </SectionLabel>
-                      )}
-                      <NavItem isActive={isActive} onClick={() => setActiveTab(tab.key)}>
-                        {tab.icon}
-                        <Typography variant="body2" fontWeight={isActive ? 600 : 400}>
-                          {tab.label}
-                        </Typography>
-                      </NavItem>
-                    </Box>
-                  );
-                })}
-
-                {/* Logout */}
-                <Divider sx={{ my: 1.5 }} />
-                <LogoutNavItem onClick={logOut}>
-                  <LogoutOutlinedIcon sx={ICON_SZ} />
-                  <Typography variant="body2" fontWeight={500}>
-                    Logout
-                  </Typography>
-                </LogoutNavItem>
-              </SidebarNav>
-            </SidebarWrapper>
+        <Grid container sx={{ minHeight: { xs: "auto", md: 600 } }}>
+          {/* ── LEFT SIDEBAR (desktop only) ── */}
+          <Grid
+            size={{ xs: 12, md: 3 }}
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
+            {sidebarContent}
           </Grid>
 
           {/* ── RIGHT CONTENT ── */}
@@ -1285,7 +1385,8 @@ function EditProfilePanel({
   updateLoading,
   doDisabledCheck,
   avatarSrc,
-  uploadImage
+  uploadImage,
+  memberEmail
 }: {
   updateData: {
     memberNick: string;
@@ -1311,6 +1412,7 @@ function EditProfilePanel({
   doDisabledCheck: () => boolean;
   avatarSrc: string;
   uploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  memberEmail?: string;
 }) {
   return (
     <Box>
@@ -1393,6 +1495,18 @@ function EditProfilePanel({
               }
             />
           </Grid>
+          {memberEmail && (
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                size="medium"
+                label="Email"
+                value={memberEmail}
+                disabled
+                helperText="Email cannot be changed"
+              />
+            </Grid>
+          )}
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth

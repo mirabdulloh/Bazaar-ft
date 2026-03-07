@@ -51,6 +51,10 @@ const ProfileHeroCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
   boxShadow: "none",
   background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.04)} 0%, ${alpha(theme.palette.primary.main, 0.01)} 100%)`,
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2.5, 2),
+    borderRadius: 12,
+  },
 }));
 
 const StatBox = styled(Box)(({ theme }) => ({
@@ -59,6 +63,12 @@ const StatBox = styled(Box)(({ theme }) => ({
   borderRadius: 12,
   border: `1px solid ${theme.palette.grey[100]}`,
   minWidth: 100,
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(1, 1.5),
+    minWidth: 0,
+    flex: 1,
+    borderRadius: 8,
+  },
 }));
 
 const SectionCard = styled(Card)(({ theme }) => ({
@@ -75,6 +85,10 @@ const TableWrapper = styled(Box)(({ theme }) => ({
   minHeight: 520,
   display: "flex",
   flexDirection: "column",
+  [theme.breakpoints.down("sm")]: {
+    minHeight: 400,
+    borderRadius: 10,
+  },
 }));
 
 const TableHeader = styled(Box)(({ theme }) => ({
@@ -99,10 +113,12 @@ const TableRow = styled(Box)(({ theme }) => ({
   "&:hover": { backgroundColor: alpha(theme.palette.primary.main, 0.02) },
   [theme.breakpoints.down("sm")]: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(1.5),
-    padding: theme.spacing(2),
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    gridTemplateColumns: "unset",
   },
 }));
 
@@ -289,18 +305,18 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 2, sm: 3 } }}>
       {/* Back button */}
       <Button
         startIcon={<ArrowBackIcon />}
         onClick={() => router.back()}
-        sx={{ mb: 2, textTransform: "none", color: "text.secondary" }}
+        sx={{ mb: { xs: 1.5, sm: 2 }, textTransform: "none", color: "text.secondary", fontSize: { xs: 13, sm: 14 } }}
       >
         Back
       </Button>
 
       {/* ─── Hero Card ─── */}
-      <ProfileHeroCard sx={{ mb: 4 }}>
+      <ProfileHeroCard sx={{ mb: { xs: 2, sm: 4 } }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           alignItems={{ xs: "center", sm: "flex-start" }}
@@ -310,8 +326,8 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
             src={memberImg}
             alt={member.memberNick as string}
             sx={{
-              width: 100,
-              height: 100,
+              width: { xs: 72, sm: 100 },
+              height: { xs: 72, sm: 100 },
               border: "3px solid",
               borderColor: isBrandOrAdmin ? "primary.main" : "grey.300",
               flexShrink: 0,
@@ -319,7 +335,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
           />
           <Box flex={1} textAlign={{ xs: "center", sm: "left" }}>
             <Stack direction="row" alignItems="center" gap={1} justifyContent={{ xs: "center", sm: "flex-start" }} mb={0.5}>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: 18, sm: 24 } }}>
                 {member.memberNick as string}
               </Typography>
               {isBrandOrAdmin && (
@@ -344,35 +360,45 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
               </Typography>
             )}
 
-            {/* Stats Row */}
-            <Stack direction="row" spacing={2} flexWrap="wrap" gap={1} justifyContent={{ xs: "center", sm: "flex-start" }}>
+            {/* Stats Grid */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: isBrandOrAdmin ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
+                  sm: "repeat(auto-fit, minmax(90px, 1fr))",
+                },
+                gap: { xs: 1, sm: 2 },
+                width: "100%",
+              }}
+            >
               <StatBox>
-                <Typography variant="h6" fontWeight={700}>{(member.memberFollowers as number) ?? 0}</Typography>
-                <Typography variant="caption" color="text.secondary">Followers</Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: 16, sm: 20 } }}>{(member.memberFollowers as number) ?? 0}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 12 } }}>Followers</Typography>
               </StatBox>
               <StatBox>
-                <Typography variant="h6" fontWeight={700}>{(member.memberFollowings as number) ?? 0}</Typography>
-                <Typography variant="caption" color="text.secondary">Followings</Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: 16, sm: 20 } }}>{(member.memberFollowings as number) ?? 0}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 12 } }}>Followings</Typography>
               </StatBox>
               <StatBox>
-                <Typography variant="h6" fontWeight={700}>{(member.memberLikes as number) ?? 0}</Typography>
-                <Typography variant="caption" color="text.secondary">Likes</Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: 16, sm: 20 } }}>{(member.memberLikes as number) ?? 0}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 12 } }}>Likes</Typography>
               </StatBox>
               {isBrandOrAdmin && (
                 <>
                   <StatBox>
-                    <Typography variant="h6" fontWeight={700}>{(member.memberArticles as number) ?? 0}</Typography>
-                    <Typography variant="caption" color="text.secondary">Articles</Typography>
+                    <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: 16, sm: 20 } }}>{(member.memberArticles as number) ?? 0}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 12 } }}>Articles</Typography>
                   </StatBox>
                   {memberType === "BRAND" && (
                     <StatBox>
-                      <Typography variant="h6" fontWeight={700}>{(member.memberProducts as number) ?? 0}</Typography>
-                      <Typography variant="caption" color="text.secondary">Products</Typography>
+                      <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: 16, sm: 20 } }}>{(member.memberProducts as number) ?? 0}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: 10, sm: 12 } }}>Products</Typography>
                     </StatBox>
                   )}
                 </>
               )}
-            </Stack>
+            </Box>
 
             {/* Follow/Unfollow button (don't show if it's the user themselves) */}
             {user?._id && user._id !== memberId && (
@@ -405,7 +431,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
       </ProfileHeroCard>
 
       {/* ─── Tabs ─── */}
-      <Stack direction="row" spacing={1} mb={3}>
+      <Stack direction="row" spacing={1} mb={{ xs: 2, sm: 3 }}>
         {(["followers", "followings"] as TabType[]).map((tab) => (
           <Button
             key={tab}
@@ -416,7 +442,8 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
               borderRadius: 5,
               textTransform: "none",
               fontWeight: 600,
-              px: 3,
+              px: { xs: 2, sm: 3 },
+              fontSize: { xs: 12, sm: 14 },
               boxShadow: "none",
               ...(activeTab === tab
                 ? {
@@ -491,15 +518,15 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                     src={fMemberImg}
                     alt={fd.memberNick as string}
                     sx={{
-                      width: 48,
-                      height: 48,
+                      width: { xs: 40, sm: 48 },
+                      height: { xs: 40, sm: 48 },
                       cursor: "pointer",
                       border: fIsBrandOrAdmin ? "2px solid" : "none",
                       borderColor: mt === "BRAND" ? "primary.main" : "info.main",
                     }}
                     onClick={() => handleNavigate(fd)}
                   />
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography
                       variant="body2"
                       fontWeight={600}
@@ -508,6 +535,7 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                         overflow: "hidden",
                         whiteSpace: "nowrap",
                         textOverflow: "ellipsis",
+                        fontSize: { xs: 13, sm: 14 },
                         "&:hover": { color: "primary.main" },
                       }}
                       onClick={() => handleNavigate(fd)}
@@ -524,10 +552,36 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                       />
                     )}
                   </Box>
+                  {/* Mobile: Follow button inline with name */}
+                  <Box sx={{ display: { xs: "flex", sm: "none" }, flexShrink: 0 }}>
+                    {user?._id && user._id !== fMemberId ? (
+                      fIsFollowing ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleUnfollow(fMemberId)}
+                          sx={{ borderRadius: 5, fontSize: 10, fontWeight: 600, textTransform: "none", px: 1.5, py: 0.2, minWidth: 0 }}
+                        >
+                          Unfollow
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          onClick={() => handleFollow(fMemberId)}
+                          sx={{ borderRadius: 5, fontSize: 10, fontWeight: 600, textTransform: "none", px: 1.5, py: 0.2, minWidth: 0, boxShadow: "none" }}
+                        >
+                          Follow
+                        </Button>
+                      )
+                    ) : null}
+                  </Box>
                 </Box>
 
                 {/* Details */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", pl: { xs: "60px", sm: 0 } }}>
+                <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 2, flexWrap: "wrap" }}>
                   <DetailBadge>
                     <PeopleAltOutlinedIcon sx={{ fontSize: 15 }} />
                     <Typography variant="caption" fontWeight={600}>
@@ -558,8 +612,8 @@ export default function MemberProfilePageView({ memberId }: { memberId: string }
                   )}
                 </Box>
 
-                {/* Subscription */}
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: { xs: "flex-start", sm: "flex-end" }, gap: 1, pl: { xs: "60px", sm: 0 } }}>
+                {/* Subscription — desktop only (mobile is inline with name) */}
+                <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
                   {user?._id && user._id !== fMemberId ? (
                     fIsFollowing ? (
                       <>

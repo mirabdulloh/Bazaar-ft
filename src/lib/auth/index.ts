@@ -130,10 +130,15 @@ export const updateUserInfo = (jwtToken: any) => {
 		memberPhone: claims.memberPhone ?? '',
 		memberNick: claims.memberNick ?? '',
 		memberFullName: claims.memberFullName ?? '',
-		memberImage:
-			claims.memberImage === null || claims.memberImage === undefined
-				? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(claims.memberNick ?? 'User')}&backgroundColor=6366f1&textColor=ffffff`
-				: `${claims.memberImage}`,
+		memberImage: (() => {
+			const img = claims.memberImage;
+			if (!img) {
+				return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(claims.memberNick ?? 'User')}&backgroundColor=6366f1&textColor=ffffff`;
+			}
+			if (img.startsWith('http://') || img.startsWith('https://')) return img;
+			const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+			return `${base}/${img}`;
+		})(),
 		memberAddress: claims.memberAddress ?? '',
 		memberDesc: claims.memberDesc ?? '',
 		memberProperties: claims.memberProperties ?? 0,

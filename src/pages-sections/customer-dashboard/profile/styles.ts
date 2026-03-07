@@ -12,15 +12,20 @@ export const ProfileCard = styled(Card)(({ theme }) => ({
   overflow: "hidden",
   elevation: 0,
   boxShadow: "none",
+  [theme.breakpoints.down("md")]: {
+    border: "none",
+    borderRadius: 0,
+    boxShadow: "none",
+  },
 }));
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 export const SidebarWrapper = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.grey[50],
   borderRight: `1px solid ${theme.palette.grey[200]}`,
+  height: "100%",
   [theme.breakpoints.down("md")]: {
     borderRight: "none",
-    borderBottom: `1px solid ${theme.palette.grey[200]}`,
   },
 }));
 
