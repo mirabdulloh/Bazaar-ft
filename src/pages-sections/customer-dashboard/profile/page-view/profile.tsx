@@ -10,6 +10,7 @@ import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import InputAdornment from "@mui/material/InputAdornment";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
@@ -39,6 +40,8 @@ import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlined from "@mui/icons-material/VisibilityOffOutlined";
 import HomeOutlined from "@mui/icons-material/HomeOutlined";
 // REACT-i18n
 import { useTranslation } from "../../../../../node_modules/react-i18next";
@@ -1494,6 +1497,7 @@ function EditProfilePanel({
   // ── Change password local state ──
   const [pwData, setPwData] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
   const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showPw, setShowPw] = useState({ old: false, next: false, confirm: false });
   const [changePassword, { loading: pwLoading }] = useMutation(CHANGE_PASSWORD);
 
   const handleChangePassword = async () => {
@@ -1511,7 +1515,7 @@ function EditProfilePanel({
         variables: { input: { oldPassword: pwData.oldPassword, newPassword: pwData.newPassword } }
       });
       setPwData({ oldPassword: "", newPassword: "", confirmPassword: "" });
-      setPwMsg({ type: "success", text: "Password changed! Please log in again." });
+      setPwMsg({ type: "success", text: "Password changed!" });
     } catch (err: any) {
       const msg = err?.graphQLErrors?.[0]?.message || "Failed to change password.";
       setPwMsg({ type: "error", text: msg });
@@ -1674,9 +1678,22 @@ function EditProfilePanel({
               fullWidth
               size="medium"
               label="Current Password"
-              type="password"
+              type={showPw.old ? "text" : "password"}
               value={pwData.oldPassword}
               onChange={(e) => setPwData((prev) => ({ ...prev, oldPassword: e.target.value }))}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPw((prev) => ({ ...prev, old: !prev.old }))}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPw.old ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -1684,10 +1701,23 @@ function EditProfilePanel({
               fullWidth
               size="medium"
               label="New Password"
-              type="password"
+              type={showPw.next ? "text" : "password"}
               value={pwData.newPassword}
               onChange={(e) => setPwData((prev) => ({ ...prev, newPassword: e.target.value }))}
               helperText="7–20 characters"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPw((prev) => ({ ...prev, next: !prev.next }))}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPw.next ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -1695,9 +1725,22 @@ function EditProfilePanel({
               fullWidth
               size="medium"
               label="Confirm New Password"
-              type="password"
+              type={showPw.confirm ? "text" : "password"}
               value={pwData.confirmPassword}
               onChange={(e) => setPwData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPw((prev) => ({ ...prev, confirm: !prev.confirm }))}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPw.confirm ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
           </Grid>
         </Grid>
