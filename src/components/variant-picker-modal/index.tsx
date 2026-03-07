@@ -87,6 +87,7 @@ export default function VariantPickerModal() {
       onClose={closePicker}
       maxWidth="xs"
       fullWidth
+      sx={{ zIndex: 1600 }}
       slotProps={{ paper: { sx: { borderRadius: 3, p: 0 } } }}
     >
       {/* Header */}

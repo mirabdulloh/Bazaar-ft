@@ -5,7 +5,7 @@ import Container from "@mui/material/Container";
 
 export function CustomerDashboardLayout({ children }: PropsWithChildren) {
   return (
-    <Box bgcolor="grey.50" py={{ xs: 3, sm: 4 }}>
+    <Box bgcolor="grey.50" py={{ xs: 3, sm: 4 }} minHeight="calc(100vh - 300px)">
       <Container>
         {children}
       </Container>

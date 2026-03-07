@@ -322,6 +322,7 @@ function WishlistCard({
             href={`/products/${id}/view`}
             style={{ flex: 1 }}
             onClick={() => setQuickViewLoading(true)}
+            onNavigate={() => setQuickViewLoading(false)}
           >
             <Button
               fullWidth
