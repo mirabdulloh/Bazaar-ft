@@ -113,7 +113,20 @@ export default function ProductIntro({ product }: Props) {
         </Grid>
 
         <Grid size={{ lg: 5, md: 5, xs: 12 }}>
-          <Typography variant="h1">{product.title}</Typography>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+            <Typography variant="h1" sx={{ flex: 1 }}>{product.title}</Typography>
+            <IconButton
+              onClick={handleLike}
+              sx={{
+                color: liked ? "error.main" : "grey.400",
+                flexShrink: 0,
+                mt: 0.5,
+                "&:hover": { color: "error.main" }
+              }}
+            >
+              {liked ? <Favorite fontSize="large" /> : <FavoriteBorder fontSize="large" />}
+            </IconButton>
+          </div>
 
           <Typography variant="body1">
             Category: <strong>{category}</strong>
@@ -148,24 +161,6 @@ export default function ProductIntro({ product }: Props) {
             <span>Rated:</span>
             <Rating readOnly color="warn" size="small" value={product.rating} />
             <Typography variant="h6">({product.productRatingCount ?? 0})</Typography>
-          </div>
-
-          {/* LIKE BUTTON + COUNT */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
-            <IconButton
-              size="small"
-              onClick={handleLike}
-              sx={{
-                color: liked ? "error.main" : "grey.500",
-                p: 0.5,
-                "&:hover": { color: "error.main" }
-              }}
-            >
-              {liked ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
-            </IconButton>
-            <Typography variant="body2" color="text.secondary">
-              {likes} likes
-            </Typography>
           </div>
 
           {/* PRODUCT VARIANTS */}
