@@ -47,7 +47,7 @@ export default function AddToCart({ product }: Props) {
       variant="outlined"
       loading={isLoading}
       onClick={handleAddToCart}
-      sx={{ padding: "3px", alignSelf: "self-end" }}
+      sx={{ p: "5px", minWidth: 0, alignSelf: "center", flexShrink: 0 }}
     >
       <Add fontSize="small" />
     </Button>

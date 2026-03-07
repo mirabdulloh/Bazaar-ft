@@ -21,6 +21,7 @@ interface Props {
   showRating?: boolean;
   showProductSize?: boolean;
   showActions?: boolean;
+  showFavorite?: boolean;
 }
 // ========================================================
 
@@ -28,7 +29,8 @@ export default function ProductCard1({
   product,
   showProductSize,
   showRating = true,
-  showActions = true
+  showActions = true,
+  showFavorite = true
 }: Props) {
   const { slug, title, price, thumbnail, rating, discount } = product;
 
@@ -39,7 +41,7 @@ export default function ProductCard1({
         <DiscountChip discount={discount} />
 
         {/* ALWAYS-VISIBLE LIKE BUTTON */}
-        <FavoriteButton product={product} />
+        {showFavorite && <FavoriteButton product={product} />}
 
         {/* QUICK VIEW ICON (hover only) */}
         {showActions && (
@@ -53,7 +55,7 @@ export default function ProductCard1({
         )}
 
         {/* PRODUCT IMAGE / THUMBNAIL */}
-        <Link href={`/products/${slug}`}>
+        <Link href={`/products/${slug}/view`} scroll={false}>
           <LazyImage
             priority
             alt={title}

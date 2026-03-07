@@ -22,8 +22,7 @@ export const ImageWrapper = styled("div")(({ theme }) => ({
   display: "inline-block",
   [theme.breakpoints.down("sm")]: { display: "block" },
   transition: "0.3s",
-  ":hover .thumbnail": { scale: 0.9 },
-  "& .thumbnail": { transition: "0.3s" }
+  "& .thumbnail": { transition: "0.3s", transform: "none" }
 }));
 
 export const HoverIconWrapper = styled("div")(({ theme }) => ({
@@ -43,9 +42,11 @@ export const ContentWrapper = styled("div")(({ theme }) => ({
   gap: 8,
   display: "flex",
   padding: "1rem",
+  alignItems: "center",
+  overflow: "hidden",
   borderTop: `1px solid ${theme.palette.divider}`,
   "& .title": { marginBottom: ".5rem" },
-  "& > .content": { flex: "1 1 0", marginInlineEnd: ".5rem" },
+  "& > .content": { flex: "1 1 0", marginInlineEnd: ".5rem", minWidth: 0 },
   "& .size": { marginBottom: ".5rem", color: theme.palette.grey[600] }
   // "& .categories": { overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }
 }));

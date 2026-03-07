@@ -955,13 +955,20 @@ function ProductGridPanel({
           </Link>
         </EmptyCard>
       ) : (
-        <Grid container spacing={2}>
-          {products.map((p: T) => (
-            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={p._id as string}>
-              <ProductCard1 product={toProductModel(p)} />
-            </Grid>
-          ))}
-        </Grid>
+        <Box
+          sx={{
+            "& .hover-box": { opacity: 0, pointerEvents: "none" },
+            "& .MuiCard-root:hover .hover-box": { opacity: 0 }
+          }}
+        >
+          <Grid container spacing={2}>
+            {products.map((p: T) => (
+              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={p._id as string}>
+                <ProductCard1 product={toProductModel(p)} showFavorite={false} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       )}
     </Box>
   );

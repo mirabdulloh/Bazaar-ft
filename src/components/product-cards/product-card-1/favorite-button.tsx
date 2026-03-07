@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 // MUI
 import IconButton from "@mui/material/IconButton";
 import Favorite from "@mui/icons-material/Favorite";
@@ -23,6 +23,15 @@ export default function FavoriteButton({ product }: Props) {
   const { id, meLiked } = product;
   const user = useReactiveVar(userVar);
   const [liked, setLiked] = useState<boolean>(meLiked ?? false);
+  // Prevents stale-cache prop sync from overriding an in-flight optimistic update
+  const pendingRef = useRef(false);
+
+  // Sync with Apollo cache/network updates (e.g. after tab switch + refetch)
+  useEffect(() => {
+    if (!pendingRef.current) {
+      setLiked(meLiked ?? false);
+    }
+  }, [meLiked]);
 
   const [likeTargetProduct] = useMutation<{
     likeTargetProduct: { _id: string; productLikes: number };
@@ -33,18 +42,25 @@ export default function FavoriteButton({ product }: Props) {
     e.stopPropagation();
     try {
       if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
+      pendingRef.current = true;
+      const newLiked = !liked;
+      setLiked(newLiked);
       const { data } = await likeTargetProduct({ variables: { input: id } });
       if (data?.likeTargetProduct?._id) {
-        if (liked) {
-          setLiked(false);
-          await sweetUnlikeAlert();
-        } else {
-          setLiked(true);
+        if (newLiked) {
           await sweetLikeSuccessAlert();
+        } else {
+          await sweetUnlikeAlert();
         }
+      } else {
+        // Mutation returned no data — revert
+        setLiked(!newLiked);
       }
     } catch (err: any) {
+      setLiked(meLiked ?? false);
       sweetMixinErrorAlert(err.message).then();
+    } finally {
+      pendingRef.current = false;
     }
   };
 

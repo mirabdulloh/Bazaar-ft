@@ -266,6 +266,11 @@ export const LIKE_TARGET_PRODUCT = gql`
       productSize
       productColor
       productMaterials
+      meLiked {
+        memberId
+        likeRefId
+        myFavorite
+      }
       createdAt
       updatedAt
       memberData {
