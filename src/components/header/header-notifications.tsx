@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
@@ -72,6 +72,8 @@ export function HeaderNotifications() {
   const user = useReactiveVar(userVar);
   const isLoggedIn = !!user._id;
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [localNotifications, setLocalNotifications] = useState<T[]>([]);
+  const [localUnreadCount, setLocalUnreadCount] = useState(0);
   const open = Boolean(anchorEl);
 
   const { data: dropdownData, loading, refetch } = useQuery(GET_MY_NOTIFICATIONS, {
@@ -89,6 +91,14 @@ export function HeaderNotifications() {
   const notifications: T[] = (dropdownData as T)?.getMyNotifications?.list ?? [];
   const unreadCount: number = (unreadData as T)?.getMyNotifications?.metaCounter?.[0]?.total ?? 0;
 
+  useEffect(() => {
+    setLocalNotifications(notifications);
+  }, [dropdownData]);
+
+  useEffect(() => {
+    setLocalUnreadCount(unreadCount);
+  }, [unreadData]);
+
   const [markAsRead] = useMutation(MARK_NOTIFICATION_AS_READ);
   const [markAllAsRead, { loading: markingAll }] = useMutation(MARK_ALL_NOTIFICATIONS_AS_READ);
 
@@ -100,6 +110,12 @@ export function HeaderNotifications() {
 
   const handleMarkOne = async (id: string) => {
     try {
+      setLocalNotifications((prev) =>
+        prev.map((item) =>
+          item._id === id ? { ...item, notificationStatus: "READ" } : item
+        )
+      );
+      setLocalUnreadCount((prev) => Math.max(0, prev - 1));
       await markAsRead({ variables: { input: { _id: id } } });
       refetch();
       refetchUnread();
@@ -110,6 +126,10 @@ export function HeaderNotifications() {
 
   const handleMarkAll = async () => {
     try {
+      setLocalNotifications((prev) =>
+        prev.map((item) => ({ ...item, notificationStatus: "READ" }))
+      );
+      setLocalUnreadCount(0);
       await markAllAsRead();
       refetch();
       refetchUnread();
@@ -120,7 +140,7 @@ export function HeaderNotifications() {
 
   return (
     <>
-      <Badge badgeContent={unreadCount} color="primary" invisible={!isLoggedIn || unreadCount === 0}>
+      <Badge badgeContent={localUnreadCount} color="primary" invisible={!isLoggedIn || localUnreadCount === 0}>
         <IconButton aria-label="Notifications" onClick={handleOpen}>
         <SvgIcon sx={{ fontSize: 24 }}>
             <svg viewBox="0 0 24 24">
@@ -155,11 +175,11 @@ export function HeaderNotifications() {
         <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid", borderColor: "divider" }}>
           <Typography variant="subtitle1" fontWeight={700}>
             Notifications
-            {unreadCount > 0 && (
-              <Chip label={unreadCount} size="small" color="primary" sx={{ ml: 1, height: 18, fontSize: 11 }} />
+            {localUnreadCount > 0 && (
+              <Chip label={localUnreadCount} size="small" color="primary" sx={{ ml: 1, height: 18, fontSize: 11 }} />
             )}
           </Typography>
-          {unreadCount > 0 && (
+          {localUnreadCount > 0 && (
             <Button
               size="small"
               startIcon={<DoneAllIcon sx={{ fontSize: 15 }} />}
@@ -174,17 +194,17 @@ export function HeaderNotifications() {
 
         {/* Notification list */}
         <Box sx={{ flex: 1, overflowY: "auto" }}>
-          {loading && notifications.length === 0 ? (
+          {loading && localNotifications.length === 0 ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress size={24} />
             </Box>
-          ) : notifications.length === 0 ? (
+          ) : localNotifications.length === 0 ? (
             <Stack alignItems="center" justifyContent="center" py={5} gap={1}>
               <NotificationsNoneOutlined sx={{ fontSize: 40, color: "grey.400" }} />
               <Typography variant="body2" color="text.secondary">No notifications yet.</Typography>
             </Stack>
           ) : (
-            notifications.map((n: T, i: number) => {
+            localNotifications.map((n: T, i: number) => {
               const isUnread = n.notificationStatus === "UNREAD";
               const authorImg = resolveImage((n.authorData as T)?.memberImage as string);
               const authorNick = (n.authorData as T)?.memberNick as string;

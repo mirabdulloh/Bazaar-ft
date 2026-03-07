@@ -202,9 +202,13 @@ export const updateUserInfo = (jwtToken: any) => {
 	});
 };
 
-export const logOut = () => {
+export const logOut = (redirect?: (href: string) => void) => {
 	deleteStorage();
 	deleteUserInfo();
+	if (redirect) {
+		redirect('/');
+		return;
+	}
 	window.location.replace('/');
 };
 

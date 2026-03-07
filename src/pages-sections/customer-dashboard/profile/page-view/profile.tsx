@@ -26,7 +26,6 @@ import CardGiftcardOutlined from "@mui/icons-material/CardGiftcardOutlined";
 import CameraEnhance from "@mui/icons-material/CameraEnhance";
 import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
 import EditOutlined from "@mui/icons-material/EditOutlined";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import MenuIcon from "@mui/icons-material/Menu";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
@@ -608,7 +607,7 @@ export function ProfilePageView() {
 
         {/* Logout */}
         <Divider sx={{ my: 1.5 }} />
-        <LogoutNavItem onClick={logOut}>
+        <LogoutNavItem onClick={() => logOut()}>
           <LogoutOutlinedIcon sx={ICON_SZ} />
           <Typography variant="body2" fontWeight={500}>
             Logout

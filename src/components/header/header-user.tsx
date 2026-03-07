@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
@@ -24,6 +25,7 @@ import User3 from "icons/User3";
 
 export function HeaderUser() {
   const user = useReactiveVar(userVar);
+  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -102,7 +104,10 @@ export function HeaderUser() {
         <Divider />
 
         <MenuItem
-          onClick={() => { setAnchorEl(null); logOut(); }}
+          onClick={() => {
+            setAnchorEl(null);
+            logOut((href) => router.replace(href));
+          }}
           sx={{ color: "error.main" }}
         >
           <ListItemIcon sx={{ color: "error.main" }}><LogoutOutlined fontSize="small" /></ListItemIcon>
