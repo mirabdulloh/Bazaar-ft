@@ -893,6 +893,12 @@ function ProductGridPanel({
   emptyMsg: string;
 }) {
   const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const parseVariantValues = (value?: string[] | string): string[] => {
+    if (!value) return [];
+    const rawValues = Array.isArray(value) ? value : value.split(/[,/|]/);
+    return Array.from(new Set(rawValues.map((item) => item.trim()).filter(Boolean)));
+  };
+
   const toProductModel = (p: T): Product => {
     const rawImg = (p.productImages as string[])?.[0] ?? "";
     const thumb = rawImg.startsWith("http") ? rawImg : rawImg ? `${base}/${rawImg}` : "/assets/images/products/product-1.png";
@@ -910,6 +916,8 @@ function ProductGridPanel({
         img.startsWith("http") ? img : `${base}/${img}`
       ),
       rating: (p.productRatingAverage as number) ?? 0,
+      size: parseVariantValues(p.productSize as string[] | string),
+      colors: parseVariantValues(p.productColor as string[] | string),
       categories: [],
       meLiked: !!(p.meLiked as T[])?.some?.((l: T) => l.myFavorite),
       productLikes: p.productLikes as number,
