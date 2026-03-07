@@ -55,9 +55,11 @@ import {
   GET_ADDRESSES,
   GET_BOARD_ARTICLES,
 } from "../../../../../apollo/user/query";
-import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE } from "../../../../../apollo/user/mutation";
+import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD } from "../../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
+import ProductCard1 from "components/product-cards/product-card-1/product-card";
+import Product from "models/Product.model";
 import DashboardHeader from "../../dashboard-header";
 import User3 from "icons/User3";
 // CUSTOM TYPES
@@ -211,7 +213,8 @@ export function ProfilePageView() {
     memberPhone: user.memberPhone || "",
     memberAddress: user.memberAddress || "",
     memberDesc: user.memberDesc || "",
-    memberImage: user.memberImage || ""
+    memberImage: user.memberImage || "",
+    memberEmail: ""
   });
   const [editMsg, setEditMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [updateMember, { loading: updateLoading }] = useMutation(UPDATE_MEMBER);
@@ -221,15 +224,17 @@ export function ProfilePageView() {
 
   // Sync edit form when user reactive var changes
   useEffect(() => {
-    setUpdateData({
+    setUpdateData((prev) => ({
+      ...prev,
       memberNick: user.memberNick || "",
       memberFullName: user.memberFullName || "",
       memberPhone: user.memberPhone || "",
       memberAddress: user.memberAddress || "",
       memberDesc: user.memberDesc || "",
       memberImage: user.memberImage || ""
-    });
+    }));
   }, [user]);
+
 
   /** Upload image to backend via multipart/form-data graphql-upload **/
   const uploadImage = useCallback(
@@ -306,7 +311,8 @@ export function ProfilePageView() {
             memberPhone: updateData.memberPhone.trim() || undefined,
             memberAddress: updateData.memberAddress.trim() || undefined,
             memberDesc: updateData.memberDesc.trim() || undefined,
-            memberImage: updateData.memberImage || undefined
+            memberImage: updateData.memberImage || undefined,
+            memberEmail: updateData.memberEmail.trim() || undefined
           }
         }
       });
@@ -362,6 +368,11 @@ export function ProfilePageView() {
     fetchPolicy: "cache-and-network",
   });
   const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
+
+  // Sync email when query data loads (email lives in GET_MEMBER, not in userVar)
+  useEffect(() => {
+    if (memberEmail) setUpdateData((prev) => ({ ...prev, memberEmail }));
+  }, [memberEmail]);
 
   const { loading: ordersLoading, data: ordersData } = useQuery(GET_MY_ORDERS, {
     fetchPolicy: "cache-and-network",
@@ -507,7 +518,6 @@ export function ProfilePageView() {
             doDisabledCheck={doDisabledCheck}
             avatarSrc={avatarSrc}
             uploadImage={uploadImage}
-            memberEmail={memberEmail}
           />
         );
       default:
@@ -882,6 +892,33 @@ function ProductGridPanel({
   loading: boolean;
   emptyMsg: string;
 }) {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const toProductModel = (p: T): Product => {
+    const rawImg = (p.productImages as string[])?.[0] ?? "";
+    const thumb = rawImg.startsWith("http") ? rawImg : rawImg ? `${base}/${rawImg}` : "/assets/images/products/product-1.png";
+    const price = p.productPrice as number;
+    const discPrice = p.productDiscountPrice as number;
+    const discount = discPrice && price ? Math.round(((price - discPrice) / price) * 100) : 0;
+    return {
+      id: p._id as string,
+      slug: p._id as string,
+      title: p.productTitle as string,
+      price,
+      discount,
+      thumbnail: thumb,
+      images: (p.productImages as string[] ?? []).map((img: string) =>
+        img.startsWith("http") ? img : `${base}/${img}`
+      ),
+      rating: (p.productRatingAverage as number) ?? 0,
+      categories: [],
+      meLiked: !!(p.meLiked as T[])?.some?.((l: T) => l.myFavorite),
+      productLikes: p.productLikes as number,
+      productViews: p.productViews as number,
+      productStockQuantity: p.productStockQuantity as number,
+      productRatingCount: p.productRatingCount as number,
+    };
+  };
+
   return (
     <Box>
       <SectionTitle title={title} />
@@ -890,7 +927,7 @@ function ProductGridPanel({
         <Grid container spacing={2}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Grid size={{ xs: 6, sm: 4, md: 3 }} key={i}>
-              <Skeleton height={200} variant="rounded" sx={{ borderRadius: 2 }} />
+              <Skeleton height={280} variant="rounded" sx={{ borderRadius: 2 }} />
             </Grid>
           ))}
         </Grid>
@@ -908,40 +945,11 @@ function ProductGridPanel({
         </EmptyCard>
       ) : (
         <Grid container spacing={2}>
-          {products.map((p: T) => {
-            const imgSrc =
-              resolveImage((p.productImages as string[])?.[0]) ||
-              "/assets/images/products/product-1.png";
-            return (
-              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={p._id as string}>
-                <Link href={`/products/${p._id}`} style={{ textDecoration: "none" }}>
-                  <ProductCard>
-                    <ProductImageBox>
-                      <Image
-                        src={imgSrc}
-                        alt={p.productTitle as string}
-                        fill
-                        style={{ objectFit: "cover" }}
-                        sizes="(max-width: 600px) 50vw, 25vw"
-                      />
-                    </ProductImageBox>
-                    <Box p={1.5}>
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        sx={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
-                      >
-                        {p.productTitle as string}
-                      </Typography>
-                      <Typography variant="body2" color="primary.main" fontWeight={700} mt={0.5}>
-                        {currency(p.productPrice as number)}
-                      </Typography>
-                    </Box>
-                  </ProductCard>
-                </Link>
-              </Grid>
-            );
-          })}
+          {products.map((p: T) => (
+            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={p._id as string}>
+              <ProductCard1 product={toProductModel(p)} />
+            </Grid>
+          ))}
         </Grid>
       )}
     </Box>
@@ -1447,7 +1455,6 @@ function EditProfilePanel({
   doDisabledCheck,
   avatarSrc,
   uploadImage,
-  memberEmail
 }: {
   updateData: {
     memberNick: string;
@@ -1456,6 +1463,7 @@ function EditProfilePanel({
     memberAddress: string;
     memberDesc: string;
     memberImage: string;
+    memberEmail: string;
   };
   setUpdateData: React.Dispatch<
     React.SetStateAction<{
@@ -1465,6 +1473,7 @@ function EditProfilePanel({
       memberAddress: string;
       memberDesc: string;
       memberImage: string;
+      memberEmail: string;
     }>
   >;
   editMsg: { type: "success" | "error"; text: string } | null;
@@ -1473,8 +1482,34 @@ function EditProfilePanel({
   doDisabledCheck: () => boolean;
   avatarSrc: string;
   uploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  memberEmail?: string;
 }) {
+  // ── Change password local state ──
+  const [pwData, setPwData] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [changePassword, { loading: pwLoading }] = useMutation(CHANGE_PASSWORD);
+
+  const handleChangePassword = async () => {
+    if (pwData.newPassword !== pwData.confirmPassword) {
+      setPwMsg({ type: "error", text: "New passwords do not match." });
+      return;
+    }
+    if (pwData.newPassword.length < 7) {
+      setPwMsg({ type: "error", text: "Password must be at least 7 characters." });
+      return;
+    }
+    setPwMsg(null);
+    try {
+      await changePassword({
+        variables: { input: { oldPassword: pwData.oldPassword, newPassword: pwData.newPassword } }
+      });
+      setPwData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setPwMsg({ type: "success", text: "Password changed! Please log in again." });
+    } catch (err: any) {
+      const msg = err?.graphQLErrors?.[0]?.message || "Failed to change password.";
+      setPwMsg({ type: "error", text: msg });
+    }
+  };
+
   return (
     <Box>
       <SectionTitle title="Edit Profile" />
@@ -1527,8 +1562,8 @@ function EditProfilePanel({
         </FlexBox>
       </PanelCard>
 
-      {/* Form fields */}
-      <PanelCard>
+      {/* Personal information */}
+      <PanelCard sx={{ mb: 3 }}>
         <Typography variant="subtitle2" fontWeight={700} mb={2.5} color="text.secondary">
           PERSONAL INFORMATION
         </Typography>
@@ -1551,23 +1586,20 @@ function EditProfilePanel({
               label="Full Name"
               placeholder="Your full name"
               value={updateData.memberFullName}
-              onChange={(e) =>
-                setUpdateData((prev) => ({ ...prev, memberFullName: e.target.value }))
-              }
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberFullName: e.target.value }))}
             />
           </Grid>
-          {memberEmail && (
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                size="medium"
-                label="Email"
-                value={memberEmail}
-                disabled
-                helperText="Email cannot be changed"
-              />
-            </Grid>
-          )}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Email"
+              type="email"
+              placeholder="Your email"
+              value={updateData.memberEmail}
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberEmail: e.target.value }))}
+            />
+          </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
@@ -1585,9 +1617,7 @@ function EditProfilePanel({
               label="Address"
               placeholder="Your address"
               value={updateData.memberAddress}
-              onChange={(e) =>
-                setUpdateData((prev) => ({ ...prev, memberAddress: e.target.value }))
-              }
+              onChange={(e) => setUpdateData((prev) => ({ ...prev, memberAddress: e.target.value }))}
             />
           </Grid>
           <Grid size={12}>
@@ -1620,6 +1650,66 @@ function EditProfilePanel({
             sx={{ px: 5 }}
           >
             Save Changes
+          </Button>
+        </Box>
+      </PanelCard>
+
+      {/* Change password */}
+      <PanelCard>
+        <Typography variant="subtitle2" fontWeight={700} mb={2.5} color="text.secondary">
+          CHANGE PASSWORD
+        </Typography>
+
+        <Grid container spacing={2.5}>
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Current Password"
+              type="password"
+              value={pwData.oldPassword}
+              onChange={(e) => setPwData((prev) => ({ ...prev, oldPassword: e.target.value }))}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="New Password"
+              type="password"
+              value={pwData.newPassword}
+              onChange={(e) => setPwData((prev) => ({ ...prev, newPassword: e.target.value }))}
+              helperText="7–20 characters"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              size="medium"
+              label="Confirm New Password"
+              type="password"
+              value={pwData.confirmPassword}
+              onChange={(e) => setPwData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+            />
+          </Grid>
+        </Grid>
+
+        {pwMsg && (
+          <Alert severity={pwMsg.type} sx={{ mt: 2, borderRadius: 2 }}>
+            {pwMsg.text}
+          </Alert>
+        )}
+
+        <Box mt={3}>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={handleChangePassword}
+            disabled={!pwData.oldPassword || !pwData.newPassword || !pwData.confirmPassword || pwLoading}
+            loading={pwLoading}
+            sx={{ px: 5 }}
+          >
+            Change Password
           </Button>
         </Box>
       </PanelCard>

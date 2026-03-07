@@ -429,6 +429,11 @@ export const GET_VISITED_PRODUCTS = gql`
         productMaterials
         createdAt
         updatedAt
+        meLiked {
+          memberId
+          likeRefId
+          myFavorite
+        }
       }
       metaData {
         total

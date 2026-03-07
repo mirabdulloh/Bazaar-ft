@@ -32,11 +32,24 @@ function createIsomorphicLink(): ApolloLink {
 		uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL,
 	});
 
+	// Silent logout on JWT expiry — no alert, just clear storage and redirect
+	const silentLogout = () => {
+		localStorage.removeItem('accessToken');
+		localStorage.removeItem('memberData');
+		localStorage.setItem('logout', Date.now().toString());
+		window.location.replace('/');
+	};
+
 	const errorLink = new ErrorLink(({ error }) => {
 		if (CombinedGraphQLErrors.is(error)) {
 			error.errors.forEach(({ message, locations, path }) => {
 				console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`);
 				const lower = message.toLowerCase();
+				// JWT expired / unauthorized → silent logout, no alert
+				if (lower.includes('unauthorized') || lower.includes('jwt expired') || lower.includes('token expired')) {
+					silentLogout();
+					return;
+				}
 				if (!lower.includes('input') && !lower.includes('no data found')) sweetErrorAlert(message);
 			});
 		} else {
