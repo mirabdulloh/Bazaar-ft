@@ -14,10 +14,14 @@ const Toast = Swal.mixin({
 	timerProgressBar: true,
 	background: '#1e1e2e',
 	color: '#e2e8f0',
+	customClass: { container: 'swal-toast-above-modal' },
 	didOpen: (toast) => {
 		toast.style.borderRadius = '14px';
 		toast.style.boxShadow    = '0 8px 30px rgba(0,0,0,0.3)';
 		toast.style.padding      = '10px 18px';
+		// Ensure toast appears above MUI dialogs (z-index 9999)
+		const container = toast.closest('.swal2-container') as HTMLElement;
+		if (container) container.style.zIndex = '11000';
 		toast.addEventListener('mouseenter', Swal.stopTimer);
 		toast.addEventListener('mouseleave', Swal.resumeTimer);
 	},

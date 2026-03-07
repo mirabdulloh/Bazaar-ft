@@ -80,8 +80,12 @@ export default function RegisterPageView() {
   const accountType = methods.watch("accountType");
 
   const handleSubmitForm = handleSubmit(async (values: RegisterValues) => {
-    await signUp(values.nick, values.password, values.phone, values.accountType);
-    router.push("/");
+    try {
+      await signUp(values.nick, values.password, values.phone, values.accountType);
+      router.push("/");
+    } catch {
+      // Error alert is shown inside signUp — just stay on the register page
+    }
   });
 
   return (

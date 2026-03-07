@@ -2,7 +2,7 @@ import { jwtDecode } from 'jwt-decode';
 import { initializeApollo } from '../../../apollo/client';
 import { userVar } from '../../../apollo/store';
 import { CustomJwtPayload } from '../types/customJwtPayload';
-import { sweetMixinErrorAlert } from '../sweetAlert';
+import { sweetTopSmallErrorAlert } from '../sweetAlert';
 import { LOGIN, SIGN_UP } from '../../../apollo/user/mutation';
 
 export function getJwtToken(): any {
@@ -27,16 +27,11 @@ export function setRefreshToken(token: string) {
 }
 
 export const logIn = async (nick: string, password: string): Promise<void> => {
-	try {
-		const { jwtToken, memberData } = await requestJwtToken({ nick, password });
+	const { jwtToken, memberData } = await requestJwtToken({ nick, password });
 
-		if (jwtToken) {
-			updateStorage({ jwtToken });        // localStorage
-			setUserFromMemberData(memberData);  // reactive var (full data, includes memberImage)
-		}
-	} catch (err) {
-		console.warn('login err', err);
-		logOut();
+	if (jwtToken) {
+		updateStorage({ jwtToken });
+		setUserFromMemberData(memberData);
 	}
 };
 
@@ -60,30 +55,32 @@ const requestJwtToken = async ({
 		if (loginData.refreshToken) setRefreshToken(loginData.refreshToken);
 		return { jwtToken: loginData.accessToken, memberData: loginData };
 	} catch (err: any) {
-		console.log('request token err', err.graphQLErrors);
-		switch (err.graphQLErrors?.[0]?.message) {
-			case 'Definer: login and password do not match':
-				await sweetMixinErrorAlert('Please check your password again');
-				break;
-			case 'Definer: user has been blocked!':
-				await sweetMixinErrorAlert('User has been blocked!');
-				break;
+		const msg = err.graphQLErrors?.[0]?.message ?? err.message ?? '';
+		console.log('login error:', msg);
+
+		if (msg.includes('No member with that member nick')) {
+			await sweetTopSmallErrorAlert('No member found with that nickname', 3500);
+		} else if (msg.includes('Wrong password')) {
+			await sweetTopSmallErrorAlert('Wrong password, please try again', 3500);
+		} else if (msg.includes('login and password do not match')) {
+			await sweetTopSmallErrorAlert('Nickname and password do not match', 3500);
+		} else if (msg.includes('blocked')) {
+			await sweetTopSmallErrorAlert('Your account has been blocked', 4000);
+		} else if (msg.includes('verify your email')) {
+			await sweetTopSmallErrorAlert('Please verify your email before logging in', 4000);
+		} else {
+			await sweetTopSmallErrorAlert(msg || 'Login failed. Please try again.', 3500);
 		}
-		throw new Error('token error');
+		throw err;
 	}
 };
 
 export const signUp = async (nick: string, password: string, phone: string, type: string): Promise<void> => {
-	try {
-		const { jwtToken, memberData } = await requestSignUpJwtToken({ nick, password, phone, type });
+	const { jwtToken, memberData } = await requestSignUpJwtToken({ nick, password, phone, type });
 
-		if (jwtToken) {
-			updateStorage({ jwtToken });        // localStorage
-			setUserFromMemberData(memberData);  // reactive var (full data, includes memberImage)
-		}
-	} catch (err) {
-		console.warn('signup err', err);
-		logOut();
+	if (jwtToken) {
+		updateStorage({ jwtToken });
+		setUserFromMemberData(memberData);
 	}
 };
 
@@ -113,16 +110,17 @@ const requestSignUpJwtToken = async ({
 		if (signupData.refreshToken) setRefreshToken(signupData.refreshToken);
 		return { jwtToken: signupData.accessToken, memberData: signupData };
 	} catch (err: any) {
-		console.log('request token err', err.graphQLErrors);
-		switch (err.graphQLErrors?.[0]?.message) {
-			case 'Definer: login and password do not match':
-				await sweetMixinErrorAlert('Please check your password again');
-				break;
-			case 'Definer: user has been blocked!':
-				await sweetMixinErrorAlert('User has been blocked!');
-				break;
+		const msg = err.graphQLErrors?.[0]?.message ?? err.message ?? '';
+		console.log('signup error:', msg);
+
+		if (msg.includes('Used Member Nick or Phone')) {
+			await sweetTopSmallErrorAlert('This nickname or phone number is already in use', 3500);
+		} else if (msg.includes('blocked')) {
+			await sweetTopSmallErrorAlert('Your account has been blocked', 4000);
+		} else {
+			await sweetTopSmallErrorAlert(msg || 'Sign up failed. Please try again.', 3500);
 		}
-		throw new Error('token error');
+		throw err;
 	}
 };
 

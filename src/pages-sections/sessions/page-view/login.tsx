@@ -38,8 +38,12 @@ export default function LoginPageView() {
   } = methods;
 
   const handleSubmitForm = handleSubmit(async (values) => {
-    await logIn(values.nick, values.password);
-    router.push("/");
+    try {
+      await logIn(values.nick, values.password);
+      router.push("/");
+    } catch {
+      // Error alert is shown inside logIn — just stay on the login page
+    }
   });
 
   return (
