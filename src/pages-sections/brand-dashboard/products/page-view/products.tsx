@@ -1,87 +1,157 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
+import Typography from "@mui/material/Typography";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 // GLOBAL CUSTOM COMPONENTS
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
+import FlexBox from "components/flex-box/flex-box";
 // GLOBAL CUSTOM HOOK
 import useMuiTable from "hooks/useMuiTable";
-//  LOCAL CUSTOM COMPONENT
+// LOCAL CUSTOM COMPONENT
 import ProductRow from "../product-row";
-import SearchArea from "../../search-box";
 import PageWrapper from "../../page-wrapper";
-// CUSTOM DATA MODEL
-import Product from "models/Product.model";
+// APOLLO
+import { useMutation } from "@apollo/client/react";
+import { useQuery } from "lib/hooks/useQuery";
+import { GET_ALL_PRODUCTS_BY_ADMIN } from "../../../../../apollo/admin/query";
+import { REMOVE_PRODUCT_BY_ADMIN } from "../../../../../apollo/admin/mutation";
+import { T } from "lib/types/common";
+// ALERTS
+import {
+  sweetTopSmallSuccessAlert,
+  sweetMixinErrorAlert,
+  sweetConfirmAlert
+} from "lib/sweetAlert";
 
 // TABLE HEADING DATA LIST
 const tableHeading = [
-  { id: "name", label: "Name", align: "left" },
-  { id: "category", label: "Category", align: "left" },
-  { id: "brand", label: "Brand", align: "left" },
-  { id: "price", label: "Price", align: "left" },
-  { id: "published", label: "Published", align: "left" },
+  { id: "productTitle", label: "Product", align: "left" },
+  { id: "productStatus", label: "Status", align: "left" },
+  { id: "productPrice", label: "Price", align: "left" },
+  { id: "productStockQuantity", label: "Stock", align: "left" },
+  { id: "productViews", label: "Views", align: "left" },
+  { id: "createdAt", label: "Date", align: "left" },
   { id: "action", label: "Action", align: "center" }
 ];
 
-// =============================================================================
-type Props = { products: Product[] };
+const PAGE_SIZE = 20;
+const PRODUCT_STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
+
 // =============================================================================
 
-export default function ProductsPageView({ products }: Props) {
-  // RESHAPE THE PRODUCT LIST BASED TABLE HEAD CELL ID
-  const reshapedProducts = products.map((item) => ({
-    id: item.id,
-    slug: item.slug,
-    name: item.title,
-    brand: item.brand!,
-    price: item.price,
-    image: item.thumbnail,
-    published: item.published!,
-    category: item.categories[0]
-  }));
+export default function ProductsPageView() {
+  const [statusFilter, setStatusFilter] = useState<string>("");
+
+  // ─── GraphQL ────────────────────────────────────────────────────────────────
+  const { data, loading, refetch } = useQuery(GET_ALL_PRODUCTS_BY_ADMIN, {
+    fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true,
+    variables: {
+      input: {
+        page: 1,
+        limit: PAGE_SIZE,
+        sort: "createdAt",
+        direction: "DESC",
+        ...(statusFilter ? { search: { productStatus: statusFilter } } : {})
+      }
+    }
+  });
+
+  const [removeProduct] = useMutation(REMOVE_PRODUCT_BY_ADMIN);
+
+  // ─── Data ───────────────────────────────────────────────────────────────────
+  const list = (data as T)?.getAllProductsByAdmin?.products ?? [];
+  const total = (data as T)?.getAllProductsByAdmin?.metaData?.total ?? 0;
 
   const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
-    useMuiTable({ listData: reshapedProducts });
+    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
 
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async (product: any) => {
+    const confirmed = await sweetConfirmAlert(
+      "Remove Product?",
+      `Remove "${product.productTitle}"? This action cannot be undone.`,
+      "Remove"
+    );
+    if (!confirmed) return;
+    try {
+      await removeProduct({ variables: { input: product._id } });
+      await sweetTopSmallSuccessAlert("Product removed");
+      refetch();
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err.message || "Failed to remove product");
+    }
+  }, [removeProduct, refetch]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <PageWrapper title="Product List">
-      <SearchArea
-        buttonText="Add Product"
-        url="/admin/products/create"
-        searchPlaceholder="Search Product..."
-      />
+      {/* Filter */}
+      <FlexBox mb={2} gap={2} flexWrap="wrap">
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <MenuItem value="">All</MenuItem>
+            {PRODUCT_STATUSES.map((s) => (
+              <MenuItem key={s} value={s}>{s}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </FlexBox>
 
-      <Card>
-        <OverlayScrollbar>
-          <TableContainer sx={{ minWidth: 900 }}>
-            <Table>
-              <TableHeader
-                order={order}
-                orderBy={orderBy}
-                heading={tableHeading}
-                onRequestSort={handleRequestSort}
-              />
+      {loading ? (
+        <Typography variant="body1">Loading products...</Typography>
+      ) : list.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="text.secondary">No products found.</Typography>
+        </Card>
+      ) : (
+        <Card>
+          <OverlayScrollbar>
+            <TableContainer sx={{ minWidth: 900 }}>
+              <Table>
+                <TableHeader
+                  order={order}
+                  orderBy={orderBy}
+                  heading={tableHeading}
+                  onRequestSort={handleRequestSort}
+                />
 
-              <TableBody>
-                {filteredList.map((product, index) => (
-                  <ProductRow key={index} product={product} />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </OverlayScrollbar>
+                <TableBody>
+                  {filteredList.map((product: any) => (
+                    <ProductRow
+                      key={product._id}
+                      product={product}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </OverlayScrollbar>
 
-        <Stack alignItems="center" my={4}>
-          <TablePagination
-            onChange={handleChangePage}
-            count={Math.ceil(products.length / rowsPerPage)}
-          />
-        </Stack>
-      </Card>
+          <Stack alignItems="center" my={4}>
+            <TablePagination
+              onChange={handleChangePage}
+              count={Math.ceil(total / rowsPerPage)}
+            />
+          </Stack>
+        </Card>
+      )}
     </PageWrapper>
   );
 }

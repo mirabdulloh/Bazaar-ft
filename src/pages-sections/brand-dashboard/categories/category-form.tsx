@@ -1,120 +1,177 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-// MUI
-import Box from "@mui/material/Box";
+import { useState, useEffect } from "react";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
+import MuiTextField from "@mui/material/TextField";
+import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-// GLOBAL CUSTOM COMPONENTS
-import DropZone from "components/DropZone";
-import FlexBox from "components/flex-box/flex-box";
-import { Checkbox, FormProvider, TextField } from "components/form-hook";
-// STYLED COMPONENTS
-import { UploadImageBox, StyledClear } from "../styles";
-// CUSTOM DATA MODEL
-import { PreviewFile } from "models/Common";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Typography from "@mui/material/Typography";
+// APOLLO
+import { useMutation } from "@apollo/client/react";
+import { useQuery } from "lib/hooks/useQuery";
+import { GET_ALL_CATEGORIES_BY_ADMIN } from "../../../../apollo/admin/query";
+import { CREATE_CATEGORY, UPDATE_CATEGORY } from "../../../../apollo/admin/mutation";
+import { T } from "lib/types/common";
+// ALERTS
+import {
+  sweetTopSmallSuccessAlert,
+  sweetMixinErrorAlert
+} from "lib/sweetAlert";
 
-// FORM FIELDS VALIDATION
-const validationSchema = yup.object().shape({
-  name: yup.string().required("Name required")
-});
+const CATEGORY_STATUSES = ["ACTIVE", "INACTIVE"];
 
 // ================================================================
-interface Props {}
+interface Props {
+  categoryId?: string;
+}
 // ================================================================
 
-export default function CategoryForm(props: Props) {
-  const [files, setFiles] = useState<PreviewFile[]>([]);
+export default function CategoryForm({ categoryId }: Props) {
+  const [categoryName, setCategoryName] = useState("");
+  const [parentCategoryId, setParentCategoryId] = useState("");
+  const [categoryStatus, setCategoryStatus] = useState("ACTIVE");
+  const [saving, setSaving] = useState(false);
 
-  const initialValues = { name: "", parent: "", featured: false };
-
-  const methods = useForm({
-    defaultValues: initialValues,
-    resolver: yupResolver(validationSchema)
+  // ─── Load all categories (for parent dropdown + editing) ─────────────────
+  const { data, loading } = useQuery(GET_ALL_CATEGORIES_BY_ADMIN, {
+    fetchPolicy: "network-only",
+    variables: {
+      input: { page: 1, limit: 100, sort: "createdAt", direction: "DESC" }
+    }
   });
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting }
-  } = methods;
+  const allCategories = (data as T)?.getAllCategoriesByAdmin?.list ?? [];
 
-  // FORM SUBMIT HANDLER
-  const handleSubmitForm = handleSubmit((values) => {
-    alert(JSON.stringify(values, null, 2));
-  });
+  // ─── Populate form when editing ──────────────────────────────────────────
+  useEffect(() => {
+    if (!categoryId || !data) return;
+    const category = allCategories.find((c: any) => c._id === categoryId);
+    if (category) {
+      setCategoryName(category.categoryName || "");
+      setParentCategoryId(category.parentCategoryId || "");
+      setCategoryStatus(category.categoryStatus || "ACTIVE");
+    }
+  }, [data, categoryId]);
 
-  // HANDLE UPDATE NEW IMAGE VIA DROP ZONE
-  const handleChangeDropZone = (files: File[]) => {
-    files.forEach((file) => Object.assign(file, { preview: URL.createObjectURL(file) }));
-    setFiles(files as PreviewFile[]);
+  const [createCategory] = useMutation(CREATE_CATEGORY);
+  const [updateCategory] = useMutation(UPDATE_CATEGORY);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryName.trim()) {
+      await sweetMixinErrorAlert("Category name is required");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (categoryId) {
+        // UPDATE
+        await updateCategory({
+          variables: {
+            input: {
+              _id: categoryId,
+              categoryName: categoryName.trim(),
+              ...(parentCategoryId ? { parentCategoryId } : {}),
+              categoryStatus
+            }
+          }
+        });
+        await sweetTopSmallSuccessAlert("Category updated successfully");
+      } else {
+        // CREATE
+        await createCategory({
+          variables: {
+            input: {
+              categoryName: categoryName.trim(),
+              ...(parentCategoryId ? { parentCategoryId } : {})
+            }
+          }
+        });
+        await sweetTopSmallSuccessAlert("Category created successfully");
+        setCategoryName("");
+        setParentCategoryId("");
+        setCategoryStatus("ACTIVE");
+      }
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err.message || "Failed to save category");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // HANDLE DELETE UPLOAD IMAGE
-  const handleFileDelete = (file: File) => () => {
-    setFiles((files) => files.filter((item) => item.name !== file.name));
-  };
+  if (loading) return <Typography>Loading...</Typography>;
+
+  // Filter out current category from parent dropdown (can't be its own parent)
+  const parentOptions = allCategories.filter((c: any) => c._id !== categoryId);
 
   return (
     <Card className="p-3">
-      <FormProvider methods={methods} onSubmit={handleSubmitForm}>
+      <form onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           <Grid size={{ sm: 6, xs: 12 }}>
-            <TextField
+            <MuiTextField
               fullWidth
-              name="name"
-              label="Name"
+              label="Category Name"
               color="info"
               size="medium"
-              placeholder="Name"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              placeholder="Category Name"
             />
           </Grid>
 
           <Grid size={{ sm: 6, xs: 12 }}>
-            <TextField
-              select
-              fullWidth
+            <FormControl fullWidth>
+              <InputLabel>Parent Category</InputLabel>
+              <Select
+                value={parentCategoryId}
+                label="Parent Category"
+                onChange={(e) => setParentCategoryId(e.target.value)}
+              >
+                <MenuItem value="">None (Top Level)</MenuItem>
+                {parentOptions.map((cat: any) => (
+                  <MenuItem key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {categoryId && (
+            <Grid size={{ sm: 6, xs: 12 }}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={categoryStatus}
+                  label="Status"
+                  onChange={(e) => setCategoryStatus(e.target.value)}
+                >
+                  {CATEGORY_STATUSES.map((s) => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
+          <Grid size={12}>
+            <Button
+              disabled={saving}
+              variant="contained"
               color="info"
-              size="medium"
-              name="parent"
-              placeholder="Parent Category"
-              label="Select Parent Category"
+              type="submit"
             >
-              <MenuItem value="electronics">Electronics</MenuItem>
-              <MenuItem value="fashion">Fashion</MenuItem>
-            </TextField>
-          </Grid>
-
-          <Grid size={12}>
-            <DropZone onChange={(files) => handleChangeDropZone(files)} />
-
-            <FlexBox flexDirection="row" mt={2} flexWrap="wrap" gap={1}>
-              {files.map((file, index) => {
-                return (
-                  <UploadImageBox key={index}>
-                    <Box component="img" alt="product" src={file.preview} width="100%" />
-                    <StyledClear onClick={handleFileDelete(file)} />
-                  </UploadImageBox>
-                );
-              })}
-            </FlexBox>
-          </Grid>
-
-          <Grid size={{ sm: 6, xs: 12 }}>
-            <Checkbox color="info" name="featured" label="Featured Category" />
-          </Grid>
-
-          <Grid size={12}>
-            <Button loading={isSubmitting} variant="contained" color="info" type="submit">
-              Save category
+              {saving ? "Saving..." : categoryId ? "Save Category" : "Create Category"}
             </Button>
           </Grid>
         </Grid>
-      </FormProvider>
+      </form>
     </Card>
   );
 }

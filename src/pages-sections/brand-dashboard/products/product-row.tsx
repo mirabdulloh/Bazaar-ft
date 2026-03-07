@@ -1,91 +1,80 @@
-import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
-import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 // MUI ICON COMPONENTS
-import Edit from "@mui/icons-material/Edit";
 import Delete from "@mui/icons-material/Delete";
-import RemoveRedEye from "@mui/icons-material/RemoveRedEye";
 // GLOBAL CUSTOM COMPONENTS
 import FlexBox from "components/flex-box/flex-box";
-import BazaarSwitch from "components/BazaarSwitch";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
+import { format } from "date-fns/format";
 // STYLED COMPONENTS
-import { StyledTableRow, CategoryWrapper, StyledTableCell, StyledIconButton } from "../styles";
+import { StyledTableRow, StatusWrapper, StyledTableCell, StyledIconButton } from "../styles";
 
 // ========================================================================
-interface Product {
-  id: string;
-  slug: string;
-  name: string;
-  price: number;
-  brand: string;
-  image: string;
-  category: string;
-  published: boolean;
-}
-
-type Props = { product: Product };
+type Props = {
+  product: any;
+  onDelete: (product: any) => void;
+};
 // ========================================================================
 
-export default function ProductRow({ product }: Props) {
-  const { category, name, price, image, brand, id, published, slug } = product;
+export default function ProductRow({ product, onDelete }: Props) {
+  const {
+    _id,
+    productTitle,
+    productStatus,
+    productPrice,
+    productStockQuantity,
+    productViews,
+    productImages,
+    createdAt
+  } = product;
 
-  const [productPublish, setProductPublish] = useState(published);
+  const image = productImages?.[0] || "";
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
       <StyledTableCell align="left">
         <FlexBox alignItems="center" gap={1.5}>
-          <Avatar variant="rounded">
-            <Image fill src={image} alt={name} sizes="(100%, 100%)" />
-          </Avatar>
+          {image ? (
+            <Avatar variant="rounded">
+              <Image fill src={image} alt={productTitle} sizes="(100%, 100%)" />
+            </Avatar>
+          ) : (
+            <Avatar variant="rounded">{productTitle?.[0] || "P"}</Avatar>
+          )}
 
           <div>
-            <Typography variant="h6">{name}</Typography>
-
-            <Typography variant="body1" sx={{ fontSize: 13, color: "grey.600" }}>
-              #{id.split("-")[0]}
+            <Typography variant="h6">{productTitle}</Typography>
+            <Typography variant="body1" sx={{ fontSize: 12, color: "grey.600" }}>
+              #{_id?.slice(0, 8)}
             </Typography>
           </div>
         </FlexBox>
       </StyledTableCell>
 
       <StyledTableCell align="left">
-        <CategoryWrapper>{category}</CategoryWrapper>
+        <StatusWrapper status={productStatus}>{productStatus}</StatusWrapper>
       </StyledTableCell>
 
-      <StyledTableCell align="left">
-        <Box sx={{ width: 55, height: 25, position: "relative", img: { objectFit: "contain" } }}>
-          <Image fill src={brand} alt={name} sizes="(55px, 25px)" />
-        </Box>
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {currency(productPrice ?? 0)}
       </StyledTableCell>
 
-      <StyledTableCell align="left">{currency(price)}</StyledTableCell>
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {productStockQuantity ?? 0}
+      </StyledTableCell>
 
-      <StyledTableCell align="left">
-        <BazaarSwitch
-          color="info"
-          checked={productPublish}
-          onChange={() => setProductPublish((state) => !state)}
-        />
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {productViews ?? 0}
+      </StyledTableCell>
+
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {createdAt ? format(new Date(createdAt), "dd MMM yyyy") : "-"}
       </StyledTableCell>
 
       <StyledTableCell align="center">
-        <Link href={`/admin/products/${slug}`}>
-          <StyledIconButton>
-            <Edit />
-          </StyledIconButton>
-        </Link>
-
-        <StyledIconButton>
-          <RemoveRedEye />
-        </StyledIconButton>
-
-        <StyledIconButton>
+        <StyledIconButton onClick={() => onDelete(product)}>
           <Delete />
         </StyledIconButton>
       </StyledTableCell>

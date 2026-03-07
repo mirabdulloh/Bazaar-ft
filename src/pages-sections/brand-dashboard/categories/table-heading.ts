@@ -1,9 +1,8 @@
 // TABLE HEADING DATA LIST
 export const tableHeading = [
-  { id: "id", label: "ID", align: "left" },
-  { id: "name", label: "Name", align: "left" },
-  { id: "image", label: "Image", align: "left" },
-  { id: "level", label: "Level", align: "left" },
-  { id: "featured", label: "Featured", align: "left" },
+  { id: "categoryName", label: "Category", align: "left" },
+  { id: "categoryStatus", label: "Status", align: "left" },
+  { id: "parentCategoryId", label: "Parent", align: "left" },
+  { id: "createdAt", label: "Created", align: "left" },
   { id: "action", label: "Action", align: "center" }
 ];
