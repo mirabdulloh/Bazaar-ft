@@ -122,33 +122,35 @@ export const updateUserInfo = (jwtToken: any) => {
 	if (!jwtToken) return false;
 
 	const claims = jwtDecode<CustomJwtPayload>(jwtToken);
+	const prev = userVar();
 	userVar({
-		_id: claims._id ?? '',
-		memberType: claims.memberType ?? '',
-		memberStatus: claims.memberStatus ?? '',
-		memberAuthType: claims.memberAuthType ?? '',
-		memberPhone: claims.memberPhone ?? '',
-		memberNick: claims.memberNick ?? '',
-		memberFullName: claims.memberFullName ?? '',
+		_id: claims._id ?? prev._id ?? '',
+		memberType: claims.memberType ?? prev.memberType ?? '',
+		memberStatus: claims.memberStatus ?? prev.memberStatus ?? '',
+		memberAuthType: claims.memberAuthType ?? prev.memberAuthType ?? '',
+		memberPhone: claims.memberPhone ?? prev.memberPhone ?? '',
+		memberNick: claims.memberNick ?? prev.memberNick ?? '',
+		memberFullName: claims.memberFullName ?? prev.memberFullName ?? '',
 		memberImage: (() => {
 			const img = claims.memberImage;
-			if (!img) {
-				return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(claims.memberNick ?? 'User')}&backgroundColor=6366f1&textColor=ffffff`;
+			if (img) {
+				if (img.startsWith('http://') || img.startsWith('https://')) return img;
+				const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+				return `${base}/${img}`;
 			}
-			if (img.startsWith('http://') || img.startsWith('https://')) return img;
-			const base = process.env.NEXT_PUBLIC_API_URL ?? '';
-			return `${base}/${img}`;
+			// Preserve existing image if JWT doesn't include it
+			return prev.memberImage || `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(claims.memberNick ?? prev.memberNick ?? 'User')}&backgroundColor=6366f1&textColor=ffffff`;
 		})(),
-		memberAddress: claims.memberAddress ?? '',
-		memberDesc: claims.memberDesc ?? '',
-		memberProperties: claims.memberProperties ?? 0,
-		memberRank: claims.memberRank ?? 0,
-		memberArticles: claims.memberArticles ?? 0,
-		memberPoints: claims.memberPoints ?? 0,
-		memberLikes: claims.memberLikes ?? 0,
-		memberViews: claims.memberViews ?? 0,
-		memberWarnings: claims.memberWarnings ?? 0,
-		memberBlocks: claims.memberBlocks ?? 0,
+		memberAddress: claims.memberAddress ?? prev.memberAddress ?? '',
+		memberDesc: claims.memberDesc ?? prev.memberDesc ?? '',
+		memberProperties: claims.memberProperties ?? prev.memberProperties ?? 0,
+		memberRank: claims.memberRank ?? prev.memberRank ?? 0,
+		memberArticles: claims.memberArticles ?? prev.memberArticles ?? 0,
+		memberPoints: claims.memberPoints ?? prev.memberPoints ?? 0,
+		memberLikes: claims.memberLikes ?? prev.memberLikes ?? 0,
+		memberViews: claims.memberViews ?? prev.memberViews ?? 0,
+		memberWarnings: claims.memberWarnings ?? prev.memberWarnings ?? 0,
+		memberBlocks: claims.memberBlocks ?? prev.memberBlocks ?? 0,
 	});
 };
 

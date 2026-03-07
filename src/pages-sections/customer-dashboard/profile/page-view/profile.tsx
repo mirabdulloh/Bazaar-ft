@@ -262,6 +262,16 @@ export function ProfilePageView() {
           updateStorage({ jwtToken });
           updateUserInfo(jwtToken);
         }
+        // Patch userVar with all updated fields — JWT payload may only include partial fields
+        userVar({
+          ...userVar(),
+          memberNick: updateData.memberNick.trim() || userVar().memberNick,
+          memberFullName: updateData.memberFullName.trim() || userVar().memberFullName,
+          memberPhone: updateData.memberPhone.trim() || userVar().memberPhone,
+          memberAddress: updateData.memberAddress.trim() || userVar().memberAddress,
+          memberDesc: updateData.memberDesc.trim() || userVar().memberDesc,
+          memberImage: resolveImage(responseImage) || userVar().memberImage,
+        });
         setProfileImagePreview(null);
       } catch (err) {
         console.error("Error uploading image:", err);
@@ -296,6 +306,16 @@ export function ProfilePageView() {
         updateStorage({ jwtToken });
         updateUserInfo(jwtToken);
       }
+      // Patch userVar with all updated fields — JWT payload may only include partial fields
+      userVar({
+        ...userVar(),
+        memberNick: updateData.memberNick.trim() || userVar().memberNick,
+        memberFullName: updateData.memberFullName.trim() || userVar().memberFullName,
+        memberPhone: updateData.memberPhone.trim() || userVar().memberPhone,
+        memberAddress: updateData.memberAddress.trim() || userVar().memberAddress,
+        memberDesc: updateData.memberDesc.trim() || userVar().memberDesc,
+        memberImage: resolveImage(updateData.memberImage) || userVar().memberImage,
+      });
       setProfileImagePreview(null);
       setEditMsg(null);
       await sweetMixinSuccessAlert("Profile updated successfully!");
