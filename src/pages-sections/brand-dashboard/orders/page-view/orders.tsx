@@ -41,9 +41,9 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
-const ORDER_STATUSES = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+const ORDER_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"];
 const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED"];
-const DELIVERY_STATUSES = ["PENDING", "SHIPPED", "DELIVERED", "RETURNED"];
+const DELIVERY_STATUSES = ["PREPARING", "SHIPPING", "DELIVERED"];
 
 // =============================================================================
 

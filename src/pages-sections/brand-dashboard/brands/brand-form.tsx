@@ -22,7 +22,7 @@ import {
   sweetMixinErrorAlert
 } from "lib/sweetAlert";
 
-const BRAND_STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
+const BRAND_STATUSES = ["PENDING", "ACTIVE", "INACTIVE", "SUSPENDED"];
 
 // ================================================================
 interface Props {

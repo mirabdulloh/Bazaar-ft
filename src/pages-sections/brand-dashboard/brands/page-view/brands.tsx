@@ -42,7 +42,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
-const BRAND_STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
+const BRAND_STATUSES = ["PENDING", "ACTIVE", "INACTIVE", "SUSPENDED"];
 
 // =============================================================================
 
@@ -90,19 +90,19 @@ export default function BrandsPageView() {
 
   const handleDelete = useCallback(async (brand: any) => {
     const confirmed = await sweetConfirmAlert(
-      "Delete Brand?",
-      `Delete "${brand.brandName}"? This action cannot be undone.`,
-      "Delete"
+      "Suspend Brand?",
+      `Suspend "${brand.brandName}"? The brand will be deactivated.`,
+      "Suspend"
     );
     if (!confirmed) return;
     try {
       await updateBrand({
-        variables: { input: { _id: brand._id, brandStatus: "DELETED" } }
+        variables: { input: { _id: brand._id, brandStatus: "SUSPENDED" } }
       });
-      await sweetTopSmallSuccessAlert("Brand deleted");
+      await sweetTopSmallSuccessAlert("Brand suspended");
       refetch();
     } catch (err: any) {
-      await sweetMixinErrorAlert(err.message || "Failed to delete brand");
+      await sweetMixinErrorAlert(err.message || "Failed to suspend brand");
     }
   }, [updateBrand, refetch]);
 

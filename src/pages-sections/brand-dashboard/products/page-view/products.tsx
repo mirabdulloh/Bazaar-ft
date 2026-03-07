@@ -45,7 +45,7 @@ const tableHeading = [
 ];
 
 const PAGE_SIZE = 20;
-const PRODUCT_STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
+const PRODUCT_STATUSES = ["DRAFT", "PENDING", "ACTIVE", "SOLD_OUT", "HIDDEN", "REJECTED", "DELETED"];
 
 // =============================================================================
 
