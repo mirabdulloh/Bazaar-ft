@@ -53,6 +53,21 @@ export const adminNavigation = [
     path: "/admin/coupons"
   },
   {
+    name: "Articles",
+    icon: duotone.Pages,
+    path: "/admin/articles"
+  },
+  {
+    name: "Chats",
+    icon: duotone.Chat,
+    path: "/admin/chats"
+  },
+  {
+    name: "Notifications",
+    icon: duotone.ProjectChart,
+    path: "/admin/notifications"
+  },
+  {
     name: "Logout",
     icon: duotone.Session,
     path: "/",
