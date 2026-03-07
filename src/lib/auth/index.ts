@@ -125,7 +125,7 @@ export const setUserFromMemberData = (member: any) => {
 		}
 		return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nick || 'User')}&backgroundColor=6366f1&textColor=ffffff`;
 	};
-	userVar({
+	const resolved: any = {
 		_id: member._id ?? '',
 		memberType: member.memberType ?? '',
 		memberStatus: member.memberStatus ?? '',
@@ -144,7 +144,10 @@ export const setUserFromMemberData = (member: any) => {
 		memberViews: member.memberViews ?? 0,
 		memberWarnings: member.memberWarnings ?? 0,
 		memberBlocks: member.memberBlocks ?? 0,
-	});
+	};
+	// Persist so page refresh can restore full user data (memberImage etc.)
+	localStorage.setItem('memberData', JSON.stringify(resolved));
+	userVar(resolved);
 };
 
 export const updateStorage = ({ jwtToken }: { jwtToken: any }) => {
@@ -196,6 +199,7 @@ export const logOut = () => {
 
 const deleteStorage = () => {
 	localStorage.removeItem('accessToken');
+	localStorage.removeItem('memberData');
 	window.localStorage.setItem('logout', Date.now().toString());
 };
 

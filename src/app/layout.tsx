@@ -26,6 +26,8 @@ import ApolloWrapper from "components/ApolloWrapper";
 import RTL from "components/rtl";
 import ProgressBar from "components/progress";
 import InitialBrandLoader from "components/initial-brand-loader";
+import { ChatProvider } from "components/chat/chat-provider";
+import { ChatDrawer } from "components/chat/chat-drawer";
 
 // IMPORT i18n SUPPORT FILE
 import "i18n";
@@ -47,10 +49,13 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
               <SettingsProvider>
                 <ThemeProvider>
                   <RTL>
-                    <InitialBrandLoader>
-                      {modal}
-                      {children}
-                    </InitialBrandLoader>
+                    <ChatProvider>
+                      <InitialBrandLoader>
+                        {modal}
+                        {children}
+                      </InitialBrandLoader>
+                      <ChatDrawer />
+                    </ChatProvider>
                   </RTL>
 
                   <ProgressBar />

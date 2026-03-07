@@ -30,6 +30,9 @@ function getInitialUser(): CustomJwtPayload {
   try {
     const token = localStorage.getItem("accessToken");
     if (!token) return emptyUser;
+    // Prefer full member data saved at login (includes memberImage etc.)
+    const saved = localStorage.getItem("memberData");
+    if (saved) return { ...emptyUser, ...JSON.parse(saved) };
     return jwtDecode<CustomJwtPayload>(token);
   } catch {
     return emptyUser;

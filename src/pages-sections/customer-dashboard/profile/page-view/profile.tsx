@@ -64,7 +64,7 @@ import User3 from "icons/User3";
 import { T } from "../../../../lib/types/common";
 // UTILS
 import { currency } from "lib";
-import { getJwtToken, logOut, updateStorage, updateUserInfo } from "lib/auth";
+import { getJwtToken, logOut, updateStorage, setUserFromMemberData } from "lib/auth";
 import { sweetMixinSuccessAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert, sweetTopSmallErrorAlert } from "../../../../lib/sweetAlert";
 // STYLED COMPONENTS
 import {
@@ -279,21 +279,9 @@ export function ProfilePageView() {
             }
           }
         });
-        const jwtToken = (saveResult?.data as T)?.updateMember?.accessToken;
-        if (jwtToken) {
-          updateStorage({ jwtToken });
-          updateUserInfo(jwtToken);
-        }
-        // Patch userVar with all updated fields — JWT payload may only include partial fields
-        userVar({
-          ...userVar(),
-          memberNick: updateData.memberNick.trim() || userVar().memberNick,
-          memberFullName: updateData.memberFullName.trim() || userVar().memberFullName,
-          memberPhone: updateData.memberPhone.trim() || userVar().memberPhone,
-          memberAddress: updateData.memberAddress.trim() || userVar().memberAddress,
-          memberDesc: updateData.memberDesc.trim() || userVar().memberDesc,
-          memberImage: resolveImage(responseImage) || userVar().memberImage,
-        });
+        const updatedMember = (saveResult?.data as T)?.updateMember;
+        if (updatedMember?.accessToken) updateStorage({ jwtToken: updatedMember.accessToken });
+        setUserFromMemberData(updatedMember);
         setProfileImagePreview(null);
       } catch (err) {
         console.error("Error uploading image:", err);
@@ -323,21 +311,9 @@ export function ProfilePageView() {
         }
       });
 
-      const jwtToken = (result?.data as T)?.updateMember?.accessToken;
-      if (jwtToken) {
-        updateStorage({ jwtToken });
-        updateUserInfo(jwtToken);
-      }
-      // Patch userVar with all updated fields — JWT payload may only include partial fields
-      userVar({
-        ...userVar(),
-        memberNick: updateData.memberNick.trim() || userVar().memberNick,
-        memberFullName: updateData.memberFullName.trim() || userVar().memberFullName,
-        memberPhone: updateData.memberPhone.trim() || userVar().memberPhone,
-        memberAddress: updateData.memberAddress.trim() || userVar().memberAddress,
-        memberDesc: updateData.memberDesc.trim() || userVar().memberDesc,
-        memberImage: resolveImage(updateData.memberImage) || userVar().memberImage,
-      });
+      const updatedMember = (result?.data as T)?.updateMember;
+      if (updatedMember?.accessToken) updateStorage({ jwtToken: updatedMember.accessToken });
+      setUserFromMemberData(updatedMember);
       setProfileImagePreview(null);
       setEditMsg(null);
       await sweetMixinSuccessAlert("Profile updated successfully!");
@@ -364,11 +340,9 @@ export function ProfilePageView() {
     try {
       const result = await claimCoupon({ variables: { couponCode: couponCode.trim() } });
 
-      const jwtToken = (result?.data as T)?.claimCoupon?.accessToken;
-      if (jwtToken) {
-        updateStorage({ jwtToken });
-        updateUserInfo(jwtToken);
-      }
+      const claimedMember = (result?.data as T)?.claimCoupon;
+      if (claimedMember?.accessToken) updateStorage({ jwtToken: claimedMember.accessToken });
+      setUserFromMemberData(claimedMember);
 
       setCouponMsg({ type: "success", text: "Coupon claimed successfully!" });
       setCouponCode("");
@@ -401,14 +375,14 @@ export function ProfilePageView() {
     notifyOnNetworkStatusChange: true
   });
 
-  const { loading: followingsLoading, data: followingsData, refetch: refetchFollowings } = useQuery(GET_MEMBER_FOLLOWINGS, {
+  const { loading: followingsLoading, data: followingsData } = useQuery(GET_MEMBER_FOLLOWINGS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 50, search: { followerId: user._id } } },
     notifyOnNetworkStatusChange: true,
     skip: !user._id
   });
 
-  const { loading: followersLoading, data: followersData, refetch: refetchFollowers } = useQuery(GET_MEMBER_FOLLOWERS, {
+  const { loading: followersLoading, data: followersData } = useQuery(GET_MEMBER_FOLLOWERS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 50, search: { followingId: user._id } } },
     notifyOnNetworkStatusChange: true,
