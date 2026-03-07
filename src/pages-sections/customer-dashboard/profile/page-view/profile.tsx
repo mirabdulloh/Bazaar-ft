@@ -46,7 +46,6 @@ import {
   GET_MEMBER_FOLLOWINGS,
   GET_MEMBER_FOLLOWERS,
   GET_VISITED_PRODUCTS,
-  GET_FAVORITE_PRODUCTS
 } from "../../../../../apollo/user/query";
 import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE } from "../../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
@@ -100,7 +99,6 @@ type TabKey =
   | "overview"
   | "orders"
   | "recently-visited"
-  | "favorites"
   | "followers"
   | "followings"
   | "claim-coupon"
@@ -129,7 +127,6 @@ const TABS: TabDef[] = [
     section: "MANAGE"
   },
   { key: "recently-visited", label: "Recently Visited", icon: <HistoryIcon sx={ICON_SZ} /> },
-  { key: "favorites", label: "My Favorites", icon: <FavoriteBorderIcon sx={ICON_SZ} /> },
   { key: "followers", label: "My Followers", icon: <PeopleAltOutlinedIcon sx={ICON_SZ} /> },
   { key: "followings", label: "My Followings", icon: <GroupsOutlinedIcon sx={ICON_SZ} /> },
   {
@@ -323,12 +320,6 @@ export function ProfilePageView() {
     notifyOnNetworkStatusChange: true
   });
 
-  const { loading: favoritesLoading, data: favoritesData } = useQuery(GET_FAVORITE_PRODUCTS, {
-    fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 12 } },
-    notifyOnNetworkStatusChange: true
-  });
-
   const { loading: followingsLoading, data: followingsData, refetch: refetchFollowings } = useQuery(GET_MEMBER_FOLLOWINGS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 50, search: { followerId: user._id } } },
@@ -346,7 +337,6 @@ export function ProfilePageView() {
   // ── Data extraction ──
   const orders: T[] = (ordersData as T)?.getMyOrders?.orders ?? [];
   const visitedProducts: T[] = (visitedData as T)?.getVisitedProducts?.products ?? [];
-  const favoriteProducts: T[] = (favoritesData as T)?.getFavoriteProducts?.products ?? [];
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
 
@@ -392,15 +382,6 @@ export function ProfilePageView() {
             products={visitedProducts}
             loading={visitedLoading}
             emptyMsg="No recently visited products."
-          />
-        );
-      case "favorites":
-        return (
-          <ProductGridPanel
-            title="My Favorites"
-            products={favoriteProducts}
-            loading={favoritesLoading}
-            emptyMsg="No favorite products yet."
           />
         );
       case "followers":
