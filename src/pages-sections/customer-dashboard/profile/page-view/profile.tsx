@@ -18,6 +18,7 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
+import Rating from "@mui/material/Rating";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -60,15 +61,17 @@ import {
   GET_BOARD_ARTICLES,
   GET_ADDRESSES,
 } from "../../../../../apollo/user/query";
-import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS } from "../../../../../apollo/user/mutation";
+import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS, CANCEL_ORDER, CREATE_REVIEW } from "../../../../../apollo/user/mutation";
 // CUSTOM COMPONENTS
 import AddressForm from "../../address/address-form";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import ProductCard1 from "components/product-cards/product-card-1/product-card";
+import useCart from "hooks/useCart";
 import Product from "models/Product.model";
 import DashboardHeader from "../../dashboard-header";
 import User3 from "icons/User3";
+import { useVariantPicker } from "contexts/VariantPickerContext";
 // CUSTOM TYPES
 import { T } from "../../../../lib/types/common";
 // UTILS
@@ -115,6 +118,7 @@ import {
 type TabKey =
   | "overview"
   | "orders"
+  | "order-history"
   | "recently-visited"
   | "followers"
   | "followings"
@@ -145,6 +149,11 @@ const TABS: TabDef[] = [
     label: "Orders",
     icon: <LocalShippingOutlined sx={ICON_SZ} />,
     section: "MANAGE"
+  },
+  {
+    key: "order-history",
+    label: "Order History",
+    icon: <ConfirmationNumberOutlined sx={ICON_SZ} />
   },
   { key: "recently-visited", label: "Recently Visited", icon: <HistoryIcon sx={ICON_SZ} /> },
   { key: "followers", label: "My Followers", icon: <PeopleAltOutlinedIcon sx={ICON_SZ} /> },
@@ -179,7 +188,7 @@ const TABS: TabDef[] = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function orderStatusColor(status: string): "warning" | "success" | "error" | "default" {
-  if (["PENDING", "PROCESSING"].includes(status)) return "warning";
+  if (["PENDING", "CONFIRMED", "SHIPPED", "PROCESSING"].includes(status)) return "warning";
   if (["PAID", "DELIVERED", "COMPLETED"].includes(status)) return "success";
   if (["CANCELLED", "REFUNDED"].includes(status)) return "error";
   return "default";
@@ -191,6 +200,48 @@ function resolveImage(img: string | undefined | null): string {
   const base = process.env.NEXT_PUBLIC_API_URL ?? "";
   const path = img.startsWith("/") ? img : `/${img}`;
   return `${base}${path}`;
+}
+
+function parseOptionArray(value: unknown): string[] {
+  if (!value) return [];
+  const raw = Array.isArray(value) ? value : [value];
+  const split = raw.flatMap((item) => String(item).split(/[,|]/));
+  return Array.from(new Set(split.map((item) => item.trim()).filter(Boolean)));
+}
+
+function toProductModel(product: T): Product {
+  const images = Array.isArray(product?.productImages) ? (product.productImages as string[]) : [];
+  const title = (product?.productTitle as string) ?? "Product";
+  const price = Number(product?.productDiscountPrice || product?.productPrice || 0);
+
+  return {
+    id: String(product?._id ?? ""),
+    slug: String(product?._id ?? ""),
+    title,
+    price,
+    rating: Number(product?.productRatingAverage ?? 0),
+    discount: Math.max(
+      0,
+      Number(product?.productPrice ?? 0) - Number(product?.productDiscountPrice ?? 0) > 0
+        ? Math.round(
+            ((Number(product?.productPrice ?? 0) - Number(product?.productDiscountPrice ?? 0)) /
+              Number(product?.productPrice ?? 1)) *
+              100
+          )
+        : 0
+    ),
+    thumbnail: resolveImage(images[0]) || "/assets/images/products/placeholder.png",
+    images: images.map((image) => resolveImage(image)),
+    description: String(product?.productDesc ?? ""),
+    colors: parseOptionArray(product?.productColor),
+    size: parseOptionArray(product?.productSize),
+    categories: [],
+    productStockQuantity: Number(product?.productStockQuantity ?? 0),
+    productLikes: Number(product?.productLikes ?? 0),
+    productViews: Number(product?.productViews ?? 0),
+    productRank: Number(product?.productRank ?? 0),
+    productRatingCount: Number(product?.productRatingCount ?? 0),
+  };
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -399,7 +450,7 @@ export function ProfilePageView() {
     if (memberEmail) setUpdateData((prev) => ({ ...prev, memberEmail }));
   }, [memberEmail]);
 
-  const { loading: ordersLoading, data: ordersData } = useQuery(GET_MY_ORDERS, {
+  const { loading: ordersLoading, data: ordersData, refetch: refetchOrders } = useQuery(GET_MY_ORDERS, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 10 } },
     notifyOnNetworkStatusChange: true
@@ -438,6 +489,27 @@ export function ProfilePageView() {
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
   const myArticles: T[] = (articlesData as T)?.getBoardArticles?.list ?? [];
 
+  const [cancelOrder] = useMutation(CANCEL_ORDER);
+  const [createReview] = useMutation(CREATE_REVIEW);
+
+  const handleCancelOrder = useCallback(async (orderId: string) => {
+    const confirmed = await sweetConfirmAlert("Cancel order?", "Only pending orders can be cancelled.");
+    if (!confirmed) return;
+
+    try {
+      await cancelOrder({ variables: { orderId } });
+      await sweetTopSmallSuccessAlert("Order cancelled");
+      await refetchOrders();
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err?.message || "Failed to cancel order");
+    }
+  }, [cancelOrder, refetchOrders]);
+
+  const handleCreateReview = useCallback(async (input: T) => {
+    await createReview({ variables: { input } });
+    await sweetTopSmallSuccessAlert("Review submitted");
+  }, [createReview]);
+
   // ── Follow / Unfollow handlers ──
   const handleFollow = useCallback(async (targetId: string) => {
     try {
@@ -472,7 +544,15 @@ export function ProfilePageView() {
       case "overview":
         return <OverviewPanel user={user} avatarSrc={avatarSrc} />;
       case "orders":
-        return <OrdersPanel orders={orders} loading={ordersLoading} />;
+        return <OrdersPanel orders={orders} loading={ordersLoading} onCancel={handleCancelOrder} />;
+      case "order-history":
+        return (
+          <OrderHistoryPanel
+            orders={orders}
+            loading={ordersLoading}
+            onCreateReview={handleCreateReview}
+          />
+        );
       case "recently-visited":
         return (
           <ProductGridPanel
@@ -832,7 +912,23 @@ function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
 }
 
 // ━━━ ORDERS PANEL ━━━
-function OrdersPanel({ orders, loading }: { orders: T[]; loading: boolean }) {
+function OrdersPanel({
+  orders,
+  loading,
+  onCancel
+}: {
+  orders: T[];
+  loading: boolean;
+  onCancel: (orderId: string) => Promise<void>;
+}) {
+  const activeOrders = useMemo(
+    () =>
+      orders.filter((order) =>
+        !["DELIVERED", "CANCELLED", "REFUNDED"].includes(String(order.orderStatus ?? ""))
+      ),
+    [orders]
+  );
+
   return (
     <Box>
       <SectionTitle title="My Orders" />
@@ -843,11 +939,11 @@ function OrdersPanel({ orders, loading }: { orders: T[]; loading: boolean }) {
             <Skeleton key={i} height={64} variant="rounded" sx={{ borderRadius: 2 }} />
           ))}
         </Stack>
-      ) : orders.length === 0 ? (
+      ) : activeOrders.length === 0 ? (
         <EmptyCard>
           <LocalShippingOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
           <Typography variant="body1" color="text.secondary">
-            No orders yet.
+            No active orders right now.
           </Typography>
           <Link href="/products/search">
             <Button variant="contained" size="small" sx={{ mt: 2 }}>
@@ -857,43 +953,300 @@ function OrdersPanel({ orders, loading }: { orders: T[]; loading: boolean }) {
         </EmptyCard>
       ) : (
         <Stack spacing={1}>
-          {orders.map((order: T) => (
-            <Link
-              key={order._id as string}
-              href={`/orders/${order._id}`}
-              style={{ textDecoration: "none" }}
-            >
-              <OrderCard>
+          {activeOrders.map((order: T) => (
+            <OrderCard key={order._id as string}>
+              <FlexBetween flexWrap="wrap" gap={1}>
+                <Box>
+                  <Typography variant="body2" fontWeight={700}>
+                    Order #{(order._id as string).slice(-8).toUpperCase()}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(order.createdAt as string).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric"
+                    })}
+                  </Typography>
+                </Box>
+                <FlexBox alignItems="center" gap={2}>
+                  <Chip
+                    label={order.orderStatus as string}
+                    size="small"
+                    color={orderStatusColor(order.orderStatus as string)}
+                    sx={{ fontWeight: 600, fontSize: 10 }}
+                  />
+                  <Typography variant="body2" fontWeight={700} color="primary.main">
+                    {currency((order.orderFinalPrice ?? order.orderTotalPrice) as number)}
+                  </Typography>
+                </FlexBox>
+              </FlexBetween>
+
+              <FlexBetween sx={{ mt: 1.5 }} gap={1} flexWrap="wrap">
                 <FlexBetween flexWrap="wrap" gap={1}>
                   <Box>
-                    <Typography variant="body2" fontWeight={700}>
-                      Order #{(order._id as string).slice(-8).toUpperCase()}
-                    </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(order.createdAt as string).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric"
-                      })}
+                      {Array.isArray(order.orderItems) ? order.orderItems.length : 0} items
                     </Typography>
                   </Box>
-                  <FlexBox alignItems="center" gap={2}>
-                    <Chip
-                      label={order.orderStatus as string}
-                      size="small"
-                      color={orderStatusColor(order.orderStatus as string)}
-                      sx={{ fontWeight: 600, fontSize: 10 }}
-                    />
-                    <Typography variant="body2" fontWeight={700} color="primary.main">
-                      {currency((order.orderFinalPrice ?? order.orderTotalPrice) as number)}
-                    </Typography>
-                  </FlexBox>
                 </FlexBetween>
-              </OrderCard>
-            </Link>
+                <FlexBox gap={1} flexWrap="wrap">
+                  <Link href={`/orders/${order._id}`} style={{ textDecoration: "none" }}>
+                    <Button size="small" variant="outlined">
+                      View Details
+                    </Button>
+                  </Link>
+                  {String(order.orderStatus) === "PENDING" && (
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      onClick={() => onCancel(String(order._id))}
+                    >
+                      Cancel Order
+                    </Button>
+                  )}
+                </FlexBox>
+              </FlexBetween>
+            </OrderCard>
           ))}
         </Stack>
       )}
+    </Box>
+  );
+}
+
+function OrderHistoryPanel({
+  orders,
+  loading,
+  onCreateReview
+}: {
+  orders: T[];
+  loading: boolean;
+  onCreateReview: (input: T) => Promise<void>;
+}) {
+  const router = useRouter();
+  const { dispatch } = useCart();
+  const { openPicker } = useVariantPicker();
+
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<T | null>(null);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewRating, setReviewRating] = useState<number | null>(5);
+  const [reviewingItemIds, setReviewingItemIds] = useState<string[]>([]);
+
+  const historyOrders = useMemo(
+    () =>
+      orders.filter((order) =>
+        ["DELIVERED", "CANCELLED", "REFUNDED"].includes(String(order.orderStatus ?? ""))
+      ),
+    [orders]
+  );
+
+  const historyItems = useMemo(
+    () =>
+      historyOrders.flatMap((order) =>
+        (Array.isArray(order.orderItems) ? order.orderItems : [])
+          .filter((item: T) => item?.product?._id)
+          .map((item: T) => ({
+            order,
+            item,
+            product: item.product as T,
+          }))
+      ),
+    [historyOrders]
+  );
+
+  const openReviewDialog = useCallback((target: T) => {
+    setReviewTarget(target);
+    setReviewComment("");
+    setReviewRating(5);
+    setReviewDialogOpen(true);
+  }, []);
+
+  const closeReviewDialog = useCallback(() => {
+    setReviewDialogOpen(false);
+    setReviewTarget(null);
+    setReviewComment("");
+    setReviewRating(5);
+  }, []);
+
+  const handleSubmitReview = useCallback(async () => {
+    if (!reviewTarget?.item?._id || !reviewTarget?.product?._id || !reviewRating || !reviewComment.trim()) {
+      await sweetMixinErrorAlert("Write a review and choose a rating.");
+      return;
+    }
+
+    const itemId = String(reviewTarget.item._id);
+    try {
+      await onCreateReview({
+        productId: String(reviewTarget.product._id),
+        orderItemId: itemId,
+        reviewRating,
+        reviewComment: reviewComment.trim(),
+        reviewImages: [],
+      });
+      setReviewingItemIds((prev) => Array.from(new Set([...prev, itemId])));
+      closeReviewDialog();
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err?.message || "Failed to submit review");
+    }
+  }, [closeReviewDialog, onCreateReview, reviewComment, reviewRating, reviewTarget]);
+
+  const handleReorder = useCallback((productRaw: T) => {
+    const product = toProductModel(productRaw);
+    const hasVariants = !!(product.size?.length || product.colors?.length);
+
+    if (hasVariants) {
+      openPicker(product);
+      return;
+    }
+
+    dispatch({
+      type: "CHANGE_CART_AMOUNT",
+      payload: {
+        id: product.id,
+        slug: product.slug,
+        price: product.price,
+        title: product.title,
+        thumbnail: product.thumbnail,
+        qty: 1,
+      }
+    });
+
+    router.push("/mini-cart", { scroll: false });
+  }, [dispatch, openPicker, router]);
+
+  return (
+    <Box>
+      <SectionTitle title="Order History" />
+
+      {loading ? (
+        <Stack spacing={2}>
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} height={110} variant="rounded" sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : historyItems.length === 0 ? (
+        <EmptyCard>
+          <ConfirmationNumberOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            No order history yet.
+          </Typography>
+        </EmptyCard>
+      ) : (
+        <Stack spacing={2}>
+          {historyItems.map((entry: T) => {
+            const product = entry.product as T;
+            const order = entry.order as T;
+            const item = entry.item as T;
+            const productImages = Array.isArray(product?.productImages) ? (product.productImages as string[]) : [];
+            const alreadyReviewed = reviewingItemIds.includes(String(item._id));
+            const canReview = String(order.orderStatus) === "DELIVERED";
+
+            return (
+              <PanelCard key={String(item._id)} sx={{ p: 2 }}>
+                <FlexBetween gap={2} flexWrap="wrap" alignItems="flex-start">
+                  <FlexBox gap={2} alignItems="flex-start" flex="1 1 420px">
+                    <Box
+                      sx={{
+                        position: "relative",
+                        width: 88,
+                        minWidth: 88,
+                        height: 88,
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        bgcolor: "grey.100"
+                      }}
+                    >
+                      {productImages[0] ? (
+                        <Image
+                          src={resolveImage(productImages[0])}
+                          alt={String(product?.productTitle ?? "Product")}
+                          fill
+                          style={{ objectFit: "cover" }}
+                        />
+                      ) : null}
+                    </Box>
+
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="subtitle1" fontWeight={700}>
+                        {String(product?.productTitle ?? "Product")}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Order #{String(order._id ?? "").slice(-8).toUpperCase()} · Qty {Number(item?.itemQuantity ?? 1)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {new Date(order.createdAt as string).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric"
+                        })}
+                      </Typography>
+                      <Typography variant="subtitle2" color="primary.main" fontWeight={700} sx={{ mt: 1 }}>
+                        {currency(Number(item?.subtotal ?? item?.priceAtPurchase ?? 0))}
+                      </Typography>
+                    </Box>
+                  </FlexBox>
+
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ minWidth: { xs: "100%", sm: "auto" } }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleReorder(product)}
+                    >
+                      Reorder
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={!canReview || alreadyReviewed}
+                      onClick={() => openReviewDialog(entry)}
+                    >
+                      {alreadyReviewed ? "Reviewed" : "Write Review"}
+                    </Button>
+                  </Stack>
+                </FlexBetween>
+              </PanelCard>
+            );
+          })}
+        </Stack>
+      )}
+
+      <Dialog open={reviewDialogOpen} onClose={closeReviewDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Write Review</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Box>
+              <Typography variant="body2" fontWeight={600} mb={1}>
+                Rating
+              </Typography>
+              <Rating
+                value={reviewRating}
+                onChange={(_, value) => setReviewRating(value)}
+              />
+            </Box>
+
+            <TextField
+              label="Review"
+              multiline
+              minRows={4}
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Write what you think about this product"
+              fullWidth
+            />
+
+            <FlexBetween>
+              <Button variant="text" onClick={closeReviewDialog}>
+                Cancel
+              </Button>
+              <Button variant="contained" onClick={handleSubmitReview}>
+                Submit Review
+              </Button>
+            </FlexBetween>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
@@ -906,7 +1259,7 @@ function AddressesPanel() {
   const { data, loading, refetch } = useQuery(GET_ADDRESSES, {
     fetchPolicy: "cache-and-network",
   });
-  const addresses: T[] = data?.getAddresses ?? [];
+  const addresses: T[] = (data as T)?.getAddresses ?? [];
 
   const [deleteAddress] = useMutation(DELETE_ADDRESS);
 
@@ -930,7 +1283,7 @@ function AddressesPanel() {
   return (
     <Box>
       <SectionTitle
-        title="My Addresses"
+        title="Shipping Addresses"
         action={
           <Button size="small" variant="contained" onClick={handleAdd}>
             + Add New

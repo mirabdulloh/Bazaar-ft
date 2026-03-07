@@ -573,6 +573,49 @@ export const GET_MY_ORDERS = gql`
         orderDeliveryStatus
         createdAt
         updatedAt
+        deliveryAddress {
+          _id
+          addressName
+          addressPhone
+          addressCountry
+          addressCity
+          addressZipCode
+          addressLine1
+          addressLine2
+          isDefault
+        }
+        orderItems {
+          _id
+          orderId
+          productId
+          priceAtPurchase
+          itemQuantity
+          subtotal
+          createdAt
+          updatedAt
+          product {
+            _id
+            memberId
+            productCategoryId
+            productStatus
+            productTitle
+            productPrice
+            productDiscountPrice
+            productViews
+            productLikes
+            productRank
+            productImages
+            productRatingAverage
+            productRatingCount
+            productStockQuantity
+            productDesc
+            productSize
+            productColor
+            productMaterials
+            createdAt
+            updatedAt
+          }
+        }
       }
       metaData {
         total
