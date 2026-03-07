@@ -21,6 +21,7 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
+  HeaderChat,
   HeaderLogin,
   HeaderNotifications,
   MobileHeader,
@@ -51,7 +52,7 @@ export default function ShopLayout3({
         <MobileHeader.Logo logoUrl={mobileNavigation.logo} />
       </MobileHeader.Left>
 
-      <MobileHeader.Right>
+      <MobileHeader.Right sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <HeaderLogin />
 
         <HeaderSearch>
@@ -60,6 +61,7 @@ export default function ShopLayout3({
 
         <HeaderNotifications />
         <HeaderCart />
+        <HeaderChat />
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
     </MobileHeader>
@@ -84,10 +86,11 @@ export default function ShopLayout3({
             <NavigationList navigation={header.navigation} />
           </Header.Mid>
 
-          <Header.Right>
+          <Header.Right sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
             <HeaderLogin />
             <HeaderNotifications />
             <HeaderCart />
+            <HeaderChat />
           </Header.Right>
         </Header>
       </Sticky>

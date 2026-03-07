@@ -21,6 +21,7 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
+  HeaderChat,
   HeaderLogin,
   HeaderNotifications,
   HeaderSearch,
@@ -44,7 +45,7 @@ export default function SalesLayout({ children, data }: Props) {
         <MobileHeader.Logo logoUrl={mobileNavigation.logo} />
       </MobileHeader.Left>
 
-      <MobileHeader.Right>
+      <MobileHeader.Right sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <HeaderLogin />
 
         <HeaderSearch>
@@ -53,6 +54,7 @@ export default function SalesLayout({ children, data }: Props) {
 
         <HeaderNotifications />
         <HeaderCart />
+        <HeaderChat />
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
     </MobileHeader>
@@ -78,10 +80,11 @@ export default function SalesLayout({ children, data }: Props) {
           <NavigationList navigation={header.navigation} />
         </Header.Mid>
 
-        <Header.Right>
+        <Header.Right sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
           <HeaderLogin />
           <HeaderNotifications />
           <HeaderCart />
+          <HeaderChat />
         </Header.Right>
       </Header>
 

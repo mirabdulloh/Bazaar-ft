@@ -39,6 +39,7 @@ import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import HomeOutlined from "@mui/icons-material/HomeOutlined";
 // REACT-i18n
 import { useTranslation } from "../../../../../node_modules/react-i18next";
 // APOLLO
@@ -51,6 +52,8 @@ import {
   GET_MEMBER_FOLLOWINGS,
   GET_MEMBER_FOLLOWERS,
   GET_VISITED_PRODUCTS,
+  GET_ADDRESSES,
+  GET_BOARD_ARTICLES,
 } from "../../../../../apollo/user/query";
 import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE } from "../../../../../apollo/user/mutation";
 // GLOBAL CUSTOM COMPONENTS
@@ -106,6 +109,8 @@ type TabKey =
   | "recently-visited"
   | "followers"
   | "followings"
+  | "articles"
+  | "addresses"
   | "claim-coupon"
   | "edit-profile";
 
@@ -114,6 +119,7 @@ interface TabDef {
   label: string;
   icon: React.ReactNode;
   section?: string;
+  roleOnly?: "BRAND_ADMIN" | "CUSTOMER";
 }
 
 const ICON_SZ = { fontSize: 18 };
@@ -135,10 +141,23 @@ const TABS: TabDef[] = [
   { key: "followers", label: "My Followers", icon: <PeopleAltOutlinedIcon sx={ICON_SZ} /> },
   { key: "followings", label: "My Followings", icon: <GroupsOutlinedIcon sx={ICON_SZ} /> },
   {
+    key: "articles",
+    label: "My Articles",
+    icon: <ArticleOutlinedIcon sx={ICON_SZ} />,
+    roleOnly: "BRAND_ADMIN"
+  },
+  {
+    key: "addresses",
+    label: "My Addresses",
+    icon: <HomeOutlined sx={ICON_SZ} />,
+    roleOnly: "CUSTOMER",
+    section: "ACCOUNT"
+  },
+  {
     key: "claim-coupon",
     label: "Claim Coupon",
     icon: <CardGiftcardOutlined sx={ICON_SZ} />,
-    section: "COUPONS"
+    roleOnly: "CUSTOMER"
   },
   {
     key: "edit-profile",
@@ -172,6 +191,9 @@ export function ProfilePageView() {
   const token = getJwtToken();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const isBrandOrAdmin = user.memberType === "BRAND" || user.memberType === "ADMIN";
+  const isCustomer = user.memberType === "CUSTOMER";
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -393,11 +415,24 @@ export function ProfilePageView() {
     skip: !user._id
   });
 
+  const { loading: articlesLoading, data: articlesData } = useQuery(GET_BOARD_ARTICLES, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 10, search: { memberId: user._id } } },
+    skip: !user._id || !isBrandOrAdmin
+  });
+
+  const { loading: addressesLoading, data: addressesData } = useQuery(GET_ADDRESSES, {
+    fetchPolicy: "cache-and-network",
+    skip: !user._id || !isCustomer
+  });
+
   // ── Data extraction ──
   const orders: T[] = (ordersData as T)?.getMyOrders?.orders ?? [];
   const visitedProducts: T[] = (visitedData as T)?.getVisitedProducts?.products ?? [];
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
+  const myArticles: T[] = (articlesData as T)?.getBoardArticles?.list ?? [];
+  const addresses: T[] = (addressesData as T)?.getAddresses ?? [];
 
   // ── Follow / Unfollow handlers ──
   const handleFollow = useCallback(async (targetId: string) => {
@@ -466,6 +501,14 @@ export function ProfilePageView() {
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
           />
+        );
+      case "articles":
+        return (
+          <ArticlesPanel articles={myArticles} loading={articlesLoading} />
+        );
+      case "addresses":
+        return (
+          <AddressesPanel addresses={addresses} loading={addressesLoading} />
         );
       case "claim-coupon":
         return (
@@ -550,10 +593,14 @@ export function ProfilePageView() {
 
       {/* Navigation tabs */}
       <SidebarNav>
-        {TABS.map((tab, index) => {
+        {TABS.filter(tab => {
+          if (tab.roleOnly === "BRAND_ADMIN") return isBrandOrAdmin;
+          if (tab.roleOnly === "CUSTOMER") return isCustomer;
+          return true;
+        }).map((tab, index, visibleTabs) => {
           const isActive = activeTab === tab.key;
           const showSection =
-            tab.section && (index === 0 || TABS[index - 1]?.section !== tab.section);
+            tab.section && (index === 0 || visibleTabs[index - 1]?.section !== tab.section);
 
           return (
             <Box key={tab.key}>
@@ -972,7 +1019,11 @@ function PeoplePanel({
   };
 
   const handleNavigate = (fd: T) => {
-    router.push(`/member/${fd._id}`);
+    const mt = fd.memberType as string;
+    if (mt === "BRAND" || mt === "ADMIN") {
+      router.push(`/brands/${fd._id}`);
+    }
+    // CUSTOMER: no public profile page — do nothing
   };
 
   return (
@@ -1582,6 +1633,143 @@ function EditProfilePanel({
           </Button>
         </Box>
       </PanelCard>
+    </Box>
+  );
+}
+
+// ━━━ ARTICLES PANEL (BRAND + ADMIN) ━━━
+function ArticlesPanel({ articles, loading }: { articles: T[]; loading: boolean }) {
+  return (
+    <Box>
+      <SectionTitle
+        title="My Articles"
+        action={
+          <Link href="/community/write">
+            <Button size="small" variant="contained" sx={{ fontSize: 12 }}>
+              + Write
+            </Button>
+          </Link>
+        }
+      />
+
+      {loading ? (
+        <Stack spacing={1.5}>
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} height={72} variant="rounded" sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : articles.length === 0 ? (
+        <EmptyCard>
+          <ArticleOutlinedIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            No articles yet.
+          </Typography>
+        </EmptyCard>
+      ) : (
+        <Stack spacing={1}>
+          {articles.map((a: T) => {
+            const imgSrc = resolveImage((a.articleImages as string[])?.[0]) || "";
+            return (
+              <Link key={a._id as string} href={`/community/${a._id}`} style={{ textDecoration: "none" }}>
+                <OrderCard>
+                  <FlexBox alignItems="center" gap={2}>
+                    {imgSrc && (
+                      <Box sx={{ width: 60, height: 60, borderRadius: 1.5, overflow: "hidden", flexShrink: 0 }}>
+                        <Image src={imgSrc} alt={a.articleTitle as string} width={60} height={60} style={{ objectFit: "cover" }} />
+                      </Box>
+                    )}
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="body2" fontWeight={700} noWrap>
+                        {a.articleTitle as string}
+                      </Typography>
+                      <FlexBox gap={1} mt={0.5} alignItems="center">
+                        <Chip label={a.articleCategory as string} size="small" sx={{ fontSize: 10 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(a.createdAt as string).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                        </Typography>
+                      </FlexBox>
+                    </Box>
+                  </FlexBox>
+                </OrderCard>
+              </Link>
+            );
+          })}
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
+// ━━━ ADDRESSES PANEL (CUSTOMER) ━━━
+function AddressesPanel({ addresses, loading }: { addresses: T[]; loading: boolean }) {
+  return (
+    <Box>
+      <SectionTitle
+        title="My Addresses"
+        action={
+          <Link href="/address">
+            <Button size="small" variant="outlined" sx={{ fontSize: 12 }}>
+              + Add Address
+            </Button>
+          </Link>
+        }
+      />
+
+      {loading ? (
+        <Stack spacing={1.5}>
+          {[1, 2].map((i) => (
+            <Skeleton key={i} height={80} variant="rounded" sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : addresses.length === 0 ? (
+        <EmptyCard>
+          <HomeOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            No addresses saved yet.
+          </Typography>
+          <Link href="/address">
+            <Button variant="contained" size="small" sx={{ mt: 2 }}>
+              Add Your First Address
+            </Button>
+          </Link>
+        </EmptyCard>
+      ) : (
+        <Stack spacing={1.5}>
+          {addresses.map((addr: T) => (
+            <PanelCard key={addr._id as string} sx={{ p: 2 }}>
+              <FlexBetween>
+                <Box>
+                  <FlexBox gap={1} alignItems="center" mb={0.5}>
+                    <Typography variant="body2" fontWeight={700}>
+                      {addr.addressName as string}
+                    </Typography>
+                    {addr.isDefault && (
+                      <Chip label="Default" size="small" color="primary" sx={{ fontSize: 10, height: 18 }} />
+                    )}
+                  </FlexBox>
+                  <Typography variant="caption" color="text.secondary">
+                    {addr.addressLine1 as string}
+                    {addr.addressLine2 ? `, ${addr.addressLine2 as string}` : ""}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {addr.addressCity as string}, {addr.addressCountry as string} {addr.addressZipCode as string}
+                  </Typography>
+                  {addr.addressPhone && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {addr.addressPhone as string}
+                    </Typography>
+                  )}
+                </Box>
+                <Link href="/address">
+                  <Button size="small" variant="text" sx={{ fontSize: 12 }}>
+                    Edit
+                  </Button>
+                </Link>
+              </FlexBetween>
+            </PanelCard>
+          ))}
+        </Stack>
+      )}
     </Box>
   );
 }
