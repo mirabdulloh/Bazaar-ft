@@ -715,6 +715,24 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 // ━━━ OVERVIEW PANEL ━━━
 function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
+  const mt = user.memberType as string;
+  const isBrandOrAdmin = mt === "BRAND" || mt === "ADMIN";
+
+  // Role-specific stats
+  const stats = isBrandOrAdmin
+    ? [
+        { label: "Articles", value: user.memberArticles ?? 0 },
+        { label: "Products", value: user.memberProperties ?? 0 },
+        { label: "Likes", value: user.memberLikes ?? 0 },
+        { label: "Views", value: user.memberViews ?? 0 },
+      ]
+    : [
+        { label: "Points", value: user.memberPoints ?? 0 },
+        { label: "Likes", value: user.memberLikes ?? 0 },
+        { label: "Views", value: user.memberViews ?? 0 },
+        { label: "Rank", value: user.memberRank ?? 0 },
+      ];
+
   return (
     <Box>
       <SectionTitle title="Profile Overview" />
@@ -734,17 +752,20 @@ function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
             )}
             <FlexBox gap={1} mt={1} flexWrap="wrap">
               <Chip
-                label={user.memberType as string}
+                label={mt}
                 size="small"
                 color="primary"
                 sx={{ fontSize: 11, fontWeight: 600 }}
               />
-              <Chip
-                label={`${user.memberPoints ?? 0} points`}
-                size="small"
-                variant="outlined"
-                sx={{ fontSize: 11 }}
-              />
+              {/* Points chip only for customers — earned as 1% of each purchase */}
+              {!isBrandOrAdmin && (
+                <Chip
+                  label={`${user.memberPoints ?? 0} pts`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: 11 }}
+                />
+              )}
             </FlexBox>
           </Box>
         </FlexBox>
@@ -759,17 +780,12 @@ function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
         <InfoRow label="Full Name" value={user.memberFullName as string} />
         <InfoRow label="Phone" value={user.memberPhone as string} />
         <InfoRow label="Address" value={user.memberAddress as string} />
-        <InfoRow label="Member Type" value={user.memberType as string} />
+        <InfoRow label="Member Type" value={mt} />
         <InfoRow label="Rank" value={String(user.memberRank ?? 0)} />
 
-        {/* Stats */}
+        {/* Stats — role-gated */}
         <Grid container spacing={2} mt={2}>
-          {[
-            { label: "Articles", value: user.memberArticles ?? 0 },
-            { label: "Likes", value: user.memberLikes ?? 0 },
-            { label: "Views", value: user.memberViews ?? 0 },
-            { label: "Points", value: user.memberPoints ?? 0 }
-          ].map((stat) => (
+          {stats.map((stat) => (
             <Grid size={{ xs: 6, sm: 3 }} key={stat.label}>
               <StatCard>
                 <Typography variant="h5" color="primary.main" fontWeight={700}>

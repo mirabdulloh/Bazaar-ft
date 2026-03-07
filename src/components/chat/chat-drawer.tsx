@@ -17,10 +17,11 @@ import CloseRounded from "@mui/icons-material/CloseRounded";
 import { useChat } from "./chat-provider";
 import { useQuery } from "lib/hooks/useQuery";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
-import { OPEN_OR_GET_CHAT, SEND_MESSAGE } from "apollo/user/mutation";
-import { GET_BRANDS, GET_MESSAGES } from "apollo/user/query";
-import { userVar } from "../../apollo/store";
+import { OPEN_OR_GET_CHAT, SEND_MESSAGE } from "../../../apollo/user/mutation";
+import { GET_BRANDS, GET_MESSAGES } from "../../../apollo/user/query";
+import { userVar } from "../../../apollo/store";
 import { T } from "lib/types/common";
+import { CustomJwtPayload } from "lib/types/customJwtPayload";
 
 const SUPPORT_BRAND_ID = process.env.NEXT_PUBLIC_SUPPORT_BRAND_ID ?? "";
 
@@ -32,11 +33,10 @@ const getBrandIdFromPath = (pathname: string) => {
 export function ChatDrawer() {
   const { open, closeChat } = useChat();
   const pathname = usePathname();
-  const user = useReactiveVar(userVar);
+  const user = useReactiveVar(userVar) as CustomJwtPayload;
   const isLoggedIn = !!user?._id;
 
   const [conversationId, setConversationId] = useState<string>("");
-  const [brandId, setBrandId] = useState<string>("");
   const [message, setMessage] = useState("");
   const [localMessages, setLocalMessages] = useState<T[]>([]);
 
@@ -73,7 +73,6 @@ export function ChatDrawer() {
     const chatId = (res?.data as T)?.openOrGetChat?._id as string;
     if (chatId) {
       setConversationId(chatId);
-      setBrandId(id);
     }
   }, [openOrGetChat, isLoggedIn]);
 
@@ -114,13 +113,15 @@ export function ChatDrawer() {
       anchor="right"
       open={open}
       onClose={closeChat}
-      PaperProps={{
-        sx: {
-          width: { xs: "100%", sm: 360 },
-          maxWidth: "92vw",
-          borderTopLeftRadius: 16,
-          borderBottomLeftRadius: 16,
-          overflow: "hidden"
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: "100%", sm: 360 },
+            maxWidth: "92vw",
+            borderTopLeftRadius: 16,
+            borderBottomLeftRadius: 16,
+            overflow: "hidden"
+          }
         }
       }}
     >
