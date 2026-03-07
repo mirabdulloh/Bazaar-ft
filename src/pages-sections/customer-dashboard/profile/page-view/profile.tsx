@@ -64,6 +64,7 @@ import {
 import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS, CANCEL_ORDER, CREATE_REVIEW } from "../../../../../apollo/user/mutation";
 // CUSTOM COMPONENTS
 import AddressForm from "../../address/address-form";
+import { OrderDetailsPageView } from "../../orders/page-view/order-details";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
 import ProductCard1 from "components/product-cards/product-card-1/product-card";
@@ -263,6 +264,7 @@ export function ProfilePageView() {
     const validTabs = new Set(TABS.map((tab) => tab.key));
     return validTabs.has(rawTab as TabKey) ? (rawTab as TabKey) : "overview";
   }, [searchParams]);
+  const selectedOrderId = searchParams.get("orderId");
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -271,6 +273,7 @@ export function ProfilePageView() {
   const handleTabChange = useCallback((key: TabKey) => {
     setActiveTab(key);
     const params = new URLSearchParams(searchParams.toString());
+    params.delete("orderId");
     if (key === "overview") params.delete("tab");
     else params.set("tab", key);
     const query = params.toString();
@@ -544,6 +547,26 @@ export function ProfilePageView() {
       case "overview":
         return <OverviewPanel user={user} avatarSrc={avatarSrc} />;
       case "orders":
+        if (selectedOrderId) {
+          return (
+            <Box>
+              <SectionTitle
+                title="Order Details"
+                action={
+                  <Button size="small" variant="outlined" onClick={() => handleTabChange("orders")}>
+                    Back to Orders
+                  </Button>
+                }
+              />
+              <OrderDetailsPageView
+                orderId={selectedOrderId}
+                embedded
+                backHref="/profile?tab=orders"
+                title="Order Details"
+              />
+            </Box>
+          );
+        }
         return <OrdersPanel orders={orders} loading={ordersLoading} onCancel={handleCancelOrder} />;
       case "order-history":
         return (
@@ -990,7 +1013,7 @@ function OrdersPanel({
                   </Box>
                 </FlexBetween>
                 <FlexBox gap={1} flexWrap="wrap">
-                  <Link href={`/orders/${order._id}`} style={{ textDecoration: "none" }}>
+                  <Link href={`/profile?tab=orders&orderId=${order._id}`} style={{ textDecoration: "none" }}>
                     <Button size="small" variant="outlined">
                       View Details
                     </Button>

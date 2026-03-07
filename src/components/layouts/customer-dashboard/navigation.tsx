@@ -14,7 +14,7 @@ export const MENUS = [
   {
     title: "DASHBOARD",
     list: [
-      { icon: "Packages", href: "/orders", title: "Orders" },
+      { icon: "Packages", href: "/profile?tab=orders", title: "Orders" },
       { icon: "Chat", href: "/chat", title: "Messages" },
       { icon: "HeartLine", href: "/wish-list", title: "Wishlist" },
       { icon: "BellOutlined", href: "/notifications", title: "Notifications" },

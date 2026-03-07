@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FaqsPageView } from "pages-sections/brand-dashboard/faqs/page-view";
 
 export const metadata: Metadata = {
   title: "FAQs - Seoulé Admin",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminFaqsPage() {
-  return <div style={{ padding: 32 }}>FAQ management coming soon.</div>;
+  return <FaqsPageView />;
 }

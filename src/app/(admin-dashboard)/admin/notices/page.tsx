@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NoticesPageView } from "pages-sections/brand-dashboard/notices/page-view";
 
 export const metadata: Metadata = {
   title: "Notices - Seoulé Admin",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminNoticesPage() {
-  return <div style={{ padding: 32 }}>Notices management coming soon.</div>;
+  return <NoticesPageView />;
 }

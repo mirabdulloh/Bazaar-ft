@@ -1,16 +1,7 @@
-import type { Metadata } from "next";
-import { OrderDetailsPageView } from "pages-sections/customer-dashboard/orders/page-view";
+import { redirect } from "next/navigation";
 import { IdParams } from "models/Common";
 
-export async function generateMetadata({ params }: IdParams): Promise<Metadata> {
+export default async function OrderDetailsRedirect({ params }: IdParams) {
   const { id } = await params;
-  return {
-    title: `Order #${id.substring(0, 12)} - Seoulé`,
-    description: "Seoulé — Fashion platform connecting brands and shoppers.",
-  };
-}
-
-export default async function OrderDetails({ params }: IdParams) {
-  const { id } = await params;
-  return <OrderDetailsPageView orderId={id} />;
+  redirect(`/profile?tab=orders&orderId=${id}`);
 }

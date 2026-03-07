@@ -21,9 +21,15 @@ import { T } from "../../../../lib/types/common";
 
 // =============================================================
 type Props = { orderId: string };
+type ViewProps = Props & { embedded?: boolean; backHref?: string; title?: string };
 // =============================================================
 
-export function OrderDetailsPageView({ orderId }: Props) {
+export function OrderDetailsPageView({
+  orderId,
+  embedded = false,
+  backHref = "/orders",
+  title = "Order Details"
+}: ViewProps) {
   const [cancelling, setCancelling] = useState(false);
 
   const { data, loading, refetch } = useQuery(GET_ORDER, {
@@ -59,7 +65,7 @@ export function OrderDetailsPageView({ orderId }: Props) {
 
   return (
     <Box>
-      <DashboardHeader href="/orders" title="Order Details" />
+      {!embedded && <DashboardHeader href={backHref} title={title} />}
 
       {loading && !order ? (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>

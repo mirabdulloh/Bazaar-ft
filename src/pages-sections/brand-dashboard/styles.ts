@@ -56,22 +56,22 @@ const StatusWrapper = styled(Box, {
   let color = theme.palette.secondary.main;
   let backgroundColor = theme.palette.secondary[100];
 
-  if (status === "Accepted" || status === "Delivered" || status === "Normal") {
+  if (status === "Accepted" || status === "Delivered" || status === "Normal" || status === "ACTIVE") {
     color = theme.palette.success.main;
     backgroundColor = theme.palette.success[100];
   }
 
-  if (status === "Rejected" || status === "Urgent" || status === "Cancelled") {
+  if (status === "Rejected" || status === "Urgent" || status === "Cancelled" || status === "DELETED" || status === "EXPIRED") {
     color = theme.palette.error.main;
     backgroundColor = theme.palette.error[100];
   }
 
-  if (status === "Processing") {
+  if (status === "Processing" || status === "INACTIVE") {
     color = theme.palette.warning.main;
     backgroundColor = theme.palette.warning[100];
   }
 
-  if (status === "Pending") {
+  if (status === "Pending" || status === "PENDING") {
     color = theme.palette.info.main;
     backgroundColor = theme.palette.info[100];
   }

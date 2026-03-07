@@ -35,7 +35,7 @@ export default function OrderRow({ order }: Props) {
   const label = order.orderStatus.charAt(0) + order.orderStatus.slice(1).toLowerCase();
 
   return (
-    <Link href={`/orders/${order._id}`}>
+    <Link href={`/profile?tab=orders&orderId=${order._id}`}>
       <TableRow elevation={0} sx={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
         <Typography noWrap variant="h5">
           #{order._id.substring(0, 18)}
