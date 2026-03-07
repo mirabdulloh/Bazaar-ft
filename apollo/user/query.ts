@@ -941,6 +941,40 @@ export const GET_MY_CHATS = gql`
         chatSubject
         createdAt
         updatedAt
+        brandData {
+          _id
+          brandName
+          brandLogo
+          memberData {
+            _id
+            memberNick
+            memberImage
+          }
+        }
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;
+
+export const GET_BRAND_CHATS = gql`
+  query GetBrandChats($input: ChatsInquiry!) {
+    getBrandChats(input: $input) {
+      list {
+        _id
+        memberId
+        brandId
+        chatStatus
+        chatSubject
+        createdAt
+        updatedAt
+        memberData {
+          _id
+          memberNick
+          memberImage
+        }
       }
       metaCounter {
         total
@@ -964,6 +998,11 @@ export const GET_MESSAGES = gql`
         deletedAt
         createdAt
         updatedAt
+        senderData {
+          _id
+          memberNick
+          memberImage
+        }
       }
       metaCounter {
         total

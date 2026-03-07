@@ -2,10 +2,17 @@
 
 import IconButton from "@mui/material/IconButton";
 import SvgIcon from "@mui/material/SvgIcon";
+import { useReactiveVar } from "@apollo/client/react";
 import { useChat } from "components/chat/chat-provider";
+import { userVar } from "../../../apollo/store";
+import { CustomJwtPayload } from "../../lib/types/customJwtPayload";
 
 export function HeaderChat() {
   const { openChat } = useChat();
+  const user = useReactiveVar(userVar) as CustomJwtPayload;
+  const isAdminOrBrand = user.memberType === "ADMIN" || user.memberType === "BRAND";
+
+  if (isAdminOrBrand) return null;
 
   return (
     <IconButton onClick={openChat} aria-label="Open chat">

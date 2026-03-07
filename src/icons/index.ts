@@ -284,6 +284,7 @@ const appIcons = {
   SilverPackageIcon,
   SofaTwo,
   Telegram,
+  Chat: Telegram,
   Toggle,
   TruckFast,
   TruckFilled,

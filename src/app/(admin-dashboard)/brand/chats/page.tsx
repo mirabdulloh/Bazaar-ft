@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { VendorChatPageView } from "pages-sections/vendor-dashboard/chat/page-view/chat";
 
 export const metadata: Metadata = {
   title: "Chats - Seoulé Brand Dashboard",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function VendorChatsPage() {
-  return <div style={{ padding: 32 }}>Customer chats coming soon.</div>;
+  return <VendorChatPageView />;
 }

@@ -15,6 +15,7 @@ export const MENUS = [
     title: "DASHBOARD",
     list: [
       { icon: "Packages", href: "/orders", title: "Orders" },
+      { icon: "Chat", href: "/chat", title: "Messages" },
       { icon: "HeartLine", href: "/wish-list", title: "Wishlist" },
       { icon: "BellOutlined", href: "/notifications", title: "Notifications" },
       { icon: "HeartLine", href: "/following", title: "Following Brands" }
@@ -58,7 +59,7 @@ export function Navigation() {
           variant="outlined"
           color="primary"
           fullWidth
-          onClick={logOut}
+          onClick={() => logOut()}
         >
           Logout
         </Button>
