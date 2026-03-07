@@ -14,8 +14,7 @@ import PackageBox from "icons/PackageBox";
 import TruckFilled from "icons/TruckFilled";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween, FlexBox } from "components/flex-box";
-// CUSTOM DATA MODEL
-import { OrderStatus } from "models/Order.model";
+import { T } from "../../../lib/types/common";
 
 // STYLED COMPONENTS
 const StyledFlexbox = styled(FlexBetween)(({ theme }) => ({
@@ -73,28 +72,21 @@ const DeliveryDateBox = styled("div")(({ theme }) => ({
 }));
 
 // ==============================================================
-interface Props {
-  status: OrderStatus;
-  deliveredAt: Date;
-  isDelivered: boolean;
-}
+type Props = { order: T };
 // ==============================================================
 
 const STEP_ICONS = [PackageBox, TruckFilled, Delivery];
-const ORDER_STATUS_LIST = ["Pending", "Processing", "Delivered"];
+const ORDER_STATUS_LIST = ["PENDING", "PROCESSING", "DELIVERED"];
 
-export default function OrderProgress({ status, deliveredAt, isDelivered }: Props) {
+export default function OrderProgress({ order }: Props) {
+  const status = (order.orderStatus as string) ?? "PENDING";
   const statusIndex = ORDER_STATUS_LIST.indexOf(status);
+  const isDelivered = order.orderDeliveryStatus === "DELIVERED";
 
   return (
     <Card
       elevation={0}
-      sx={{
-        mb: 4,
-        p: "2rem 1.5rem",
-        border: "1px solid",
-        borderColor: "grey.100"
-      }}
+      sx={{ mb: 4, p: "2rem 1.5rem", border: "1px solid", borderColor: "grey.100" }}
     >
       <StyledFlexbox>
         {STEP_ICONS.map((Icon, ind) => (
@@ -124,7 +116,11 @@ export default function OrderProgress({ status, deliveredAt, isDelivered }: Prop
       <FlexBox justifyContent={{ xs: "center", sm: "flex-end" }}>
         <DeliveryDateBox>
           Estimated Delivery Date{" "}
-          <b>{isDelivered ? format(new Date(deliveredAt), "dd MMM yyyy") : "N/A"}</b>
+          <b>
+            {isDelivered && order.updatedAt
+              ? format(new Date(order.updatedAt as string), "dd MMM yyyy")
+              : "N/A"}
+          </b>
         </DeliveryDateBox>
       </FlexBox>
     </Card>

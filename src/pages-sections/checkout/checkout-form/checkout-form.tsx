@@ -1,160 +1,252 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Resolver, useForm, useWatch } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-import clsx from "clsx";
+import Link from "next/link";
 // MUI
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import Radio from "@mui/material/Radio";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
+import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
-// GLOBAL CUSTOM COMPONENTS
-import { FormProvider, TextField, Autocomplete, Checkbox } from "components/form-hook";
-// DUMMY CUSTOM DATA
-import countryList from "data/countryList";
-// STYLED COMPONENT
-import { ButtonWrapper, CardRoot, FormWrapper } from "./styles";
-
-// uncomment these fields below for from validation
-const validationSchema = yup.object().shape({
-  shipping_name: yup.string().required("Name is required"),
-  shipping_email: yup.string().email("invalid email").required("Email is required"),
-  shipping_contact: yup.string().required("Phone is required"),
-  shipping_zip: yup.string().required("Zip is required"),
-  shipping_country: yup.mixed().required("Country is required"),
-  shipping_address1: yup.string().required("Address is required"),
-  same_as_shipping: yup.boolean().optional(),
-  billing_name: yup.string().optional(),
-  billing_email: yup.string().optional(),
-  billing_contact: yup.string().optional(),
-  billing_zip: yup.string().optional(),
-  billing_country: yup.object().optional(),
-  billing_address1: yup.string().optional()
-});
-
-type FormValues = yup.InferType<typeof validationSchema>;
+import RadioGroup from "@mui/material/RadioGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import CreditCardOutlined from "@mui/icons-material/CreditCardOutlined";
+import AddLocationAltOutlined from "@mui/icons-material/AddLocationAltOutlined";
+// APOLLO
+import { useMutation, useReactiveVar } from "@apollo/client/react";
+import { userVar } from "../../../../apollo/store";
+import { useQuery } from "../../../lib/hooks/useQuery";
+import { GET_ADDRESSES } from "../../../../apollo/user/query";
+import { CREATE_ORDER } from "../../../../apollo/user/mutation";
+// CONTEXT
+import useCart from "hooks/useCart";
+// UTILS
+import { sweetMixinErrorAlert } from "lib/sweetAlert";
+import { T } from "../../../lib/types/common";
 
 export default function CheckoutForm() {
   const router = useRouter();
+  const user = useReactiveVar(userVar);
+  const { state, dispatch } = useCart();
+  const cart = state.cart;
 
-  const initialValues: FormValues = {
-    shipping_zip: "",
-    shipping_name: "",
-    shipping_email: "",
-    shipping_contact: "",
-    shipping_address1: "",
-    shipping_country: { label: "United States", value: "US" },
-    same_as_shipping: false,
-    billing_zip: "",
-    billing_name: "",
-    billing_email: "",
-    billing_contact: "",
-    billing_address1: "",
-    billing_country: { label: "United States", value: "US" }
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
+  const [placing, setPlacing] = useState(false);
+
+  const { data: addressData, loading: addressLoading } = useQuery(GET_ADDRESSES, {
+    skip: !user?._id,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [createOrder] = useMutation(CREATE_ORDER);
+
+  const addresses: T[] = (addressData as T)?.getAddresses ?? [];
+
+  const handlePlaceOrder = async () => {
+    if (!selectedAddressId) {
+      sweetMixinErrorAlert("Please select a delivery address.");
+      return;
+    }
+    if (!cart.length) {
+      sweetMixinErrorAlert("Your cart is empty.");
+      return;
+    }
+
+    setPlacing(true);
+    try {
+      const { data } = await createOrder({
+        variables: {
+          input: {
+            orderDeliveryAddressId: selectedAddressId,
+            orderPaymentMethod: paymentMethod,
+            items: cart.map((item) => ({
+              productId: item.id,
+              itemQuantity: item.qty,
+            })),
+          },
+        },
+      });
+      dispatch({ type: "CLEAR_CART" });
+      router.push(`/orders/${data.createOrder._id}`);
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? "Failed to place order.");
+    } finally {
+      setPlacing(false);
+    }
   };
 
-  const methods = useForm<FormValues>({
-    defaultValues: initialValues,
-    resolver: yupResolver(validationSchema) as Resolver<FormValues>
-  });
-
-  const {
-    control,
-    handleSubmit,
-    formState: { isSubmitting }
-  } = methods;
-
-  const sameAsShipping = useWatch({
-    control,
-    name: "same_as_shipping"
-  });
-
-  const handleSubmitForm = handleSubmit((values) => {
-    alert(JSON.stringify(values, null, 2));
-    router.push("/payment");
-  });
-
   return (
-    <FormProvider methods={methods} onSubmit={handleSubmitForm}>
-      <CardRoot elevation={0}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {/* ── Delivery Address ── */}
+      <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
         <Typography variant="h5" sx={{ mb: 2 }}>
-          Shipping Address
+          Delivery Address
         </Typography>
 
-        <FormWrapper>
-          <TextField size="medium" fullWidth label="Full Name" name="shipping_name" />
-          <TextField size="medium" fullWidth label="Phone Number" name="shipping_contact" />
-          <TextField
-            fullWidth
-            type="email"
-            size="medium"
-            label="Email Address"
-            name="shipping_email"
-          />
-          <TextField size="medium" fullWidth label="Company" name="shipping_company" />
-          <TextField size="medium" fullWidth label="Address 1" name="shipping_address1" />
-          <TextField size="medium" fullWidth label="Address 2" name="shipping_address2" />
-          <Autocomplete
-            fullWidth
-            size="medium"
-            label="Country"
-            options={countryList}
-            name="shipping_country"
-            placeholder="Select Country"
-            getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
-          />
-          <TextField size="medium" fullWidth label="Zip Code" name="shipping_zip" />
-        </FormWrapper>
-      </CardRoot>
+        {addressLoading ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            {[1, 2].map((i) => (
+              <Skeleton key={i} variant="rounded" height={80} sx={{ borderRadius: 2 }} />
+            ))}
+          </Box>
+        ) : addresses.length === 0 ? (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              py: 4,
+              gap: 1.5,
+              border: "1px dashed",
+              borderColor: "grey.300",
+              borderRadius: 2,
+            }}
+          >
+            <AddLocationAltOutlined sx={{ fontSize: 40, color: "grey.400" }} />
+            <Typography variant="body1" color="text.secondary">
+              No saved addresses.
+            </Typography>
+            <Button
+              component={Link}
+              href="/address"
+              variant="outlined"
+              size="small"
+              sx={{ textTransform: "none" }}
+            >
+              Add an address
+            </Button>
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            {addresses.map((addr: T) => {
+              const isSelected = selectedAddressId === String(addr._id);
+              return (
+                <Box
+                  key={String(addr._id)}
+                  onClick={() => setSelectedAddressId(String(addr._id))}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    border: "2px solid",
+                    borderColor: isSelected ? "primary.main" : "grey.200",
+                    bgcolor: isSelected ? "primary.50" : "transparent",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1.5,
+                  }}
+                >
+                  <Radio
+                    checked={isSelected}
+                    size="small"
+                    sx={{ mt: -0.5, p: 0.5 }}
+                    color="primary"
+                  />
+                  <Box>
+                    <Typography variant="body2" fontWeight={700}>
+                      {addr.addressName as string}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {addr.addressLine1 as string}
+                      {addr.addressLine2 ? `, ${addr.addressLine2 as string}` : ""}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {addr.addressCity as string}, {addr.addressZipCode as string},{" "}
+                      {addr.addressCountry as string}
+                    </Typography>
+                    {addr.addressPhone && (
+                      <Typography variant="caption" color="text.disabled">
+                        {addr.addressPhone as string}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              );
+            })}
 
-      <CardRoot elevation={0}>
-        <Typography variant="h5">Billing Address</Typography>
-
-        <Checkbox
-          size="small"
-          color="secondary"
-          name="same_as_shipping"
-          label="Same as shipping address"
-          className={clsx({ "mb-1": !sameAsShipping })}
-        />
-
-        {!sameAsShipping && (
-          <FormWrapper>
-            <TextField size="medium" fullWidth label="Full Name" name="billing_name" />
-            <TextField size="medium" fullWidth label="Phone Number" name="billing_contact" />
-            <TextField
-              size="medium"
-              fullWidth
-              type="email"
-              name="billing_email"
-              label="Email Address"
-            />
-            <TextField size="medium" fullWidth label="Company" name="billing_company" />
-            <TextField size="medium" fullWidth label="Address 1" name="billing_address1" />
-            <TextField size="medium" fullWidth label="Address 2" name="billing_address2" />
-            <Autocomplete
-              size="medium"
-              fullWidth
-              label="Country"
-              options={countryList}
-              name="billing_country"
-              placeholder="Select Country"
-              getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
-            />
-            <TextField size="medium" fullWidth label="Zip Code" name="billing_zip" />
-          </FormWrapper>
+            <Button
+              component={Link}
+              href="/address"
+              variant="text"
+              size="small"
+              startIcon={<AddLocationAltOutlined />}
+              sx={{ alignSelf: "flex-start", textTransform: "none", mt: 0.5 }}
+            >
+              Add another address
+            </Button>
+          </Box>
         )}
-      </CardRoot>
+      </Card>
 
-      <ButtonWrapper>
+      {/* ── Payment Method ── */}
+      <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Payment Method
+        </Typography>
+
+        <RadioGroup
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD")}
+        >
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            {(
+              [
+                { value: "CASH", label: "Cash on Delivery", Icon: LocalShippingOutlined },
+                { value: "CARD", label: "Pay by Card", Icon: CreditCardOutlined },
+              ] as const
+            ).map(({ value, label, Icon }) => {
+              const isSelected = paymentMethod === value;
+              return (
+                <Box
+                  key={value}
+                  onClick={() => setPaymentMethod(value)}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    border: "2px solid",
+                    borderColor: isSelected ? "primary.main" : "grey.200",
+                    bgcolor: isSelected ? "primary.50" : "transparent",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                  }}
+                >
+                  <FormControlLabel
+                    value={value}
+                    control={<Radio size="small" color="primary" />}
+                    label=""
+                    sx={{ m: 0, p: 0 }}
+                  />
+                  <Icon sx={{ color: isSelected ? "primary.main" : "grey.500" }} />
+                  <Typography variant="body2" fontWeight={isSelected ? 700 : 500}>
+                    {label}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </RadioGroup>
+      </Card>
+
+      <Divider />
+
+      {/* ── Actions ── */}
+      <Box sx={{ display: "flex", gap: 2 }}>
         <Button
           size="large"
           fullWidth
           href="/cart"
-          color="primary"
+          component={Link}
           variant="outlined"
-          LinkComponent={Link}
+          color="primary"
         >
           Back to Cart
         </Button>
@@ -162,14 +254,15 @@ export default function CheckoutForm() {
         <Button
           size="large"
           fullWidth
-          type="submit"
-          color="primary"
           variant="contained"
-          loading={isSubmitting}
+          color="primary"
+          onClick={handlePlaceOrder}
+          loading={placing}
+          disabled={!cart.length || placing}
         >
-          Proceed to Payment
+          Place Order
         </Button>
-      </ButtonWrapper>
-    </FormProvider>
+      </Box>
+    </Box>
   );
 }

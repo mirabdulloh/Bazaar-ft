@@ -509,6 +509,13 @@ export const GET_ORDER = gql`
         subtotal
         createdAt
         updatedAt
+        product {
+          _id
+          productTitle
+          productImages
+          productPrice
+          productDiscountPrice
+        }
       }
       member {
         _id
