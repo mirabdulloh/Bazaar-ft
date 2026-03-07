@@ -689,6 +689,12 @@ export const MARK_ALL_NOTIFICATIONS_AS_READ = gql`
   }
 `;
 
+export const REMOVE_ALL_MY_NOTIFICATIONS = gql`
+  mutation RemoveAllMyNotifications {
+    removeAllMyNotifications
+  }
+`;
+
 // ─── Follows ──────────────────────────────────────────────────────────────────
 
 export const SUBSCRIBE = gql`

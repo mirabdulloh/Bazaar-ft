@@ -9,7 +9,6 @@ import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
-import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -27,7 +26,8 @@ import { useReactiveVar, useMutation } from "@apollo/client/react";
 import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import { GET_MY_NOTIFICATIONS } from "../../../../../apollo/user/query";
-import { MARK_ALL_NOTIFICATIONS_AS_READ, MARK_NOTIFICATION_AS_READ } from "../../../../../apollo/user/mutation";
+import { MARK_ALL_NOTIFICATIONS_AS_READ, MARK_NOTIFICATION_AS_READ, REMOVE_ALL_MY_NOTIFICATIONS } from "../../../../../apollo/user/mutation";
+import { sweetConfirmAlert } from "lib/sweetAlert";
 import { T } from "../../../../lib/types/common";
 import DashboardHeader from "../../dashboard-header";
 import { alpha, styled } from "@mui/material/styles";
@@ -60,18 +60,6 @@ function NotifIcon({ type }: { type: string }) {
   if (type === "COMMENT") return <CommentOutlined sx={sx} />;
   if (type === "LIKE") return <FavoriteOutlined sx={sx} />;
   return <NotificationsNoneOutlined sx={sx} />;
-}
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatDate(dateStr: string) {
@@ -119,7 +107,7 @@ const FILTER_TABS: { label: string; value: FilterTab }[] = [
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 6;
 
 export default function NotificationsPageView() {
   const user = useReactiveVar(userVar);
@@ -160,6 +148,7 @@ export default function NotificationsPageView() {
 
   const [markAsRead] = useMutation(MARK_NOTIFICATION_AS_READ);
   const [markAllAsRead, { loading: markingAll }] = useMutation(MARK_ALL_NOTIFICATIONS_AS_READ);
+  const [removeAll, { loading: removingAll }] = useMutation(REMOVE_ALL_MY_NOTIFICATIONS);
 
   const handleMarkOne = useCallback(async (id: string) => {
     try {
@@ -180,6 +169,23 @@ export default function NotificationsPageView() {
       // silent
     }
   }, [markAllAsRead, refetch, refetchUnread]);
+
+  const handleClearAll = useCallback(async () => {
+    const confirmed = await sweetConfirmAlert(
+      "Clear all notifications?",
+      "This will permanently delete all your notifications.",
+      "Yes, clear all"
+    );
+    if (!confirmed) return;
+    try {
+      await removeAll();
+      setPage(1);
+      refetch();
+      refetchUnread();
+    } catch {
+      // silent
+    }
+  }, [removeAll, refetch, refetchUnread]);
 
   const handleTabChange = (_: unknown, val: FilterTab) => {
     setActiveFilter(val);
@@ -234,17 +240,30 @@ export default function NotificationsPageView() {
             ))}
           </Tabs>
 
-          {unreadCount > 0 && (
-            <Button
-              size="small"
-              startIcon={<DoneAllIcon sx={{ fontSize: 15 }} />}
-              onClick={handleMarkAll}
-              disabled={markingAll}
-              sx={{ fontSize: 12, textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}
-            >
-              Mark all as read
-            </Button>
-          )}
+          <Stack direction="row" alignItems="center" gap={1}>
+            {unreadCount > 0 && (
+              <Button
+                size="small"
+                startIcon={<DoneAllIcon sx={{ fontSize: 15 }} />}
+                onClick={handleMarkAll}
+                disabled={markingAll}
+                sx={{ fontSize: 12, textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}
+              >
+                Mark all as read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                size="small"
+                color="error"
+                onClick={handleClearAll}
+                disabled={removingAll}
+                sx={{ fontSize: 12, textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}
+              >
+                Clear all
+              </Button>
+            )}
+          </Stack>
         </Box>
       </NotifCard>
 

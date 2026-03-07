@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 // MUI
 import Grid from "@mui/material/Grid";
@@ -68,12 +67,11 @@ export default function ProductIntro({ product }: Props) {
   const searchParams = useSearchParams();
   const user = useReactiveVar(userVar);
 
-  const [liked, setLiked] = useState<boolean>(product.meLiked ?? false);
-  const [likes, setLikes] = useState<number>(product.productLikes ?? 0);
+  // Derived directly from Apollo cache — auto-updates when mutation response merges
+  const liked = product.meLiked ?? false;
+  const likes = product.productLikes ?? 0;
 
-  const [likeTargetProduct] = useMutation<{
-    likeTargetProduct: { _id: string; productLikes: number };
-  }>(LIKE_TARGET_PRODUCT);
+  const [likeTargetProduct] = useMutation(LIKE_TARGET_PRODUCT);
 
   const selectedSize = searchParams.get("size") ?? "";
   const selectedColor = searchParams.get("color") ?? "";
@@ -88,16 +86,11 @@ export default function ProductIntro({ product }: Props) {
   const handleLike = async () => {
     try {
       if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
-      const { data } = await likeTargetProduct({ variables: { input: product.id } });
-      if (data?.likeTargetProduct?._id) {
-        setLikes(data.likeTargetProduct.productLikes);
-        if (liked) {
-          setLiked(false);
-          await sweetUnlikeAlert();
-        } else {
-          setLiked(true);
-          await sweetLikeSuccessAlert();
-        }
+      await likeTargetProduct({ variables: { input: product.id } });
+      if (liked) {
+        await sweetUnlikeAlert();
+      } else {
+        await sweetLikeSuccessAlert();
       }
     } catch (err: any) {
       sweetMixinErrorAlert(err.message).then();
