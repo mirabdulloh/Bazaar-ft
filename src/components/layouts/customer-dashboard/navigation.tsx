@@ -25,7 +25,7 @@ export const MENUS = [
     title: "ACCOUNT SETTINGS",
     list: [
       { icon: "User3", href: "/profile", title: "Profile Info" },
-      { icon: "Location", href: "/address", title: "Addresses" },
+      { icon: "Location", href: "/profile?tab=addresses", title: "Shipping Addresses" },
       { icon: "CreditCard", href: "/payment-methods", title: "Payment Methods" }
     ]
   }

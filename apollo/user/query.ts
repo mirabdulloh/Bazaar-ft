@@ -515,6 +515,8 @@ export const GET_ORDER = gql`
           productImages
           productPrice
           productDiscountPrice
+          productSize
+          productColor
         }
       }
       member {

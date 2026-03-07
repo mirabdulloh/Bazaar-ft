@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 // MUI
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Radio from "@mui/material/Radio";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -37,6 +39,7 @@ export default function CheckoutForm() {
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("CREDIT_CARD");
+  const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "", name: "" });
   const [placing, setPlacing] = useState(false);
 
   const { data: addressData, loading: addressLoading } = useQuery(GET_ADDRESSES, {
@@ -114,12 +117,12 @@ export default function CheckoutForm() {
             </Typography>
             <Button
               component={Link}
-              href="/address"
+              href="/profile"
               variant="outlined"
               size="small"
               sx={{ textTransform: "none" }}
             >
-              Add an address
+              Go to Profile → Add Address
             </Button>
           </Box>
         ) : (
@@ -173,13 +176,13 @@ export default function CheckoutForm() {
 
             <Button
               component={Link}
-              href="/address"
+              href="/profile"
               variant="text"
               size="small"
               startIcon={<AddLocationAltOutlined />}
               sx={{ alignSelf: "flex-start", textTransform: "none", mt: 0.5 }}
             >
-              Add another address
+              Manage addresses in Profile
             </Button>
           </Box>
         )}
@@ -237,6 +240,115 @@ export default function CheckoutForm() {
             })}
           </Box>
         </RadioGroup>
+      </Card>
+
+      {/* ── Payment Information ── */}
+      <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Payment Information
+        </Typography>
+
+        {(paymentMethod === "CREDIT_CARD" || paymentMethod === "DEBIT_CARD") && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Card Number"
+              placeholder="0000 0000 0000 0000"
+              value={cardInfo.number}
+              inputProps={{ maxLength: 19 }}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+                const formatted = raw.replace(/(\d{4})(?=\d)/g, "$1 ");
+                setCardInfo((prev) => ({ ...prev, number: formatted }));
+              }}
+            />
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Expiry (MM/YY)"
+                placeholder="MM/YY"
+                value={cardInfo.expiry}
+                inputProps={{ maxLength: 5 }}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
+                  setCardInfo((prev) => ({ ...prev, expiry: val }));
+                }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="CVV"
+                placeholder="123"
+                type="password"
+                value={cardInfo.cvv}
+                inputProps={{ maxLength: 4 }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  setCardInfo((prev) => ({ ...prev, cvv: val }));
+                }}
+              />
+            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Cardholder Name"
+              placeholder="Name on card"
+              value={cardInfo.name}
+              onChange={(e) => setCardInfo((prev) => ({ ...prev, name: e.target.value }))}
+            />
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Card details are reviewed and confirmed by our team after order placement.
+            </Alert>
+          </Box>
+        )}
+
+        {paymentMethod === "BANK_TRANSFER" && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box sx={{ p: 2, borderRadius: 2, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200" }}>
+              <Typography variant="body2" color="text.secondary" mb={1.5} fontWeight={700}>
+                TRANSFER TO
+              </Typography>
+              {[
+                { label: "Bank", value: "Kookmin Bank (국민은행)" },
+                { label: "Account", value: "012-345-6789012" },
+                { label: "Account Holder", value: "BAZAAR LLC" },
+              ].map(({ label, value }) => (
+                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", py: 0.75 }}>
+                  <Typography variant="body2" color="text.secondary">{label}</Typography>
+                  <Typography variant="body2" fontWeight={600}>{value}</Typography>
+                </Box>
+              ))}
+            </Box>
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Please transfer the exact order total. Your order will be confirmed after manual payment verification.
+            </Alert>
+          </Box>
+        )}
+
+        {paymentMethod === "MOBILE_PAYMENT" && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box sx={{ p: 2, borderRadius: 2, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200" }}>
+              <Typography variant="body2" color="text.secondary" mb={1.5} fontWeight={700}>
+                SEND PAYMENT TO
+              </Typography>
+              {[
+                { label: "KakaoPay / TossPay", value: "010-1234-5678" },
+                { label: "Recipient", value: "BAZAAR LLC" },
+              ].map(({ label, value }) => (
+                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", py: 0.75 }}>
+                  <Typography variant="body2" color="text.secondary">{label}</Typography>
+                  <Typography variant="body2" fontWeight={600}>{value}</Typography>
+                </Box>
+              ))}
+            </Box>
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Complete the mobile payment first, then place your order. We'll confirm once payment is received.
+            </Alert>
+          </Box>
+        )}
       </Card>
 
       <Divider />

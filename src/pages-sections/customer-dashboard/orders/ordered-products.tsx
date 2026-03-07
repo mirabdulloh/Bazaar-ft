@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { format } from "date-fns/format";
 // MUI
+import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 // GLOBAL CUSTOM COMPONENTS
@@ -44,21 +46,39 @@ export default function OrderedProducts({ order }: Props) {
         const price = item.priceAtPurchase as number;
         const qty = item.itemQuantity as number;
 
+        const parseVariants = (val: string[] | string | undefined | null): string[] => {
+          if (!val) return [];
+          const arr = Array.isArray(val) ? val : val.split(/[,/|]/);
+          return [...new Set(arr.map((v) => v.trim()).filter(Boolean))];
+        };
+        const sizes = parseVariants(product?.productSize as string[] | string | undefined);
+        const colors = parseVariants(product?.productColor as string[] | string | undefined);
+
         return (
-          <FlexBetween px={2} py={1} flexWrap="wrap" key={ind} gap={1}>
-            <FlexBox gap={2} alignItems="center">
-              <Avatar variant="rounded" sx={{ height: 60, width: 60, backgroundColor: "grey.50", position: "relative" }}>
+          <FlexBetween px={2} py={1.5} flexWrap="wrap" key={ind} gap={1} sx={{ borderBottom: "1px solid", borderColor: "grey.100", "&:last-child": { borderBottom: 0 } }}>
+            <FlexBox gap={2} alignItems="flex-start">
+              <Avatar variant="rounded" sx={{ height: 64, width: 64, backgroundColor: "grey.50", position: "relative", flexShrink: 0 }}>
                 {imgSrc ? (
-                  <Image fill alt={name} src={imgSrc} sizes="60px" style={{ objectFit: "cover" }} />
+                  <Image fill alt={name} src={imgSrc} sizes="64px" style={{ objectFit: "cover" }} />
                 ) : null}
               </Avatar>
 
-              <div>
+              <Box>
                 <Typography noWrap variant="h6">{name}</Typography>
+                {(sizes.length > 0 || colors.length > 0) && (
+                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5, mb: 0.5 }}>
+                    {sizes.map((s) => (
+                      <Chip key={s} label={`Size: ${s}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
+                    ))}
+                    {colors.map((c) => (
+                      <Chip key={c} label={`Color: ${c}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
+                    ))}
+                  </Box>
+                )}
                 <Typography lineHeight={2} variant="body1" color="text.secondary">
                   {currency(price)} × {qty}
                 </Typography>
-              </div>
+              </Box>
             </FlexBox>
 
             <Typography variant="body1" fontWeight={600}>

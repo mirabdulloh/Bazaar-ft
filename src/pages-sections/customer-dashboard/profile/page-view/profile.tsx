@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 // MUI
 import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import InputAdornment from "@mui/material/InputAdornment";
-import Chip from "@mui/material/Chip";
-import Divider from "@mui/material/Divider";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import InputAdornment from "@mui/material/InputAdornment";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
@@ -57,8 +57,8 @@ import {
   GET_MEMBER_FOLLOWINGS,
   GET_MEMBER_FOLLOWERS,
   GET_VISITED_PRODUCTS,
-  GET_ADDRESSES,
   GET_BOARD_ARTICLES,
+  GET_ADDRESSES,
 } from "../../../../../apollo/user/query";
 import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS } from "../../../../../apollo/user/mutation";
 // CUSTOM COMPONENTS
@@ -128,7 +128,7 @@ interface TabDef {
   label: string;
   icon: React.ReactNode;
   section?: string;
-  roleOnly?: "BRAND_ADMIN" | "CUSTOMER";
+  roleOnly?: "BRAND_ADMIN" | "USER";
 }
 
 const ICON_SZ = { fontSize: 18 };
@@ -157,16 +157,16 @@ const TABS: TabDef[] = [
   },
   {
     key: "addresses",
-    label: "My Addresses",
+    label: "Shipping Addresses",
     icon: <HomeOutlined sx={ICON_SZ} />,
-    roleOnly: "CUSTOMER",
+    roleOnly: "USER",
     section: "ACCOUNT"
   },
   {
     key: "claim-coupon",
     label: "Claim Coupon",
     icon: <CardGiftcardOutlined sx={ICON_SZ} />,
-    roleOnly: "CUSTOMER"
+    roleOnly: "USER"
   },
   {
     key: "edit-profile",
@@ -198,20 +198,38 @@ export function ProfilePageView() {
   const { t } = useTranslation();
   const user = useReactiveVar(userVar);
   const token = getJwtToken();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const isBrandOrAdmin = user.memberType === "BRAND" || user.memberType === "ADMIN";
-  const isCustomer = user.memberType === "CUSTOMER";
+  const isUser = user.memberType === "USER";
 
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const initialTab = useMemo(() => {
+    const rawTab = searchParams.get("tab");
+    const validTabs = new Set(TABS.map((tab) => tab.key));
+    return validTabs.has(rawTab as TabKey) ? (rawTab as TabKey) : "overview";
+  }, [searchParams]);
+
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Switch tab + auto-close drawer on mobile
   const handleTabChange = useCallback((key: TabKey) => {
     setActiveTab(key);
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "overview") params.delete("tab");
+    else params.set("tab", key);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     if (isMobile) setDrawerOpen(false);
-  }, [isMobile]);
+  }, [isMobile, pathname, router, searchParams]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // ── Edit Profile state ──
   const [updateData, setUpdateData] = useState({
@@ -413,18 +431,12 @@ export function ProfilePageView() {
     skip: !user._id || !isBrandOrAdmin
   });
 
-  const { loading: addressesLoading, data: addressesData, refetch: refetchAddresses } = useQuery(GET_ADDRESSES, {
-    fetchPolicy: "cache-and-network",
-    skip: !user._id || !isCustomer
-  });
-
   // ── Data extraction ──
   const orders: T[] = (ordersData as T)?.getMyOrders?.orders ?? [];
   const visitedProducts: T[] = (visitedData as T)?.getVisitedProducts?.products ?? [];
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
   const myArticles: T[] = (articlesData as T)?.getBoardArticles?.list ?? [];
-  const addresses: T[] = (addressesData as T)?.getAddresses ?? [];
 
   // ── Follow / Unfollow handlers ──
   const handleFollow = useCallback(async (targetId: string) => {
@@ -499,9 +511,7 @@ export function ProfilePageView() {
           <ArticlesPanel articles={myArticles} loading={articlesLoading} />
         );
       case "addresses":
-        return (
-          <AddressesPanel addresses={addresses} loading={addressesLoading} refetch={refetchAddresses} />
-        );
+        return <AddressesPanel />;
       case "claim-coupon":
         return (
           <CouponPanel
@@ -586,7 +596,7 @@ export function ProfilePageView() {
       <SidebarNav>
         {TABS.filter(tab => {
           if (tab.roleOnly === "BRAND_ADMIN") return isBrandOrAdmin;
-          if (tab.roleOnly === "CUSTOMER") return isCustomer;
+          if (tab.roleOnly === "USER") return isUser;
           return true;
         }).map((tab, index, visibleTabs) => {
           const isActive = activeTab === tab.key;
@@ -816,6 +826,7 @@ function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
           ))}
         </Grid>
       </PanelCard>
+
     </Box>
   );
 }
@@ -883,6 +894,135 @@ function OrdersPanel({ orders, loading }: { orders: T[]; loading: boolean }) {
           ))}
         </Stack>
       )}
+    </Box>
+  );
+}
+
+// ━━━ ADDRESSES PANEL ━━━
+function AddressesPanel() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<T | null>(null);
+
+  const { data, loading, refetch } = useQuery(GET_ADDRESSES, {
+    fetchPolicy: "cache-and-network",
+  });
+  const addresses: T[] = data?.getAddresses ?? [];
+
+  const [deleteAddress] = useMutation(DELETE_ADDRESS);
+
+  const handleAdd = () => { setEditingAddress(null); setDialogOpen(true); };
+  const handleEdit = (addr: T) => { setEditingAddress(addr); setDialogOpen(true); };
+  const handleClose = () => { setDialogOpen(false); setEditingAddress(null); };
+  const handleSaved = () => { handleClose(); refetch(); };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = await sweetConfirmAlert("Delete address?", "This address will be permanently removed.");
+    if (!confirmed) return;
+    try {
+      await deleteAddress({ variables: { input: id } });
+      await sweetTopSmallSuccessAlert("Address deleted");
+      refetch();
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err?.message || "Failed to delete address");
+    }
+  };
+
+  return (
+    <Box>
+      <SectionTitle
+        title="My Addresses"
+        action={
+          <Button size="small" variant="contained" onClick={handleAdd}>
+            + Add New
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <Stack spacing={2}>
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} height={96} variant="rounded" sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : addresses.length === 0 ? (
+        <EmptyCard>
+          <HomeOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+          <Typography variant="body1" color="text.secondary">
+            No saved addresses yet.
+          </Typography>
+          <Button variant="contained" size="small" sx={{ mt: 2 }} onClick={handleAdd}>
+            Add Your First Address
+          </Button>
+        </EmptyCard>
+      ) : (
+        <Stack spacing={2}>
+          {addresses.map((addr: T) => (
+            <PanelCard
+              key={addr._id as string}
+              sx={{
+                p: 2,
+                border: "1px solid",
+                borderColor: addr.isDefault ? "primary.main" : "divider",
+                bgcolor: addr.isDefault ? "primary.50" : "background.paper",
+              }}
+            >
+              <FlexBetween gap={2} flexWrap="wrap">
+                <Box flex={1}>
+                  <FlexBox alignItems="center" gap={1} mb={0.5}>
+                    <Typography variant="body2" fontWeight={700}>
+                      {addr.addressName as string}
+                    </Typography>
+                    {addr.isDefault && (
+                      <Chip label="Default" size="small" color="primary" sx={{ fontSize: 10, height: 18 }} />
+                    )}
+                  </FlexBox>
+                  <Typography variant="body2" color="text.secondary">
+                    {addr.addressLine1 as string}
+                    {addr.addressLine2 ? `, ${addr.addressLine2 as string}` : ""}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {[addr.addressCity, addr.addressZipCode, addr.addressCountry].filter(Boolean).join(", ")}
+                  </Typography>
+                  {addr.addressPhone && (
+                    <Typography variant="caption" color="text.secondary">
+                      {addr.addressPhone as string}
+                    </Typography>
+                  )}
+                </Box>
+                <FlexBox gap={1} flexShrink={0}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditOutlined sx={{ fontSize: 14 }} />}
+                    onClick={() => handleEdit(addr)}
+                    sx={{ fontSize: 12 }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={() => handleDelete(addr._id as string)}
+                    sx={{ fontSize: 12 }}
+                  >
+                    Delete
+                  </Button>
+                </FlexBox>
+              </FlexBetween>
+            </PanelCard>
+          ))}
+        </Stack>
+      )}
+
+      <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          {editingAddress ? "Edit Address" : "Add New Address"}
+        </DialogTitle>
+        <DialogContent>
+          <AddressForm address={editingAddress} onSuccess={handleSaved} onCancel={handleClose} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
@@ -1838,113 +1978,6 @@ function ArticlesPanel({ articles, loading }: { articles: T[]; loading: boolean 
           })}
         </Stack>
       )}
-    </Box>
-  );
-}
-
-// ━━━ ADDRESSES PANEL (CUSTOMER) ━━━
-function AddressesPanel({ addresses, loading, refetch }: { addresses: T[]; loading: boolean; refetch: () => void }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<T | null>(null);
-  const [deleteAddress, { loading: deleting }] = useMutation(DELETE_ADDRESS);
-
-  const openAdd = () => { setEditingAddress(null); setDialogOpen(true); };
-  const openEdit = (addr: T) => { setEditingAddress(addr); setDialogOpen(true); };
-  const closeDialog = () => { setDialogOpen(false); setEditingAddress(null); };
-  const onSaved = () => { closeDialog(); refetch(); };
-
-  const handleDelete = async (id: string) => {
-    const confirmed = await sweetConfirmAlert("Delete address?", "This address will be permanently removed.", "Yes, delete");
-    if (!confirmed) return;
-    try {
-      await deleteAddress({ variables: { input: id } });
-      refetch();
-    } catch (err: any) {
-      sweetMixinErrorAlert(err.message ?? "Failed to delete address.");
-    }
-  };
-
-  return (
-    <Box>
-      <SectionTitle
-        title="My Addresses"
-        action={
-          <Button size="small" variant="outlined" sx={{ fontSize: 12 }} onClick={openAdd}>
-            + Add Address
-          </Button>
-        }
-      />
-
-      {loading ? (
-        <Stack spacing={1.5}>
-          {[1, 2].map((i) => (
-            <Skeleton key={i} height={80} variant="rounded" sx={{ borderRadius: 2 }} />
-          ))}
-        </Stack>
-      ) : addresses.length === 0 ? (
-        <EmptyCard>
-          <HomeOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
-          <Typography variant="body1" color="text.secondary">
-            No addresses saved yet.
-          </Typography>
-          <Button variant="contained" size="small" sx={{ mt: 2 }} onClick={openAdd}>
-            Add Your First Address
-          </Button>
-        </EmptyCard>
-      ) : (
-        <Stack spacing={1.5}>
-          {addresses.map((addr: T) => (
-            <PanelCard key={addr._id as string} sx={{ p: 2 }}>
-              <FlexBetween>
-                <Box>
-                  <FlexBox gap={1} alignItems="center" mb={0.5}>
-                    <Typography variant="body2" fontWeight={700}>
-                      {addr.addressName as string}
-                    </Typography>
-                    {addr.isDefault && (
-                      <Chip label="Default" size="small" color="primary" sx={{ fontSize: 10, height: 18 }} />
-                    )}
-                  </FlexBox>
-                  <Typography variant="caption" color="text.secondary">
-                    {addr.addressLine1 as string}
-                    {addr.addressLine2 ? `, ${addr.addressLine2 as string}` : ""}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {addr.addressCity as string}, {addr.addressCountry as string} {addr.addressZipCode as string}
-                  </Typography>
-                  {addr.addressPhone && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {addr.addressPhone as string}
-                    </Typography>
-                  )}
-                </Box>
-                <FlexBox gap={0.5}>
-                  <Button size="small" variant="text" sx={{ fontSize: 12 }} onClick={() => openEdit(addr)}>
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="text"
-                    color="error"
-                    sx={{ fontSize: 12 }}
-                    onClick={() => handleDelete(String(addr._id))}
-                    disabled={deleting}
-                  >
-                    Delete
-                  </Button>
-                </FlexBox>
-              </FlexBetween>
-            </PanelCard>
-          ))}
-        </Stack>
-      )}
-
-      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingAddress ? "Edit Address" : "Add New Address"}</DialogTitle>
-        <DialogContent>
-          <AddressForm address={editingAddress} onSuccess={onSaved} onCancel={closeDialog} />
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }

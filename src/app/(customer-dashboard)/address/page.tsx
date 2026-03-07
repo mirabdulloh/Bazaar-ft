@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import { AddressPageView } from "pages-sections/customer-dashboard/address/page-view";
-
-export const metadata: Metadata = {
-  title: "My Addresses - Seoulé",
-  description: "Seoulé — Fashion platform connecting brands and shoppers.",
-};
+import { redirect } from "next/navigation";
 
 export default function AddressPage() {
-  return <AddressPageView />;
+  redirect("/profile?tab=addresses");
 }
