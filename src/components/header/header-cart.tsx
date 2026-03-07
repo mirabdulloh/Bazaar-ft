@@ -14,7 +14,7 @@ export function HeaderCart() {
   return (
     <Badge badgeContent={state.cart.length} color="primary">
       <IconButton LinkComponent={Link} href="/mini-cart">
-        <SvgIcon fontSize="small">
+        <SvgIcon sx={{ fontSize: 24 }}>
           <svg viewBox="0 0 24 24">
             <g fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M3.864 16.455c-.858-3.432-1.287-5.147-.386-6.301S6.148 9 9.685 9h4.63c3.538 0 5.306 0 6.207 1.154s.472 2.87-.386 6.301c-.546 2.183-.818 3.274-1.632 3.91c-.814.635-1.939.635-4.189.635h-4.63c-2.25 0-3.375 0-4.189-.635c-.814-.636-1.087-1.727-1.632-3.91Z" />

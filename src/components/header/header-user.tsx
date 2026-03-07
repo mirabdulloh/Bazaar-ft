@@ -35,7 +35,7 @@ export function HeaderUser() {
     return (
       <Link href="/login">
         <IconButton>
-          <SvgIcon fontSize="small">
+          <SvgIcon sx={{ fontSize: 24 }}>
             <svg viewBox="0 0 24 24">
               <g fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="12" cy="9" r="3" />

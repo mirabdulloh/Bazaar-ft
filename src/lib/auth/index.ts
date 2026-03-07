@@ -17,11 +17,11 @@ export function setJwtToken(token: string) {
 
 export const logIn = async (nick: string, password: string): Promise<void> => {
 	try {
-		const { jwtToken } = await requestJwtToken({ nick, password });
+		const { jwtToken, memberData } = await requestJwtToken({ nick, password });
 
 		if (jwtToken) {
-			updateStorage({ jwtToken });
-			updateUserInfo(jwtToken);
+			updateStorage({ jwtToken });        // localStorage
+			setUserFromMemberData(memberData);  // reactive var (full data, includes memberImage)
 		}
 	} catch (err) {
 		console.warn('login err', err);
@@ -35,7 +35,7 @@ const requestJwtToken = async ({
 }: {
 	nick: string;
 	password: string;
-}): Promise<{ jwtToken: string }> => {
+}): Promise<{ jwtToken: string; memberData: any }> => {
 	const apolloClient = initializeApollo();
 
 	try {
@@ -45,8 +45,8 @@ const requestJwtToken = async ({
 			fetchPolicy: 'network-only',
 		});
 
-		const { accessToken } = (result?.data as any)?.login;
-		return { jwtToken: accessToken };
+		const loginData = (result?.data as any)?.login;
+		return { jwtToken: loginData.accessToken, memberData: loginData };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
 		switch (err.graphQLErrors?.[0]?.message) {
@@ -63,11 +63,11 @@ const requestJwtToken = async ({
 
 export const signUp = async (nick: string, password: string, phone: string, type: string): Promise<void> => {
 	try {
-		const { jwtToken } = await requestSignUpJwtToken({ nick, password, phone, type });
+		const { jwtToken, memberData } = await requestSignUpJwtToken({ nick, password, phone, type });
 
 		if (jwtToken) {
-			updateStorage({ jwtToken });
-			updateUserInfo(jwtToken);
+			updateStorage({ jwtToken });        // localStorage
+			setUserFromMemberData(memberData);  // reactive var (full data, includes memberImage)
 		}
 	} catch (err) {
 		console.warn('signup err', err);
@@ -85,7 +85,7 @@ const requestSignUpJwtToken = async ({
 	password: string;
 	phone: string;
 	type: string;
-}): Promise<{ jwtToken: string }> => {
+}): Promise<{ jwtToken: string; memberData: any }> => {
 	const apolloClient = initializeApollo();
 
 	try {
@@ -97,8 +97,8 @@ const requestSignUpJwtToken = async ({
 			fetchPolicy: 'network-only',
 		});
 
-		const { accessToken } = (result?.data as any)?.signup;
-		return { jwtToken: accessToken };
+		const signupData = (result?.data as any)?.signup;
+		return { jwtToken: signupData.accessToken, memberData: signupData };
 	} catch (err: any) {
 		console.log('request token err', err.graphQLErrors);
 		switch (err.graphQLErrors?.[0]?.message) {
@@ -111,6 +111,40 @@ const requestSignUpJwtToken = async ({
 		}
 		throw new Error('token error');
 	}
+};
+
+// Populate userVar from the full mutation response (LOGIN / SIGN_UP / UPDATE_MEMBER).
+// This is preferred over updateUserInfo(jwt) because the JWT only carries 4 fields.
+export const setUserFromMemberData = (member: any) => {
+	if (!member) return;
+	const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+	const resolveImage = (img: string | undefined | null, nick: string) => {
+		if (img) {
+			if (img.startsWith('http://') || img.startsWith('https://')) return img;
+			return `${base}/${img}`;
+		}
+		return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nick || 'User')}&backgroundColor=6366f1&textColor=ffffff`;
+	};
+	userVar({
+		_id: member._id ?? '',
+		memberType: member.memberType ?? '',
+		memberStatus: member.memberStatus ?? '',
+		memberAuthType: member.memberAuthType ?? '',
+		memberPhone: member.memberPhone ?? '',
+		memberNick: member.memberNick ?? '',
+		memberFullName: member.memberFullName ?? '',
+		memberImage: resolveImage(member.memberImage, member.memberNick),
+		memberAddress: member.memberAddress ?? '',
+		memberDesc: member.memberDesc ?? '',
+		memberProperties: member.memberProducts ?? 0,
+		memberRank: member.memberRank ?? 0,
+		memberArticles: member.memberArticles ?? 0,
+		memberPoints: member.memberPoints ?? 0,
+		memberLikes: member.memberLikes ?? 0,
+		memberViews: member.memberViews ?? 0,
+		memberWarnings: member.memberWarnings ?? 0,
+		memberBlocks: member.memberBlocks ?? 0,
+	});
 };
 
 export const updateStorage = ({ jwtToken }: { jwtToken: any }) => {

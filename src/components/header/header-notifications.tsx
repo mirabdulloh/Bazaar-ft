@@ -122,7 +122,7 @@ export function HeaderNotifications() {
     <>
       <Badge badgeContent={unreadCount} color="primary" invisible={!isLoggedIn || unreadCount === 0}>
         <IconButton aria-label="Notifications" onClick={handleOpen}>
-          <SvgIcon fontSize="small">
+        <SvgIcon sx={{ fontSize: 24 }}>
             <svg viewBox="0 0 24 24">
               <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <path d="M15 18H9" />
