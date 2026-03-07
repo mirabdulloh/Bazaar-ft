@@ -1,9 +1,9 @@
 export const tableHeading = [
-  { id: "id", label: "Order ID", align: "left" },
-  { id: "qty", label: "Qty", align: "left" },
-  { id: "purchaseDate", label: "Purchase Date", align: "left" },
-  { id: "billingAddress", label: "Billing Address", align: "left" },
-  { id: "amount", label: "Amount", align: "left" },
-  { id: "status", label: "Status", align: "left" },
+  { id: "_id", label: "Order ID", align: "left" },
+  { id: "orderStatus", label: "Status", align: "left" },
+  { id: "orderPaymentStatus", label: "Payment", align: "left" },
+  { id: "orderDeliveryStatus", label: "Delivery", align: "left" },
+  { id: "orderFinalPrice", label: "Total", align: "left" },
+  { id: "createdAt", label: "Date", align: "left" },
   { id: "action", label: "Action", align: "center" }
 ];

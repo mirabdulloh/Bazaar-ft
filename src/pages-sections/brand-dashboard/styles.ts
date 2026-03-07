@@ -56,17 +56,17 @@ const StatusWrapper = styled(Box, {
   let color = theme.palette.secondary.main;
   let backgroundColor = theme.palette.secondary[100];
 
-  if (status === "Accepted" || status === "Delivered" || status === "Normal" || status === "ACTIVE") {
+  if (status === "Accepted" || status === "Delivered" || status === "Normal" || status === "ACTIVE" || status === "COMPLETED" || status === "PAID") {
     color = theme.palette.success.main;
     backgroundColor = theme.palette.success[100];
   }
 
-  if (status === "Rejected" || status === "Urgent" || status === "Cancelled" || status === "DELETED" || status === "EXPIRED") {
+  if (status === "Rejected" || status === "Urgent" || status === "Cancelled" || status === "DELETED" || status === "EXPIRED" || status === "BLOCK" || status === "DELETE" || status === "CANCELLED" || status === "FAILED" || status === "RETURNED") {
     color = theme.palette.error.main;
     backgroundColor = theme.palette.error[100];
   }
 
-  if (status === "Processing" || status === "INACTIVE") {
+  if (status === "Processing" || status === "INACTIVE" || status === "PROCESSING" || status === "SHIPPED" || status === "REFUNDED") {
     color = theme.palette.warning.main;
     backgroundColor = theme.palette.warning[100];
   }

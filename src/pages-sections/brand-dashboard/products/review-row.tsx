@@ -1,57 +1,48 @@
-import Image from "next/image";
-import { useState } from "react";
-import Avatar from "@mui/material/Avatar";
-import Typography from "@mui/material/Typography";
+import { format } from "date-fns/format";
+import Rating from "@mui/material/Rating";
 // MUI ICON COMPONENT
 import Delete from "@mui/icons-material/Delete";
 // GLOBAL CUSTOM COMPONENTS
 import BazaarSwitch from "components/BazaarSwitch";
-import FlexBox from "components/flex-box/flex-box";
 // STYLED COMPONENTS
-import { StyledIconButton, StyledTableCell, StyledTableRow } from "../styles";
+import { StatusWrapper, StyledIconButton, StyledTableCell, StyledTableRow } from "../styles";
 
 // ========================================================================
-interface Review {
-  customer: string;
-  product: string;
-  comment: string;
-  published: boolean;
-  productImage: string;
-}
-
-type Props = { review: Review };
+type Props = {
+  review: any;
+  onToggle: (review: any) => void;
+  onDelete: (id: string) => void;
+};
 // ========================================================================
 
-export default function ReviewRow({ review }: Props) {
-  const { customer, product, comment, published, productImage } = review;
-
-  const [productPublish, setProductPublish] = useState(published);
+export default function ReviewRow({ review, onToggle, onDelete }: Props) {
+  const { _id, reviewComment, reviewRating, reviewStatus, createdAt } = review;
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
-      <StyledTableCell align="left">
-        <FlexBox alignItems="center" gap={1.5}>
-          <Avatar variant="rounded">
-            <Image fill alt={product} src={productImage} sizes="(100%, 100%)" />
-          </Avatar>
-
-          <Typography variant="h6">{product}</Typography>
-        </FlexBox>
+      <StyledTableCell align="left" sx={{ fontWeight: 400, maxWidth: 400 }}>
+        {reviewComment || "-"}
       </StyledTableCell>
 
-      <StyledTableCell align="left">{customer}</StyledTableCell>
-      <StyledTableCell align="left">{comment}</StyledTableCell>
+      <StyledTableCell align="left">
+        <Rating value={reviewRating ?? 0} size="small" color="warning" readOnly />
+      </StyledTableCell>
 
       <StyledTableCell align="left">
-        <BazaarSwitch
-          color="info"
-          checked={productPublish}
-          onChange={() => setProductPublish((state: boolean) => !state)}
-        />
+        <StatusWrapper status={reviewStatus}>{reviewStatus}</StatusWrapper>
+      </StyledTableCell>
+
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {createdAt ? format(new Date(createdAt), "dd MMM yyyy") : "-"}
       </StyledTableCell>
 
       <StyledTableCell align="center">
-        <StyledIconButton>
+        <BazaarSwitch
+          color="info"
+          checked={reviewStatus === "ACTIVE"}
+          onChange={() => onToggle(review)}
+        />
+        <StyledIconButton onClick={() => onDelete(_id)}>
           <Delete />
         </StyledIconButton>
       </StyledTableCell>
