@@ -140,6 +140,7 @@ export default function DashboardChatView({
   const [localMessages, setLocalMessages] = useState<T[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -148,7 +149,7 @@ export default function DashboardChatView({
     data: getChatsData,
     refetch: getChatsRefetch,
   } = useQuery(chatsQuery, {
-    variables: { input: { page: 1, limit: 20, sort: "updatedAt", direction: "DESC" } },
+    variables: { input: { page: 1, limit: 20, direction: "DESC" } },
     skip: !isLoggedIn,
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -213,15 +214,26 @@ export default function DashboardChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [localMessages, activeChatId]);
 
-  const handleSocketMessage = useCallback(async (msg: T) => {
+  const handleSocketMessage = useCallback((msg: T) => {
     const incomingConversationId = String(msg.conversationId ?? "");
 
-    // Always refresh the chats list so the sidebar stays up-to-date for all conversations
+    // Always refresh the chats list so the sidebar stays up-to-date
     getChatsRefetch();
 
-    // Only refresh the message thread if the incoming message is for the active conversation
     if (activeChatId && incomingConversationId === activeChatId) {
+      // Instantly insert the incoming message so the thread updates before the refetch returns
+      setLocalMessages((prev) => {
+        if (prev.some((m: T) => String(m._id) === String(msg._id))) return prev;
+        return [...prev, msg];
+      });
+      // Follow-up refetch fills in senderData and other enriched fields
       getMessagesRefetch();
+    } else if (incomingConversationId) {
+      // Not the active conversation — increment its unread badge
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [incomingConversationId]: (prev[incomingConversationId] ?? 0) + 1,
+      }));
     }
   }, [activeChatId, getMessagesRefetch, getChatsRefetch]);
 
@@ -382,7 +394,10 @@ export default function DashboardChatView({
                       <ListItemButton
                         key={item._id as string}
                         selected={isActive}
-                        onClick={() => setActiveChatId(item._id as string)}
+                        onClick={() => {
+                          setActiveChatId(item._id as string);
+                          setUnreadCounts((prev) => ({ ...prev, [item._id as string]: 0 }));
+                        }}
                         sx={{
                           px: 2,
                           py: 1.5,
@@ -416,13 +431,34 @@ export default function DashboardChatView({
                           </Box>
 
                           <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Stack direction="row" justifyContent="space-between" spacing={1}>
-                              <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ maxWidth: "70%" }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                              <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ maxWidth: "60%" }}>
                                 {getConversationName(item, mode)}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                                {formatRelativeTime(item.updatedAt as string)}
-                              </Typography>
+                              <Stack direction="row" alignItems="center" spacing={0.5} flexShrink={0}>
+                                {(unreadCounts[item._id as string] ?? 0) > 0 && (
+                                  <Box
+                                    sx={{
+                                      minWidth: 20,
+                                      height: 20,
+                                      bgcolor: "primary.main",
+                                      color: "white",
+                                      borderRadius: "50%",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      px: 0.4,
+                                    }}
+                                  >
+                                    {unreadCounts[item._id as string]}
+                                  </Box>
+                                )}
+                                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                                  {formatRelativeTime(item.updatedAt as string)}
+                                </Typography>
+                              </Stack>
                             </Stack>
                             <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.3, fontSize: "0.78rem" }}>
                               {(item.chatSubject as string) || "Open conversation"}

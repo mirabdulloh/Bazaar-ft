@@ -24,8 +24,7 @@ import PageWrapper from "../page-wrapper";
 import { useMutation } from "@apollo/client/react";
 import { useQuery } from "lib/hooks/useQuery";
 import { CREATE_PRODUCT, UPDATE_PRODUCT } from "../../../../apollo/brand/mutation";
-import { GET_BRAND_PRODUCTS } from "../../../../apollo/brand/query";
-import { GET_CATEGORIES } from "../../../../apollo/user/query";
+import { GET_PRODUCT, GET_CATEGORIES } from "../../../../apollo/user/query";
 import { T } from "lib/types/common";
 // AUTH
 import { getJwtToken } from "lib/auth";
@@ -36,9 +35,11 @@ import { UploadImageBox, StyledClear } from "../styles";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PRODUCT_TYPES = ["CLOTHING", "SHOES", "ACCECORY", "BAG", "BEAUTY", "LIFESTYLE", "SPORTS", "OTHER"];
+const PRODUCT_STATUSES = ["DRAFT", "PENDING", "ACTIVE", "SOLD_OUT", "HIDDEN"];
 
 const initialForm = {
   productType: "CLOTHING",
+  productStatus: "DRAFT",
   productCategoryId: "",
   productTitle: "",
   productPrice: "",
@@ -78,22 +79,20 @@ export default function BrandProductForm({ productId }: Props) {
   ) ?? [];
 
   // ─── Load existing product for edit ─────────────────────────────────────────
-  const { data: prodData, loading: loadingProduct } = useQuery(GET_BRAND_PRODUCTS, {
+  const { data: prodData, loading: loadingProduct } = useQuery(GET_PRODUCT, {
     skip: !isEdit,
     fetchPolicy: "network-only",
-    variables: {
-      input: { page: 1, limit: 1, search: {} }
-    }
+    variables: { input: productId }
   });
 
   useEffect(() => {
     if (!isEdit || !prodData) return;
-    const products = (prodData as T)?.getBrandProducts?.products ?? [];
-    const product = products.find((p: any) => p._id === productId);
+    const product = (prodData as T)?.getProduct;
     if (!product) return;
 
     setForm({
       productType: product.productType || "CLOTHING",
+      productStatus: product.productStatus || "DRAFT",
       productCategoryId: product.productCategoryId || "",
       productTitle: product.productTitle || "",
       productPrice: String(product.productPrice ?? ""),
@@ -218,6 +217,8 @@ export default function BrandProductForm({ productId }: Props) {
         productColor: form.productColor.trim()
       };
 
+      if (isEdit) input.productStatus = form.productStatus;
+
       if (form.productCategoryId) input.productCategoryId = form.productCategoryId;
       if (form.productDiscountPrice) input.productDiscountPrice = Number(form.productDiscountPrice);
       if (form.productStockQuantity) input.productStockQuantity = Number(form.productStockQuantity);
@@ -264,8 +265,8 @@ export default function BrandProductForm({ productId }: Props) {
             />
           </Grid>
 
-          {/* Type & Category */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          {/* Type, Status & Category */}
+          <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
             <FormControl fullWidth>
               <InputLabel>Product Type</InputLabel>
               <Select
@@ -280,7 +281,24 @@ export default function BrandProductForm({ productId }: Props) {
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6 }}>
+          {isEdit && (
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={form.productStatus}
+                  label="Status"
+                  onChange={handleChange("productStatus")}
+                >
+                  {PRODUCT_STATUSES.map((s) => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
+          <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
             <FormControl fullWidth>
               <InputLabel>Category</InputLabel>
               <Select

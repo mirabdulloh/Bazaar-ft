@@ -60,7 +60,6 @@ export default function ChatsPageView() {
       input: {
         page: 1,
         limit: PAGE_SIZE,
-        sort: "createdAt",
         direction: "DESC",
         ...(statusFilter ? { search: { chatStatus: statusFilter } } : {})
       }
