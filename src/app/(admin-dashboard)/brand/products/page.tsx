@@ -5,6 +5,8 @@ export const metadata: Metadata = {
   description: "Manage your brand's products",
 };
 
+import { BrandProductsPageView } from "pages-sections/brand-dashboard/brand-products/page-view";
+
 export default function VendorProductsPage() {
-  return <div style={{ padding: 32 }}>Your products coming soon.</div>;
+  return <BrandProductsPageView />;
 }

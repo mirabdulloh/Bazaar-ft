@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -11,11 +11,6 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
 // GLOBAL CUSTOM COMPONENTS
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
@@ -28,43 +23,28 @@ import PageWrapper from "../../page-wrapper";
 // TABLE HEAD COLUMN DATA
 import { tableHeading } from "../table-heading";
 // APOLLO
-import { useMutation } from "@apollo/client/react";
 import { useQuery } from "lib/hooks/useQuery";
-import { GET_ALL_ORDERS_BY_ADMIN } from "../../../../../apollo/admin/query";
-import { UPDATE_ORDER_BY_ADMIN } from "../../../../../apollo/admin/mutation";
+import { GET_BRAND_ORDERS } from "../../../../../apollo/brand/query";
 import { T } from "lib/types/common";
-// ALERTS
-import {
-  sweetTopSmallSuccessAlert,
-  sweetMixinErrorAlert
-} from "lib/sweetAlert";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
 const ORDER_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"];
-const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED"];
-const DELIVERY_STATUSES = ["PREPARING", "SHIPPING", "DELIVERED"];
 
 // =============================================================================
 
 export default function OrdersPageView() {
   // ─── Filters ────────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<string>("");
-
-  // ─── Dialog state ───────────────────────────────────────────────────────────
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [editOrderStatus, setEditOrderStatus] = useState("");
-  const [editPaymentStatus, setEditPaymentStatus] = useState("");
-  const [editDeliveryStatus, setEditDeliveryStatus] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_ORDERS_BY_ADMIN, {
+  const { data, loading } = useQuery(GET_BRAND_ORDERS, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
       input: {
-        page: 1,
+        page: currentPage,
         limit: PAGE_SIZE,
         sort: "createdAt",
         direction: "DESC",
@@ -73,48 +53,19 @@ export default function OrdersPageView() {
     }
   });
 
-  const [updateOrder, { loading: updating }] = useMutation(UPDATE_ORDER_BY_ADMIN);
-
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllOrdersByAdmin?.orders ?? [];
-  const total = (data as T)?.getAllOrdersByAdmin?.metaData?.total ?? 0;
+  const list = (data as T)?.getBrandOrders?.orders ?? [];
+  const total = (data as T)?.getBrandOrders?.metaData?.total ?? 0;
 
-  const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
+  const { order, orderBy, handleRequestSort } =
     useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
-  const openEditDialog = useCallback((orderItem: any) => {
-    setSelectedOrder(orderItem);
-    setEditOrderStatus(orderItem.orderStatus || "PENDING");
-    setEditPaymentStatus(orderItem.orderPaymentStatus || "PENDING");
-    setEditDeliveryStatus(orderItem.orderDeliveryStatus || "PENDING");
-    setDialogOpen(true);
-  }, []);
+  const handlePageChange = (_: any, page: number) => setCurrentPage(page);
 
-  const handleClose = () => {
-    setDialogOpen(false);
-    setSelectedOrder(null);
-  };
-
-  const handleUpdate = async () => {
-    if (!selectedOrder) return;
-    try {
-      await updateOrder({
-        variables: {
-          input: {
-            _id: selectedOrder._id,
-            orderStatus: editOrderStatus,
-            orderPaymentStatus: editPaymentStatus,
-            orderDeliveryStatus: editDeliveryStatus
-          }
-        }
-      });
-      await sweetTopSmallSuccessAlert("Order updated successfully");
-      handleClose();
-      refetch();
-    } catch (err: any) {
-      await sweetMixinErrorAlert(err.message || "Failed to update order");
-    }
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -127,7 +78,7 @@ export default function OrdersPageView() {
           <Select
             value={statusFilter}
             label="Order Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
           >
             <MenuItem value="">All</MenuItem>
             {ORDER_STATUSES.map((s) => (
@@ -156,11 +107,10 @@ export default function OrdersPageView() {
                 />
 
                 <TableBody>
-                  {filteredList.map((orderItem: any) => (
+                  {list.map((orderItem: any) => (
                     <OrderRow
                       key={orderItem._id}
                       order={orderItem}
-                      onEdit={openEditDialog}
                     />
                   ))}
                 </TableBody>
@@ -170,61 +120,13 @@ export default function OrdersPageView() {
 
           <Stack alignItems="center" my={4}>
             <TablePagination
-              onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              onChange={handlePageChange}
+              count={Math.ceil(total / PAGE_SIZE)}
+              page={currentPage}
             />
           </Stack>
         </Card>
       )}
-
-      {/* ─── Edit Order Dialog ──────────────────────────────────────────── */}
-      <Dialog
-        open={dialogOpen}
-        onClose={handleClose}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          Update Order — #{selectedOrder?._id?.slice(0, 8)}
-        </DialogTitle>
-
-        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: "16px !important" }}>
-          <FormControl fullWidth>
-            <InputLabel>Order Status</InputLabel>
-            <Select value={editOrderStatus} label="Order Status" onChange={(e) => setEditOrderStatus(e.target.value)}>
-              {ORDER_STATUSES.map((s) => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>Payment Status</InputLabel>
-            <Select value={editPaymentStatus} label="Payment Status" onChange={(e) => setEditPaymentStatus(e.target.value)}>
-              {PAYMENT_STATUSES.map((s) => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>Delivery Status</InputLabel>
-            <Select value={editDeliveryStatus} label="Delivery Status" onChange={(e) => setEditDeliveryStatus(e.target.value)}>
-              {DELIVERY_STATUSES.map((s) => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button onClick={handleUpdate} variant="contained" color="info" disabled={updating}>
-            Update
-          </Button>
-        </DialogActions>
-      </Dialog>
     </PageWrapper>
   );
 }

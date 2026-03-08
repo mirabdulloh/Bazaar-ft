@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BrandCouponsPageView } from "pages-sections/brand-dashboard/brand-coupons/page-view";
 
 export const metadata: Metadata = {
   title: "Coupons - Seoulé Brand Dashboard",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function VendorCouponsPage() {
-  return <div style={{ padding: 32 }}>Brand coupons coming soon.</div>;
+  return <BrandCouponsPageView />;
 }
