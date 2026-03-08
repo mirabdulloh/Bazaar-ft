@@ -52,9 +52,9 @@ export function ChatDrawer() {
   const brands: T[] = (brandsData as T)?.getBrands?.brands ?? [];
 
   const { data: messagesData, loading: messagesLoading, refetch: refetchMessages } = useQuery(GET_MESSAGES, {
-    variables: { input: { page: 1, limit: 50, conversationId } },
+    variables: { input: { page: 1, limit: 50, conversationId, direction: "ASC" } },
     skip: !conversationId,
-    fetchPolicy: "cache-and-network"
+    fetchPolicy: "cache-and-network",
   });
 
   useEffect(() => {
@@ -98,14 +98,22 @@ export function ChatDrawer() {
       conversationId,
       senderId: user._id,
       message: trimmed,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
     setLocalMessages((prev) => [...prev, optimistic]);
     try {
-      await sendMessage({ variables: { input: { conversationId, message: trimmed } } });
+      const result = await sendMessage({ variables: { input: { conversationId, message: trimmed } } });
+      const confirmed = (result?.data as T)?.sendMessage as T | undefined;
+      if (confirmed) {
+        setLocalMessages((prev) => [
+          ...prev.filter((m: T) => m._id !== optimistic._id),
+          confirmed,
+        ]);
+      }
       refetchMessages();
     } catch {
-      // ignore for now
+      setLocalMessages((prev) => prev.filter((m: T) => m._id !== optimistic._id));
+      setMessage(trimmed);
     }
   };
 

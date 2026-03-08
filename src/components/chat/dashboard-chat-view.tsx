@@ -187,7 +187,15 @@ export default function DashboardChatView({
 
   useEffect(() => {
     const list = ((getMessagesData as T)?.getMessages?.list ?? []) as T[];
-    setLocalMessages(list);
+    // Merge server data with any still-pending optimistic messages to avoid
+    // the race condition where a refetch returns before the server saves the new message
+    setLocalMessages((prev) => {
+      const fetchedIds = new Set(list.map((m: T) => String(m._id)));
+      const pendingOptimistic = prev.filter(
+        (m: T) => String(m._id).startsWith("local-") && !fetchedIds.has(String(m._id))
+      );
+      return [...list, ...pendingOptimistic];
+    });
   }, [getMessagesData]);
 
   useEffect(() => {
@@ -205,12 +213,19 @@ export default function DashboardChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [localMessages, activeChatId]);
 
-  const handleSocketMessage = useCallback(async () => {
-    if (!activeChatId) return;
-    await Promise.all([getMessagesRefetch(), getChatsRefetch()]);
+  const handleSocketMessage = useCallback(async (msg: T) => {
+    const incomingConversationId = String(msg.conversationId ?? "");
+
+    // Always refresh the chats list so the sidebar stays up-to-date for all conversations
+    getChatsRefetch();
+
+    // Only refresh the message thread if the incoming message is for the active conversation
+    if (activeChatId && incomingConversationId === activeChatId) {
+      getMessagesRefetch();
+    }
   }, [activeChatId, getMessagesRefetch, getChatsRefetch]);
 
-  useChatSocket(activeChatId || null, handleSocketMessage);
+  useChatSocket(handleSocketMessage);
 
   const handleDeleteChat = useCallback(async () => {
     if (!activeChatId) return;
@@ -243,8 +258,19 @@ export default function DashboardChatView({
     setLocalMessages((prev) => [...prev, optimistic]);
 
     try {
-      await sendMessage({ variables: { input: { conversationId: activeChatId, message: trimmed } } });
-      await Promise.all([getMessagesRefetch(), getChatsRefetch()]);
+      const result = await sendMessage({ variables: { input: { conversationId: activeChatId, message: trimmed } } });
+      const confirmed = (result?.data as T)?.sendMessage as T | undefined;
+
+      if (confirmed) {
+        // Immediately replace the optimistic bubble with the confirmed server message
+        setLocalMessages((prev) => [
+          ...prev.filter((m: T) => m._id !== optimistic._id),
+          confirmed,
+        ]);
+      }
+
+      // Background sync — don't await; catch silently to avoid swallowing the send success
+      Promise.all([getMessagesRefetch(), getChatsRefetch()]).catch(() => {});
     } catch (error: any) {
       sweetMixinErrorAlert(error?.message ?? "Failed to send message.");
       setLocalMessages((prev) => prev.filter((msg: T) => msg._id !== optimistic._id));

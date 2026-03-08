@@ -26,12 +26,11 @@ function buildSocketUrl(token: string): string {
   return `${base}${separator}token=${encodeURIComponent(token)}`;
 }
 
-export function useChatSocket(activeChatId: string | null, onNewMessage: (msg: T) => void) {
+export function useChatSocket(onNewMessage: (msg: T) => void) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const shouldReconnectRef = useRef(true);
   const callbackRef = useRef(onNewMessage);
-  const activeChatIdRef = useRef(activeChatId);
 
   const token = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -41,10 +40,6 @@ export function useChatSocket(activeChatId: string | null, onNewMessage: (msg: T
   useEffect(() => {
     callbackRef.current = onNewMessage;
   }, [onNewMessage]);
-
-  useEffect(() => {
-    activeChatIdRef.current = activeChatId;
-  }, [activeChatId]);
 
   useEffect(() => {
     if (!token) return;
@@ -61,11 +56,8 @@ export function useChatSocket(activeChatId: string | null, onNewMessage: (msg: T
         try {
           const payload = JSON.parse(event.data) as NewMessagePayload;
           if (payload?.event !== "newMessage" || !payload.data) return;
-
-          const conversationId = payload.data.conversationId as string | undefined;
-          if (activeChatIdRef.current && conversationId === activeChatIdRef.current) {
-            callbackRef.current(payload.data);
-          }
+          // Always fire — the caller decides which conversation to handle
+          callbackRef.current(payload.data);
         } catch {
           // Ignore malformed websocket payloads.
         }

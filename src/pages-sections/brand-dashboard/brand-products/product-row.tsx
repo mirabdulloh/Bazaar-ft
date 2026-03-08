@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import Edit from "@mui/icons-material/Edit";
@@ -9,6 +8,8 @@ import FlexBox from "components/flex-box/flex-box";
 import { currency } from "lib";
 import { format } from "date-fns/format";
 import { StyledTableRow, StatusWrapper, StyledTableCell, StyledIconButton } from "../styles";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 // ========================================================================
 type Props = {
@@ -31,16 +32,22 @@ export default function BrandProductRow({ product, onEdit, onDelete }: Props) {
     createdAt
   } = product;
 
-  const image = productImages?.[0] || "";
+  const rawImage = productImages?.[0] || "";
+  const image = rawImage
+    ? rawImage.startsWith("http") ? rawImage : `${API_URL}/${rawImage}`
+    : "";
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
       <StyledTableCell align="left">
         <FlexBox alignItems="center" gap={1.5}>
           {image ? (
-            <Avatar variant="rounded">
-              <Image fill src={image} alt={productTitle} sizes="(100%, 100%)" />
-            </Avatar>
+            <Avatar
+              variant="rounded"
+              src={image}
+              alt={productTitle}
+              sx={{ width: 40, height: 40 }}
+            />
           ) : (
             <Avatar variant="rounded">{productTitle?.[0] || "P"}</Avatar>
           )}
