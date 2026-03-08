@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentNode } from "@apollo/client";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
-import {
-  alpha,
-  useTheme,
-} from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import InputBase from "@mui/material/InputBase";
 import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -22,6 +23,10 @@ import Typography from "@mui/material/Typography";
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import ChatBubbleOutlineRounded from "@mui/icons-material/ChatBubbleOutlineRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import DoneAllRounded from "@mui/icons-material/DoneAllRounded";
+import EmojiEmotionsOutlined from "@mui/icons-material/EmojiEmotionsOutlined";
+import MoreVertRounded from "@mui/icons-material/MoreVertRounded";
+import SearchRounded from "@mui/icons-material/SearchRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import { userVar } from "../../../apollo/store";
 import { DELETE_CHAT, SEND_MESSAGE } from "../../../apollo/user/mutation";
@@ -65,18 +70,12 @@ function formatRelativeTime(date?: string) {
   if (diff < day) return `${Math.floor(diff / hour)}h ago`;
   if (diff < 7 * day) return `${Math.floor(diff / day)}d ago`;
 
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatMessageTime(date?: string) {
   if (!date) return "";
-  return new Date(date).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return new Date(date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function getConversationName(item: T, mode: ConversationMode): string {
@@ -87,7 +86,6 @@ function getConversationName(item: T, mode: ConversationMode): string {
       "Brand"
     );
   }
-
   return ((item.memberData as T)?.memberNick as string) || "Customer";
 }
 
@@ -98,9 +96,32 @@ function getConversationImage(item: T, mode: ConversationMode): string {
       resolveImage((((item.brandData as T)?.memberData as T)?.memberImage as string))
     );
   }
-
   return resolveImage((item.memberData as T)?.memberImage as string);
 }
+
+function groupMessagesByDate(messages: T[]): { label: string; items: T[] }[] {
+  const map = new Map<string, T[]>();
+  for (const msg of messages) {
+    const d = new Date(msg.createdAt as string);
+    const key = d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(msg);
+  }
+  const fmtKey = (offset: number) =>
+    new Date(Date.now() - offset).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const todayKey = fmtKey(0);
+  const yesterdayKey = fmtKey(86400000);
+  return Array.from(map.entries()).map(([key, items]) => ({
+    label: key === todayKey ? "Today" : key === yesterdayKey ? "Yesterday" : key,
+    items,
+  }));
+}
+
+const STATUS_CHIP: Record<string, { label: string; color: "success" | "warning" | "default" }> = {
+  OPEN: { label: "Open", color: "success" },
+  PENDING: { label: "Pending", color: "warning" },
+  CLOSED: { label: "Closed", color: "default" },
+};
 
 export default function DashboardChatView({
   chatsQuery,
@@ -117,6 +138,8 @@ export default function DashboardChatView({
   const [activeChatId, setActiveChatId] = useState<string>("");
   const [draft, setDraft] = useState("");
   const [localMessages, setLocalMessages] = useState<T[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -125,14 +148,7 @@ export default function DashboardChatView({
     data: getChatsData,
     refetch: getChatsRefetch,
   } = useQuery(chatsQuery, {
-    variables: {
-      input: {
-        page: 1,
-        limit: 20,
-        sort: "updatedAt",
-        direction: "DESC",
-      },
-    },
+    variables: { input: { page: 1, limit: 20, sort: "updatedAt", direction: "DESC" } },
     skip: !isLoggedIn,
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -142,6 +158,17 @@ export default function DashboardChatView({
     () => (((getChatsData as T)?.[chatsRootKey]?.list ?? []) as T[]),
     [getChatsData, chatsRootKey]
   );
+
+  const filtered = useMemo(
+    () =>
+      searchQuery.trim()
+        ? conversations.filter((item: T) =>
+            getConversationName(item, mode).toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : conversations,
+    [conversations, searchQuery, mode]
+  );
+
   const selectedConversation = conversations.find((item: T) => item._id === activeChatId) ?? null;
 
   const {
@@ -149,14 +176,7 @@ export default function DashboardChatView({
     data: getMessagesData,
     refetch: getMessagesRefetch,
   } = useQuery(GET_MESSAGES, {
-    variables: {
-      input: {
-        page: 1,
-        limit: 50,
-        conversationId: activeChatId,
-        direction: "ASC",
-      },
-    },
+    variables: { input: { page: 1, limit: 50, conversationId: activeChatId, direction: "ASC" } },
     skip: !isLoggedIn || !activeChatId,
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -194,15 +214,8 @@ export default function DashboardChatView({
 
   const handleDeleteChat = useCallback(async () => {
     if (!activeChatId) return;
-
-    const ok = await sweetConfirmAlert(
-      "Delete this conversation?",
-      "This removes the chat from your list.",
-      "Delete"
-    );
-
+    const ok = await sweetConfirmAlert("Delete this conversation?", "This removes the chat from your list.", "Delete");
     if (!ok) return;
-
     try {
       await deleteChat({ variables: { input: activeChatId } });
       setActiveChatId("");
@@ -223,78 +236,41 @@ export default function DashboardChatView({
       senderId: user._id,
       message: trimmed,
       createdAt: new Date().toISOString(),
-      senderData: {
-        _id: user._id,
-        memberNick: user.memberNick,
-        memberImage: user.memberImage,
-      },
+      senderData: { _id: user._id, memberNick: user.memberNick, memberImage: user.memberImage },
     };
 
     setDraft("");
     setLocalMessages((prev) => [...prev, optimistic]);
 
     try {
-      await sendMessage({
-        variables: {
-          input: {
-            conversationId: activeChatId,
-            message: trimmed,
-          },
-        },
-      });
-
+      await sendMessage({ variables: { input: { conversationId: activeChatId, message: trimmed } } });
       await Promise.all([getMessagesRefetch(), getChatsRefetch()]);
     } catch (error: any) {
       sweetMixinErrorAlert(error?.message ?? "Failed to send message.");
       setLocalMessages((prev) => prev.filter((msg: T) => msg._id !== optimistic._id));
       setDraft(trimmed);
     }
-  }, [
-    activeChatId,
-    draft,
-    getChatsRefetch,
-    getMessagesRefetch,
-    sendMessage,
-    sendMessageLoading,
-    user._id,
-    user.memberImage,
-    user.memberNick,
-  ]);
+  }, [activeChatId, draft, getChatsRefetch, getMessagesRefetch, sendMessage, sendMessageLoading, user._id, user.memberImage, user.memberNick]);
 
   const canShowThread = !!activeChatId && (!isMobile || activeChatId);
   const showConversationList = !isMobile || !activeChatId;
   const showThread = !isMobile || !!activeChatId;
-
   const emptyList = !getChatsLoading && conversations.length === 0;
+  const chatStatus = (selectedConversation?.chatStatus as string) ?? "OPEN";
+  const statusChip = STATUS_CHIP[chatStatus] ?? STATUS_CHIP.OPEN;
 
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h3" fontWeight={800} sx={{ mb: 0.5 }}>
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {subtitle}
-        </Typography>
+        <Typography variant="h3" fontWeight={800} sx={{ mb: 0.5 }}>{title}</Typography>
+        <Typography variant="body2" color="text.secondary">{subtitle}</Typography>
       </Box>
 
       {!isLoggedIn ? (
-        <Paper
-          variant="outlined"
-          sx={{
-            minHeight: 420,
-            borderRadius: 4,
-            display: "grid",
-            placeItems: "center",
-            textAlign: "center",
-            px: 3,
-          }}
-        >
+        <Paper variant="outlined" sx={{ minHeight: 420, borderRadius: 4, display: "grid", placeItems: "center", textAlign: "center", px: 3 }}>
           <Stack spacing={1.5} alignItems="center">
             <ChatBubbleOutlineRounded color="action" sx={{ fontSize: 40 }} />
-            <Typography variant="h6" fontWeight={700}>
-              Please log in to use chat
-            </Typography>
+            <Typography variant="h6" fontWeight={700}>Please log in to use chat</Typography>
           </Stack>
         </Paper>
       ) : (
@@ -308,6 +284,7 @@ export default function DashboardChatView({
             bgcolor: "background.paper",
           }}
         >
+          {/* ── Conversation List ── */}
           {showConversationList && (
             <Box
               sx={{
@@ -318,30 +295,46 @@ export default function DashboardChatView({
                 bgcolor: alpha(theme.palette.grey[50], 0.6),
               }}
             >
-              <Box sx={{ p: 2.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                <Stack direction="row" spacing={1.25} alignItems="center">
+              {/* Panel header */}
+              <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
                   <Avatar
                     variant="rounded"
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                      color: "primary.main",
-                    }}
+                    sx={{ width: 38, height: 38, bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}
                   >
-                    <ChatBubbleOutlineRounded />
+                    <ChatBubbleOutlineRounded sx={{ fontSize: 18 }} />
                   </Avatar>
                   <Box>
-                    <Typography variant="h6" fontWeight={800}>
-                      Messages
-                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={800} lineHeight={1.2}>Messages</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {mode === "customer" ? "Your brand conversations" : "Your customer conversations"}
+                      {mode === "customer" ? "Brand conversations" : "Customer conversations"}
                     </Typography>
                   </Box>
                 </Stack>
+
+                {/* Search */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    bgcolor: theme.palette.grey[100],
+                    borderRadius: 999,
+                    px: 1.5,
+                    py: 0.5,
+                  }}
+                >
+                  <SearchRounded sx={{ fontSize: 18, color: "text.secondary", flexShrink: 0 }} />
+                  <InputBase
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    sx={{ flex: 1, fontSize: "0.875rem" }}
+                  />
+                </Box>
               </Box>
 
+              {/* Conversation items */}
               <Box sx={{ flex: 1, overflowY: "auto" }}>
                 {getChatsLoading && conversations.length === 0 ? (
                   <Stack sx={{ minHeight: 240 }} alignItems="center" justifyContent="center">
@@ -350,14 +343,15 @@ export default function DashboardChatView({
                 ) : emptyList ? (
                   <Stack sx={{ minHeight: 240, px: 3 }} alignItems="center" justifyContent="center" spacing={1}>
                     <ChatBubbleOutlineRounded color="action" />
-                    <Typography variant="body2" color="text.secondary" textAlign="center">
-                      No conversations yet.
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary" textAlign="center">No conversations yet.</Typography>
+                  </Stack>
+                ) : filtered.length === 0 ? (
+                  <Stack sx={{ minHeight: 120, px: 3 }} alignItems="center" justifyContent="center" spacing={1}>
+                    <Typography variant="body2" color="text.secondary" textAlign="center">No results for "{searchQuery}"</Typography>
                   </Stack>
                 ) : (
-                  conversations.map((item: T) => {
+                  filtered.map((item: T) => {
                     const isActive = item._id === activeChatId;
-
                     return (
                       <ListItemButton
                         key={item._id as string}
@@ -367,45 +361,44 @@ export default function DashboardChatView({
                           px: 2,
                           py: 1.5,
                           alignItems: "flex-start",
-                          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+                          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                           bgcolor: isActive ? alpha(theme.palette.primary.main, 0.08) : "transparent",
-                          "&.Mui-selected": {
-                            bgcolor: alpha(theme.palette.primary.main, 0.08),
-                          },
-                          "&.Mui-selected:hover": {
-                            bgcolor: alpha(theme.palette.primary.main, 0.12),
-                          },
+                          "&.Mui-selected": { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                          "&.Mui-selected:hover": { bgcolor: alpha(theme.palette.primary.main, 0.12) },
                         }}
                       >
                         <Stack direction="row" spacing={1.25} sx={{ width: "100%" }}>
-                          <Avatar
-                            src={getConversationImage(item, mode)}
-                            alt={getConversationName(item, mode)}
-                            sx={{ width: 46, height: 46 }}
-                          />
+                          {/* Avatar with online dot */}
+                          <Box position="relative" flexShrink={0}>
+                            <Avatar
+                              src={getConversationImage(item, mode)}
+                              alt={getConversationName(item, mode)}
+                              sx={{ width: 46, height: 46 }}
+                            />
+                            <Box
+                              sx={{
+                                position: "absolute",
+                                bottom: 1,
+                                right: 1,
+                                width: 10,
+                                height: 10,
+                                bgcolor: "success.main",
+                                borderRadius: "50%",
+                                border: `2px solid ${theme.palette.background.paper}`,
+                              }}
+                            />
+                          </Box>
 
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Stack direction="row" justifyContent="space-between" spacing={1}>
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={700}
-                                noWrap
-                                sx={{ maxWidth: "70%" }}
-                              >
+                              <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ maxWidth: "70%" }}>
                                 {getConversationName(item, mode)}
                               </Typography>
-
                               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                                 {formatRelativeTime(item.updatedAt as string)}
                               </Typography>
                             </Stack>
-
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                              sx={{ mt: 0.4 }}
-                            >
+                            <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.3, fontSize: "0.78rem" }}>
                               {(item.chatSubject as string) || "Open conversation"}
                             </Typography>
                           </Box>
@@ -418,14 +411,16 @@ export default function DashboardChatView({
             </Box>
           )}
 
+          {/* ── Message Thread ── */}
           {showThread && (
             <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
               {canShowThread ? (
                 <>
+                  {/* Thread header */}
                   <Box
                     sx={{
-                      px: { xs: 1.5, md: 2.5 },
-                      py: 1.5,
+                      px: { xs: 1.5, md: 2 },
+                      py: 1.25,
                       borderBottom: `1px solid ${theme.palette.divider}`,
                       display: "flex",
                       alignItems: "center",
@@ -435,43 +430,80 @@ export default function DashboardChatView({
                   >
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
                       {isMobile && (
-                        <IconButton onClick={() => setActiveChatId("")}>
+                        <IconButton size="small" onClick={() => setActiveChatId("")}>
                           <ArrowBackRounded />
                         </IconButton>
                       )}
 
-                      <Avatar
-                        src={selectedConversation ? getConversationImage(selectedConversation, mode) : ""}
-                        alt={selectedConversation ? getConversationName(selectedConversation, mode) : "Chat"}
-                        sx={{ width: 42, height: 42 }}
-                      />
+                      <Box position="relative" flexShrink={0}>
+                        <Avatar
+                          src={selectedConversation ? getConversationImage(selectedConversation, mode) : ""}
+                          alt={selectedConversation ? getConversationName(selectedConversation, mode) : "Chat"}
+                          sx={{ width: 42, height: 42 }}
+                        />
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            bottom: 1,
+                            right: 1,
+                            width: 10,
+                            height: 10,
+                            bgcolor: "success.main",
+                            borderRadius: "50%",
+                            border: `2px solid ${theme.palette.background.paper}`,
+                          }}
+                        />
+                      </Box>
 
                       <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="subtitle1" fontWeight={800} noWrap>
-                          {selectedConversation ? getConversationName(selectedConversation, mode) : "Conversation"}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="subtitle1" fontWeight={800} noWrap>
+                            {selectedConversation ? getConversationName(selectedConversation, mode) : "Conversation"}
+                          </Typography>
+                          <Chip
+                            label={statusChip.label}
+                            color={statusChip.color}
+                            size="small"
+                            sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700 }}
+                          />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
                           {(selectedConversation?.chatSubject as string) || "Live conversation"}
                         </Typography>
                       </Box>
                     </Stack>
 
-                    <IconButton
-                      color="error"
-                      onClick={handleDeleteChat}
-                      disabled={deleteChatLoading}
-                    >
-                      <DeleteOutlineRounded />
+                    {/* Kebab menu */}
+                    <IconButton size="small" onClick={(e) => setMenuAnchor(e.currentTarget)} disabled={deleteChatLoading}>
+                      <MoreVertRounded />
                     </IconButton>
+                    <Menu
+                      anchorEl={menuAnchor}
+                      open={!!menuAnchor}
+                      onClose={() => setMenuAnchor(null)}
+                      transformOrigin={{ horizontal: "right", vertical: "top" }}
+                      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                    >
+                      <MenuItem
+                        onClick={() => { setMenuAnchor(null); handleDeleteChat(); }}
+                        sx={{ color: "error.main", gap: 0.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <DeleteOutlineRounded color="error" fontSize="small" />
+                        </ListItemIcon>
+                        Delete conversation
+                      </MenuItem>
+                    </Menu>
                   </Box>
 
+                  {/* Messages */}
                   <Box
                     sx={{
                       flex: 1,
                       overflowY: "auto",
                       px: { xs: 1.5, md: 2.5 },
                       py: 2,
-                      bgcolor: alpha(theme.palette.grey[50], 0.45),
+                      bgcolor: alpha(theme.palette.grey[50], 0.4),
                     }}
                   >
                     {getMessagesLoading && localMessages.length === 0 ? (
@@ -485,62 +517,132 @@ export default function DashboardChatView({
                         </Typography>
                       </Stack>
                     ) : (
-                      <Stack spacing={1.5}>
-                        {localMessages.map((message: T) => {
-                          const isMine = message.senderId === user._id;
-                          const senderImg = resolveImage((message.senderData as T)?.memberImage as string);
-                          const senderName = ((message.senderData as T)?.memberNick as string) || "User";
-
-                          return (
-                            <Stack
-                              key={message._id as string}
-                              direction="row"
-                              spacing={1}
-                              justifyContent={isMine ? "flex-end" : "flex-start"}
-                              alignItems="flex-end"
-                            >
-                              {!isMine && <Avatar src={senderImg} alt={senderName} sx={{ width: 32, height: 32 }} />}
-
-                              <Box
+                      <Stack spacing={0}>
+                        {groupMessagesByDate(localMessages).map((group) => (
+                          <Box key={group.label}>
+                            {/* Date separator */}
+                            <Box sx={{ textAlign: "center", my: 1.5 }}>
+                              <Typography
+                                variant="caption"
                                 sx={{
-                                  maxWidth: { xs: "84%", md: "70%" },
+                                  bgcolor: "grey.100",
+                                  borderRadius: 999,
                                   px: 1.5,
-                                  py: 1.2,
-                                  borderRadius: 3,
-                                  bgcolor: isMine ? "primary.main" : "grey.100",
-                                  color: isMine ? "primary.contrastText" : "text.primary",
-                                  borderTopRightRadius: isMine ? 1 : 3,
-                                  borderTopLeftRadius: isMine ? 3 : 1,
-                                  boxShadow: isMine
-                                    ? `0 10px 20px ${alpha(theme.palette.primary.main, 0.22)}`
-                                    : "0 6px 16px rgba(15, 23, 42, 0.06)",
+                                  py: 0.4,
+                                  color: "text.secondary",
+                                  fontSize: "0.7rem",
                                 }}
                               >
-                                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                  {message.message as string}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    mt: 0.6,
-                                    display: "block",
-                                    color: isMine ? alpha("#fff", 0.8) : "text.secondary",
-                                    textAlign: isMine ? "right" : "left",
-                                  }}
-                                >
-                                  {formatMessageTime(message.createdAt as string)}
-                                </Typography>
-                              </Box>
+                                {group.label}
+                              </Typography>
+                            </Box>
+
+                            <Stack spacing={0}>
+                              {group.items.map((message: T, idx: number) => {
+                                const isMine = message.senderId === user._id;
+                                const senderImg = resolveImage((message.senderData as T)?.memberImage as string);
+                                const senderName = ((message.senderData as T)?.memberNick as string) || "User";
+                                const isLocal = String(message._id).startsWith("local-");
+
+                                const prevMsg = idx > 0 ? group.items[idx - 1] : null;
+                                const isSameGroup =
+                                  !!prevMsg &&
+                                  prevMsg.senderId === message.senderId &&
+                                  new Date(message.createdAt as string).getTime() -
+                                    new Date(prevMsg.createdAt as string).getTime() <
+                                    120_000;
+
+                                return (
+                                  <Box
+                                    key={message._id as string}
+                                    sx={{ mt: isSameGroup ? 0.3 : 1.5 }}
+                                  >
+                                    <Stack
+                                      direction="row"
+                                      spacing={1}
+                                      justifyContent={isMine ? "flex-end" : "flex-start"}
+                                      alignItems="flex-end"
+                                    >
+                                      {/* Other's avatar (or spacer) */}
+                                      {!isMine && (
+                                        isSameGroup ? (
+                                          <Box sx={{ width: 32, flexShrink: 0 }} />
+                                        ) : (
+                                          <Avatar src={senderImg} alt={senderName} sx={{ width: 32, height: 32, flexShrink: 0 }} />
+                                        )
+                                      )}
+
+                                      {/* Bubble */}
+                                      <Box
+                                        sx={{
+                                          maxWidth: { xs: "82%", md: "68%" },
+                                          px: 1.5,
+                                          pt: 1,
+                                          pb: 0.75,
+                                          borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                                          bgcolor: isMine ? "primary.main" : "grey.100",
+                                          color: isMine ? "primary.contrastText" : "text.primary",
+                                          boxShadow: isMine
+                                            ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.28)}`
+                                            : "0 2px 8px rgba(15,23,42,0.06)",
+                                        }}
+                                      >
+                                        <Typography
+                                          variant="body2"
+                                          sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5 }}
+                                        >
+                                          {message.message as string}
+                                        </Typography>
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "flex-end",
+                                            gap: 0.4,
+                                            mt: 0.4,
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              fontSize: "0.65rem",
+                                              color: isMine ? alpha("#fff", 0.75) : "text.secondary",
+                                            }}
+                                          >
+                                            {formatMessageTime(message.createdAt as string)}
+                                          </Typography>
+                                          {isMine && !isLocal && (
+                                            <DoneAllRounded
+                                              sx={{ fontSize: 13, color: alpha("#fff", 0.75) }}
+                                            />
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </Stack>
+                                  </Box>
+                                );
+                              })}
                             </Stack>
-                          );
-                        })}
+                          </Box>
+                        ))}
                         <div ref={bottomRef} />
                       </Stack>
                     )}
                   </Box>
 
-                  <Box sx={{ p: { xs: 1.25, md: 1.75 }, borderTop: `1px solid ${theme.palette.divider}` }}>
-                    <Stack direction="row" spacing={1.25} alignItems="flex-end">
+                  {/* Input */}
+                  <Box
+                    sx={{
+                      p: { xs: 1.25, md: 1.5 },
+                      borderTop: `1px solid ${theme.palette.divider}`,
+                      bgcolor: "background.paper",
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="flex-end">
+                      <IconButton size="small" disabled sx={{ color: "text.secondary", mb: 0.25 }}>
+                        <EmojiEmotionsOutlined />
+                      </IconButton>
+
                       <TextField
                         fullWidth
                         multiline
@@ -558,24 +660,30 @@ export default function DashboardChatView({
                         sx={{
                           "& .MuiOutlinedInput-root": {
                             borderRadius: 3,
-                            bgcolor: "background.paper",
+                            bgcolor: alpha(theme.palette.grey[100], 0.8),
+                            "& fieldset": { border: "none" },
                           },
                         }}
                       />
 
-                      <Button
-                        variant="contained"
+                      <IconButton
                         onClick={handleSend}
                         disabled={!draft.trim() || sendMessageLoading || deleteChatLoading}
                         sx={{
-                          minWidth: 52,
-                          height: 52,
-                          borderRadius: 3,
-                          boxShadow: "none",
+                          width: 44,
+                          height: 44,
+                          flexShrink: 0,
+                          mb: 0.25,
+                          bgcolor: draft.trim() ? "primary.main" : "grey.100",
+                          color: draft.trim() ? "white" : "grey.500",
+                          borderRadius: "50%",
+                          transition: "all 0.2s ease",
+                          "&:hover": { bgcolor: draft.trim() ? "primary.dark" : "grey.200" },
+                          "&.Mui-disabled": { bgcolor: "grey.100", color: "grey.400" },
                         }}
                       >
-                        <SendRounded />
-                      </Button>
+                        <SendRounded sx={{ fontSize: 18 }} />
+                      </IconButton>
                     </Stack>
                   </Box>
                 </>
@@ -583,19 +691,12 @@ export default function DashboardChatView({
                 <Stack sx={{ flex: 1 }} alignItems="center" justifyContent="center" spacing={1.5}>
                   <Avatar
                     variant="rounded"
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                      color: "primary.main",
-                    }}
+                    sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}
                   >
                     <ChatBubbleOutlineRounded />
                   </Avatar>
-                  <Typography variant="h6" fontWeight={800}>
-                    Select a conversation to start chatting
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ maxWidth: 320 }}>
+                  <Typography variant="h6" fontWeight={800}>Select a conversation</Typography>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ maxWidth: 300 }}>
                     Choose a conversation from the left panel to see the full message thread.
                   </Typography>
                 </Stack>

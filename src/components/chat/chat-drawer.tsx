@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
@@ -181,9 +182,11 @@ export function ChatDrawer() {
             </Stack>
           </Box>
         ) : (
-          <Stack spacing={1.5} sx={{ flex: 1, p: 2, overflowY: "auto" }}>
-            {messagesLoading && localMessages.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">Loading messages…</Typography>
+          <Stack spacing={1} sx={{ flex: 1, p: 2, overflowY: "auto" }}>
+            {(openingChat || (messagesLoading && localMessages.length === 0)) ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 120 }}>
+                <CircularProgress size={24} />
+              </Box>
             ) : localMessages.length === 0 ? (
               <Box
                 sx={{
@@ -192,16 +195,17 @@ export function ChatDrawer() {
                   bgcolor: "grey.100",
                   px: 1.5,
                   py: 1,
-                  borderRadius: 2
+                  borderRadius: "14px 14px 14px 4px",
                 }}
               >
-                <Typography variant="body2">
-                  Hi there. How can we help you today?
-                </Typography>
+                <Typography variant="body2">Hi there. How can we help you today?</Typography>
               </Box>
             ) : (
               localMessages.map((m: T) => {
                 const isMine = m.senderId === user._id;
+                const time = m.createdAt
+                  ? new Date(m.createdAt as string).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+                  : "";
                 return (
                   <Box
                     key={m._id as string}
@@ -211,11 +215,26 @@ export function ChatDrawer() {
                       bgcolor: isMine ? "primary.main" : "grey.100",
                       color: isMine ? "primary.contrastText" : "text.primary",
                       px: 1.5,
-                      py: 1,
-                      borderRadius: 2
+                      pt: 1,
+                      pb: 0.75,
+                      borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                     }}
                   >
-                    <Typography variant="body2">{m.message as string}</Typography>
+                    <Typography variant="body2" sx={{ wordBreak: "break-word" }}>{m.message as string}</Typography>
+                    {time && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          textAlign: "right",
+                          mt: 0.25,
+                          fontSize: "0.6rem",
+                          opacity: 0.7,
+                        }}
+                      >
+                        {time}
+                      </Typography>
+                    )}
                   </Box>
                 );
               })

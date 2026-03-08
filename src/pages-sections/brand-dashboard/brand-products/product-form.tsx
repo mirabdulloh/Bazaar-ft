@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import axios from "axios";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -26,6 +27,8 @@ import { CREATE_PRODUCT, UPDATE_PRODUCT } from "../../../../apollo/brand/mutatio
 import { GET_BRAND_PRODUCTS } from "../../../../apollo/brand/query";
 import { GET_CATEGORIES } from "../../../../apollo/user/query";
 import { T } from "lib/types/common";
+// AUTH
+import { getJwtToken } from "lib/auth";
 // ALERTS
 import { sweetTopSmallSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 // STYLED
@@ -56,10 +59,15 @@ type Props = {
 export default function BrandProductForm({ productId }: Props) {
   const router = useRouter();
   const isEdit = !!productId;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
 
   const [form, setForm] = useState(initialForm);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  /** Server paths (uploads/products/...) for images already on server */
+  const [serverImages, setServerImages] = useState<string[]>([]);
+  /** New files the user dropped, not yet uploaded */
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  /** Blob preview URLs for newFiles (parallel array) */
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
 
   // ─── Load categories ────────────────────────────────────────────────────────
   const { data: catData } = useQuery(GET_CATEGORIES, {
@@ -96,7 +104,7 @@ export default function BrandProductForm({ productId }: Props) {
       productColor: product.productColor || "",
       productMaterials: product.productMaterials || ""
     });
-    setImageUrls(product.productImages || []);
+    setServerImages(product.productImages || []);
   }, [isEdit, prodData, productId]);
 
   // ─── Mutations ──────────────────────────────────────────────────────────────
@@ -105,21 +113,26 @@ export default function BrandProductForm({ productId }: Props) {
 
   // ─── Image handling ─────────────────────────────────────────────────────────
   const handleImageDrop = useCallback((files: File[]) => {
-    setImageFiles((prev) => [...prev, ...files]);
-    // Preview new files
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageUrls((prev) => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+    setNewFiles((prev) => [...prev, ...files]);
+    const previews = files.map((f) => URL.createObjectURL(f));
+    setNewPreviews((prev) => [...prev, ...previews]);
   }, []);
 
+  /** Combined list for display: server images + new previews */
+  const allDisplayImages = [...serverImages, ...newPreviews];
+  const totalImages = allDisplayImages.length;
+
   const handleRemoveImage = useCallback((index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+    if (index < serverImages.length) {
+      // Removing an existing server image
+      setServerImages((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      // Removing a newly added file
+      const newIdx = index - serverImages.length;
+      setNewFiles((prev) => prev.filter((_, i) => i !== newIdx));
+      setNewPreviews((prev) => prev.filter((_, i) => i !== newIdx));
+    }
+  }, [serverImages.length]);
 
   // ─── Form change ───────────────────────────────────────────────────────────
   const handleChange = (field: string) => (e: any) => {
@@ -144,16 +157,57 @@ export default function BrandProductForm({ productId }: Props) {
       await sweetMixinErrorAlert("Product color is required.");
       return;
     }
-    if (imageUrls.length === 0) {
+    if (totalImages === 0) {
       await sweetMixinErrorAlert("At least one product image is required.");
       return;
     }
 
     try {
-      const productImages = imageUrls.filter((url) => !url.startsWith("data:"));
-      // TODO: Upload new image files to server and get URLs
-      // For now, include data URLs (your upload logic here)
-      const allImages = [...productImages, ...imageUrls.filter((url) => url.startsWith("data:"))];
+      // --- Upload new files via multipart/form-data (graphql-upload spec) ---
+      let uploadedUrls: string[] = [];
+      if (newFiles.length > 0) {
+        const token = getJwtToken();
+
+        const fileVars: Record<string, string[]> = {};
+        newFiles.forEach((_, idx) => {
+          fileVars[String(idx)] = [`variables.files.${idx}`];
+        });
+
+        const formData = new FormData();
+        formData.append(
+          "operations",
+          JSON.stringify({
+            query: `mutation ImagesUploader($files: [Upload!]!, $target: String!) {
+              imagesUploader(files: $files, target: $target)
+            }`,
+            variables: {
+              files: newFiles.map(() => null),
+              target: "products"
+            }
+          })
+        );
+        formData.append("map", JSON.stringify(fileVars));
+        newFiles.forEach((file, idx) => {
+          formData.append(String(idx), file);
+        });
+
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_GRAPHQL_URL}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              "apollo-require-preflight": "true",
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        uploadedUrls = response.data?.data?.imagesUploader ?? [];
+        if (!uploadedUrls.length) throw new Error("Image upload failed");
+      }
+
+      const allImages = [...serverImages, ...uploadedUrls];
 
       const input: any = {
         productType: form.productType,
@@ -336,20 +390,24 @@ export default function BrandProductForm({ productId }: Props) {
               info="Upload product images (PNG, JPG, GIF)"
             />
 
-            {imageUrls.length > 0 && (
+            {allDisplayImages.length > 0 && (
               <FlexBox gap={1} mt={2} flexWrap="wrap">
-                {imageUrls.map((url, idx) => (
-                  <UploadImageBox key={idx}>
-                    <Image
-                      fill
-                      src={url}
-                      alt={`product-${idx}`}
-                      sizes="70px"
-                      style={{ objectFit: "cover" }}
-                    />
-                    <StyledClear onClick={() => handleRemoveImage(idx)} />
-                  </UploadImageBox>
-                ))}
+                {allDisplayImages.map((url, idx) => {
+                  // Server images need API base prefix; blob URLs are used as-is
+                  const imgSrc = url.startsWith("blob:") ? url : `${apiBase}/${url}`;
+                  return (
+                    <UploadImageBox key={idx}>
+                      <Image
+                        fill
+                        src={imgSrc}
+                        alt={`product-${idx}`}
+                        sizes="70px"
+                        style={{ objectFit: "cover" }}
+                      />
+                      <StyledClear onClick={() => handleRemoveImage(idx)} />
+                    </UploadImageBox>
+                  );
+                })}
               </FlexBox>
             )}
           </Grid>
