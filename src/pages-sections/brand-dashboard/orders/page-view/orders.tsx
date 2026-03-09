@@ -26,6 +26,8 @@ import { tableHeading } from "../table-heading";
 import { useQuery } from "lib/hooks/useQuery";
 import { GET_BRAND_ORDERS } from "../../../../../apollo/brand/query";
 import { T } from "lib/types/common";
+// TYPES
+import type { OrderData } from "../order-row";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
@@ -107,7 +109,7 @@ export default function OrdersPageView() {
                 />
 
                 <TableBody>
-                  {list.map((orderItem: any) => (
+                  {list.map((orderItem: OrderData) => (
                     <OrderRow
                       key={orderItem._id}
                       order={orderItem}
