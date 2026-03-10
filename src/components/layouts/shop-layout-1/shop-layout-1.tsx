@@ -22,7 +22,6 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
-  HeaderChat,
   HeaderNotifications,
   HeaderUser,
   MobileHeader,
@@ -55,7 +54,6 @@ export default function ShopLayout1({ children, data }: Props) {
 
         <HeaderNotifications />
         <HeaderCart />
-        <HeaderChat />
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
     </MobileHeader>
@@ -86,8 +84,7 @@ export default function ShopLayout1({ children, data }: Props) {
             <HeaderUser />
             <HeaderNotifications />
             <HeaderCart />
-            <HeaderChat />
-          </Header.Right>
+              </Header.Right>
         </Header>
       </Sticky>
 

@@ -26,11 +26,6 @@ import ApolloWrapper from "components/ApolloWrapper";
 import RTL from "components/rtl";
 import ProgressBar from "components/progress";
 import InitialBrandLoader from "components/initial-brand-loader";
-import { ChatProvider } from "components/chat/chat-provider";
-import { SocketProvider } from "providers/SocketProvider";
-import { ChatWidget } from "components/chat/chat-widget/ChatWidget";
-import { SupportChatButton } from "components/chat/support-chat/SupportChatButton";
-import { SupportChatWindow } from "components/chat/support-chat/SupportChatWindow";
 
 // IMPORT i18n SUPPORT FILE
 import "i18n";
@@ -47,30 +42,23 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <body id="body" className={geist.className}>
         <ApolloWrapper>
-          <SocketProvider>
-            <CartProvider>
-              <VariantPickerProvider>
-                <SettingsProvider>
-                  <ThemeProvider>
-                    <RTL>
-                      <ChatProvider>
-                        <InitialBrandLoader>
-                          {modal}
-                          {children}
-                        </InitialBrandLoader>
-                        <ChatWidget />
-                        <SupportChatButton />
-                        <SupportChatWindow />
-                      </ChatProvider>
-                    </RTL>
+          <CartProvider>
+            <VariantPickerProvider>
+              <SettingsProvider>
+                <ThemeProvider>
+                  <RTL>
+                    <InitialBrandLoader>
+                      {modal}
+                      {children}
+                    </InitialBrandLoader>
+                  </RTL>
 
-                    <ProgressBar />
-                    <VariantPickerModal />
-                  </ThemeProvider>
-                </SettingsProvider>
-              </VariantPickerProvider>
-            </CartProvider>
-          </SocketProvider>
+                  <ProgressBar />
+                  <VariantPickerModal />
+                </ThemeProvider>
+              </SettingsProvider>
+            </VariantPickerProvider>
+          </CartProvider>
         </ApolloWrapper>
 
         <GoogleAnalytics gaId="G-XKPD36JXY0" />

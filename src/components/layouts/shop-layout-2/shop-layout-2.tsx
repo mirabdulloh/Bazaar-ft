@@ -8,7 +8,7 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
-  HeaderChat,
+
   HeaderLogin,
   HeaderNotifications,
   MobileHeader,
@@ -41,7 +41,7 @@ export default function ShopLayout2({ children, data }: LayoutProps) {
 
         <HeaderNotifications />
         <HeaderCart />
-        <HeaderChat />
+        
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
     </MobileHeader>
@@ -76,7 +76,7 @@ export default function ShopLayout2({ children, data }: LayoutProps) {
             <HeaderLogin />
             <HeaderNotifications />
             <HeaderCart />
-            <HeaderChat />
+            
           </Header.Right>
         </Header>
       </Sticky>

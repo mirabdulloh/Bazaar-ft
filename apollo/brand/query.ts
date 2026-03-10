@@ -127,23 +127,3 @@ export const GET_BRAND_ORDERS = gql`
   }
 `;
 
-// ─── Brand Chats ──────────────────────────────────────────────────────────────
-
-export const GET_BRAND_CHATS = gql`
-  query GetBrandChats($input: ChatsInquiry!) {
-    getBrandChats(input: $input) {
-      list {
-        _id
-        memberId
-        brandId
-        chatStatus
-        chatSubject
-        createdAt
-        updatedAt
-      }
-      metaCounter {
-        total
-      }
-    }
-  }
-`;
