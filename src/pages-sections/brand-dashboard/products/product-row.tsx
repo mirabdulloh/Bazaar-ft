@@ -1,5 +1,13 @@
 import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+function resolveImg(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return API_URL ? `${API_URL}${normalized}` : normalized;
+}
 import Typography from "@mui/material/Typography";
 // MUI ICON COMPONENTS
 import Delete from "@mui/icons-material/Delete";
@@ -30,7 +38,7 @@ export default function ProductRow({ product, onDelete }: Props) {
     createdAt
   } = product;
 
-  const image = productImages?.[0] || "";
+  const image = resolveImg(productImages?.[0]);
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
