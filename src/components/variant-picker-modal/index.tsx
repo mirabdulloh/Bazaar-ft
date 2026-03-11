@@ -14,6 +14,8 @@ import DialogContent from "@mui/material/DialogContent";
 import IconButton from "@mui/material/IconButton";
 import Close from "@mui/icons-material/Close";
 // CONTEXTS
+import { useReactiveVar } from "@apollo/client/react";
+import { userVar } from "../../../apollo/store";
 import { useVariantPicker } from "contexts/VariantPickerContext";
 import useCart from "hooks/useCart";
 import { currency } from "lib";
@@ -31,6 +33,7 @@ export default function VariantPickerModal() {
   const router = useRouter();
   const { state, closePicker } = useVariantPicker();
   const { dispatch } = useCart();
+  const user = useReactiveVar(userVar);
   const { open, product } = state;
 
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -54,6 +57,11 @@ export default function VariantPickerModal() {
   const hasColors = colorOptions.length > 0;
 
   const handleConfirm = () => {
+    if (!user?._id) {
+      closePicker();
+      router.push("/login");
+      return;
+    }
     if (hasSizes && !selectedSize) {
       setError("Please select a size");
       return;

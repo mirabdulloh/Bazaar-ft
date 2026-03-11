@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@mui/material/Button";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import { useReactiveVar } from "@apollo/client/react";
+import { userVar } from "../../../../apollo/store";
 import useCart from "hooks/useCart";
 import { useVariantPicker } from "contexts/VariantPickerContext";
 import Product from "models/Product.model";
@@ -17,10 +19,16 @@ export default function HoverActions({ product }: Props) {
   const { dispatch } = useCart();
   const { openPicker } = useVariantPicker();
   const router = useRouter();
+  const user = useReactiveVar(userVar);
   const [loading, setLoading] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // prevent Link navigation
+
+    if (!user?._id) {
+      router.push("/login");
+      return;
+    }
 
     // If the product has size or color variants, show the picker modal
     if (product.size?.length || product.colors?.length) {
