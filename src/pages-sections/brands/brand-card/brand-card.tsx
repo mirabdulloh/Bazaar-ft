@@ -1,5 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const isApiUrl = (src?: string | null) => !!src && !!API_URL && src.startsWith(API_URL);
 // MUI
 import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
@@ -43,7 +46,7 @@ export default function ShopCard(props: Partial<Shop>) {
       <FlexBetween pl={3} pr={1}>
         <Link href={`/brands/${slug}`} passHref>
           <StyledAvatar variant="rounded">
-            <Image fill alt={name!} src={profilePicture!} sizes="(75px, 75px)" />
+            <Image fill alt={name!} src={profilePicture!} sizes="(75px, 75px)" unoptimized={isApiUrl(profilePicture)} />
           </StyledAvatar>
         </Link>
 

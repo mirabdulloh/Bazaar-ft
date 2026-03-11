@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { Fragment, MouseEvent, useMemo, useState } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const isApiUrl = (src: string) => API_URL ? src.startsWith(API_URL) : false;
 // STYLED COMPONENTS
 import { PreviewImage, ProductImageWrapper } from "./styles";
 
@@ -35,7 +38,7 @@ export default function ProductGallery({ images }: { images: string[] }) {
         onClick={() => setZoomed((prev) => !prev)}
       >
         <div className="zoom-media" style={{ transformOrigin: origin }}>
-          <Image fill alt="product" src={activeImage} sizes="(400px 400px)" />
+          <Image fill alt="product" src={activeImage} sizes="(400px 400px)" unoptimized={isApiUrl(activeImage)} />
         </div>
       </ProductImageWrapper>
 
@@ -46,7 +49,7 @@ export default function ProductGallery({ images }: { images: string[] }) {
             onClick={() => setCurrentImage(ind)}
             selected={currentImage === ind}
           >
-            <Image fill alt="product" src={url} sizes="(48px 48px)" />
+            <Image fill alt="product" src={url} sizes="(48px 48px)" unoptimized={isApiUrl(url)} />
           </PreviewImage>
         ))}
       </div>

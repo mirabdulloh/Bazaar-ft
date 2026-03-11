@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import axios from "axios";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
@@ -415,12 +414,11 @@ export default function BrandProductForm({ productId }: Props) {
                   const imgSrc = url.startsWith("blob:") ? url : `${apiBase}/${url}`;
                   return (
                     <UploadImageBox key={idx}>
-                      <Image
-                        fill
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={imgSrc}
                         alt={`product-${idx}`}
-                        sizes="70px"
-                        style={{ objectFit: "cover" }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       />
                       <StyledClear onClick={() => handleRemoveImage(idx)} />
                     </UploadImageBox>

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 // MUI
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -67,7 +69,7 @@ export default function MiniCartItem({ item, onCart }: Props) {
     <StyledRoot>
       <Link href={`/products/${item.slug}`}>
         <StyledAvatar variant="rounded">
-          <Image alt={item.title} src={item.thumbnail} fill sizes="(100px, 100px)" />
+          <Image alt={item.title} src={item.thumbnail} fill sizes="(100px, 100px)" unoptimized={!!API_URL && item.thumbnail.startsWith(API_URL)} />
         </StyledAvatar>
       </Link>
 
