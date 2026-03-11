@@ -26,7 +26,7 @@ export default function Section1() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ display: { xs: "none", md: "block" } }}>
           <Card
             badge={t("Exclusive Brands", { defaultValue: "Exclusive Brands" })}
             body={t("Shop curated looks from the best fashion brands.", {
@@ -41,7 +41,7 @@ export default function Section1() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: { xs: "none", md: "block" } }}>
           <CardTwo
             badge={t("Men’s Essentials", { defaultValue: "Men’s Essentials" })}
             body={t("Clean cuts, premium materials.", { defaultValue: "Clean cuts, premium materials." })}
@@ -54,7 +54,7 @@ export default function Section1() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: { xs: "none", md: "block" } }}>
           <CardTwo
             badge={t("Women’s Collection", { defaultValue: "Women’s Collection" })}
             body={t("From casual to bold — all seasons covered.", {
@@ -67,7 +67,7 @@ export default function Section1() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: { xs: "none", md: "block" } }}>
           <CardTwo
             badge={t("Limited Deals", { defaultValue: "Limited Deals" })}
             body={t("Shop sale items before they’re gone.", {

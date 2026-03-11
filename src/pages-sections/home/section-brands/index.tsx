@@ -60,7 +60,7 @@ export default function FeaturedBrandsSection() {
       {getBrandsLoading ? (
         <Box display="flex" gap={2} overflow="hidden">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Box key={i} sx={{ minWidth: { xs: "75vw", sm: 280 }, flex: "0 0 auto" }}>
+            <Box key={i} sx={{ minWidth: { xs: "90%", sm: "75vw", md: 280 }, flex: "0 0 auto", display: { xs: i === 0 ? "block" : "none", sm: "block" } }}>
               <Skeleton variant="rectangular" height={180} sx={{ borderRadius: 2 }} />
               <Skeleton variant="text" width="60%" sx={{ mt: 1 }} height={28} />
               <Skeleton variant="text" width="80%" height={20} />

@@ -15,7 +15,7 @@ export default function Section4() {
     <Container className="mb-5">
       <Grid container spacing={3}>
         <Grid container spacing={3} size={{ md: 6, xs: 12 }}>
-          <Grid size={12}>
+          <Grid size={12} sx={{ display: { xs: "none", md: "block" } }}>
             <Card
               title={t("Accessories to elevate every outfit.", {
                 defaultValue: "Accessories to elevate every outfit."
@@ -44,7 +44,7 @@ export default function Section4() {
           </Grid>
         </Grid>
 
-        <Grid size={{ md: 6, xs: 12 }}>
+        <Grid size={{ md: 6, xs: 12 }} sx={{ display: { xs: "none", md: "block" } }}>
           <CardThree
             title={t("OUTERWEAR", { defaultValue: "OUTERWEAR" })}
             imgUrl="/assets/images/banners/banner-74-hq.jpg"
