@@ -24,6 +24,7 @@ import { signUp } from "lib/auth";
 // REGISTER FORM FIELD VALIDATION SCHEMA
 type RegisterValues = {
   nick: string;
+  email: string;
   phone: string;
   password: string;
   re_password: string;
@@ -33,6 +34,7 @@ type RegisterValues = {
 
 const validationSchema = yup.object().shape({
   nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Name is required"),
+  email: yup.string().email("Enter a valid email address").required("Email is required"),
   phone: yup.string().matches(/^\+?[0-9]{7,15}$/, "Digits only, e.g. +821012345678").required("Phone number is required"),
   password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required"),
   re_password: yup
@@ -60,6 +62,7 @@ export default function RegisterPageView() {
 
   const initialValues = {
     nick: "",
+    email: "",
     phone: "",
     password: "",
     re_password: "",
@@ -81,8 +84,10 @@ export default function RegisterPageView() {
 
   const handleSubmitForm = handleSubmit(async (values: RegisterValues) => {
     try {
-      await signUp(values.nick, values.password, values.phone, values.accountType);
-      router.push("/");
+      const { isPending } = await signUp(values.nick, values.password, values.phone, values.accountType, values.email);
+      // Pending = email sent, send them to login page to wait
+      // Not pending = signed up without email, auto-logged in, go home
+      router.push(isPending ? "/login" : "/");
     } catch {
       // Error alert is shown inside signUp — just stay on the register page
     }
@@ -93,6 +98,11 @@ export default function RegisterPageView() {
       <div className="mb-1">
         <Label>Full Name</Label>
         <TextField fullWidth name="nick" size="medium" placeholder="Your name" />
+      </div>
+
+      <div className="mb-1">
+        <Label>Email Address</Label>
+        <TextField fullWidth name="email" size="medium" type="email" placeholder="you@example.com" />
       </div>
 
       <div className="mb-1">

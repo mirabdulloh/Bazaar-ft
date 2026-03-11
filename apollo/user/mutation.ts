@@ -913,6 +913,22 @@ export const UPDATE_COMMENT = gql`
 
 // ─── Coupons ──────────────────────────────────────────────────────────────────
 
+export const VERIFY_EMAIL = gql`
+  mutation VerifyEmail($token: String!) {
+    verifyEmail(token: $token) {
+      _id
+      memberType
+      memberStatus
+      memberNick
+      memberFullName
+      memberEmail
+      memberImage
+      accessToken
+      refreshToken
+    }
+  }
+`;
+
 export const CLAIM_COUPON = gql`
   mutation ClaimCoupon($couponCode: String!) {
     claimCoupon(couponCode: $couponCode) {

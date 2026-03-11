@@ -2,7 +2,7 @@ import { jwtDecode } from 'jwt-decode';
 import { initializeApollo } from '../../../apollo/client';
 import { userVar } from '../../../apollo/store';
 import { CustomJwtPayload } from '../types/customJwtPayload';
-import { sweetTopSmallErrorAlert } from '../sweetAlert';
+import { sweetTopSmallErrorAlert, sweetTopSmallSuccessAlert } from '../sweetAlert';
 import { LOGIN, SIGN_UP } from '../../../apollo/user/mutation';
 
 export function getJwtToken(): any {
@@ -23,7 +23,7 @@ export function getRefreshToken(): string {
 }
 
 export function setRefreshToken(token: string) {
-	localStorage.setItem('refreshToken', token);
+	if (typeof window !== 'undefined') localStorage.setItem('refreshToken', token);
 }
 
 export const logIn = async (nick: string, password: string): Promise<void> => {
@@ -75,13 +75,20 @@ const requestJwtToken = async ({
 	}
 };
 
-export const signUp = async (nick: string, password: string, phone: string, type: string): Promise<void> => {
-	const { jwtToken, memberData } = await requestSignUpJwtToken({ nick, password, phone, type });
+export const signUp = async (nick: string, password: string, phone: string, type: string, email?: string): Promise<{ isPending: boolean }> => {
+	const { jwtToken, memberData } = await requestSignUpJwtToken({ nick, password, phone, type, email });
+
+	// If member is PENDING (email verification required), do not log in
+	if (memberData?.memberStatus === 'PENDING') {
+		await sweetTopSmallSuccessAlert('Check your email to verify your account!', 5000);
+		return { isPending: true };
+	}
 
 	if (jwtToken) {
 		updateStorage({ jwtToken });
 		setUserFromMemberData(memberData);
 	}
+	return { isPending: false };
 };
 
 const requestSignUpJwtToken = async ({
@@ -89,11 +96,13 @@ const requestSignUpJwtToken = async ({
 	password,
 	phone,
 	type,
+	email,
 }: {
 	nick: string;
 	password: string;
 	phone: string;
 	type: string;
+	email?: string;
 }): Promise<{ jwtToken: string; memberData: any }> => {
 	const apolloClient = initializeApollo();
 
@@ -101,7 +110,7 @@ const requestSignUpJwtToken = async ({
 		const result = await apolloClient.mutate({
 			mutation: SIGN_UP,
 			variables: {
-				input: { memberNick: nick, memberPassword: password, memberPhone: phone, memberType: type },
+				input: { memberNick: nick, memberPassword: password, memberPhone: phone, memberType: type, ...(email ? { memberEmail: email } : {}) },
 			},
 			fetchPolicy: 'network-only',
 		});
