@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { Observable, ApolloClient, HttpLink, InMemoryCache, CombinedGraphQLErrors, FetchResult } from '@apollo/client';
+import { Observable, ApolloClient, HttpLink, InMemoryCache, CombinedGraphQLErrors } from '@apollo/client';
+import type { FetchResult } from '@apollo/client';
 import { ApolloLink } from '@apollo/client/link';
 import { ErrorLink } from '@apollo/client/link/error';
 import { getJwtToken, getRefreshToken, setJwtToken, setRefreshToken } from '../src/lib/auth';
 import { setUserFromMemberData } from '../src/lib/auth';
 import { sweetErrorAlert } from '../src/lib/sweetAlert';
-import { REFRESH_TOKEN } from './user/mutation';
 
 let apolloClient: ApolloClient;
 
@@ -150,7 +150,27 @@ function createApolloClient() {
 	return new ApolloClient({
 		ssrMode: typeof window === 'undefined',
 		link: createIsomorphicLink(),
-		cache: new InMemoryCache(),
+		cache: new InMemoryCache({
+			// MongoDB uses _id — tell Apollo to use it as the cache key for all types
+			typePolicies: {
+				Member: { keyFields: ['_id'] },
+				Product: { keyFields: ['_id'] },
+				Brand: { keyFields: ['_id'] },
+				Category: { keyFields: ['_id'] },
+				Order: { keyFields: ['_id'] },
+				OrderItem: { keyFields: ['_id'] },
+				Review: { keyFields: ['_id'] },
+				Address: { keyFields: ['_id'] },
+				Notification: { keyFields: ['_id'] },
+				Follow: { keyFields: ['_id'] },
+				BoardArticle: { keyFields: ['_id'] },
+				Comment: { keyFields: ['_id'] },
+				Coupon: { keyFields: ['_id'] },
+				Message: { keyFields: ['_id'] },
+				Chat: { keyFields: ['_id'] },
+				FAQ: { keyFields: ['_id'] },
+			},
+		}),
 	});
 }
 

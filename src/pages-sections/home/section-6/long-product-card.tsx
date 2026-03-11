@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useReactiveVar } from "@apollo/client/react";
+import { userVar } from "../../../../apollo/store";
+import { sweetTopSmallErrorAlert } from "lib/sweetAlert";
 // MUI
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
@@ -30,11 +33,16 @@ export default function LongProductCard({ product, likeProductHandler }: Props) 
 
   const { slug, title, price, thumbnail, rating, discount, productLikes } = product;
 
+  const user = useReactiveVar(userVar);
   const [liked, setLiked] = useState(product.meLiked ?? false);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user?._id) {
+      sweetTopSmallErrorAlert("Please log in to like products", 2500);
+      return;
+    }
     setLiked((prev) => !prev);
     likeProductHandler?.(product.id);
   };

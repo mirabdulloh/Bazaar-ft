@@ -113,8 +113,9 @@ export default function Section2() {
       }
       await sweetLikeSuccessAlert();
     } catch (err: any) {
-      console.log('Err on likeProductHandler:', err);
-      sweetMixinErrorAlert(err.message).then();
+      if (err.message !== Message.NOT_AUTHENTICATED) {
+        sweetMixinErrorAlert(err.message).then();
+      }
     }
   };
 
