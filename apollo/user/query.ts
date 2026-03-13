@@ -118,6 +118,7 @@ export const GET_BRANDS = gql`
           memberRank
           memberLikes
           memberViews
+          memberFollowers
         }
         meLiked {
           memberId

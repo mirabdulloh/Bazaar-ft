@@ -237,7 +237,7 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 											>
 												<GroupIcon sx={{ fontSize: 24, color: "text.secondary" }} />
 												<Typography variant="caption" color="text.secondary" noWrap>
-													{brand.brandFollowersCount?.toLocaleString()} followers
+													{(brand.memberData?.memberFollowers ?? brand.brandFollowersCount ?? 0).toLocaleString()} followers
 												</Typography>
 											</Stack>
 										</Stack>
@@ -271,7 +271,7 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 											>
 												<GroupIcon sx={{ fontSize: 24, color: "text.secondary" }} />
 												<Typography variant="caption" color="text.secondary">
-													{brand.brandFollowersCount?.toLocaleString()} followers
+													{(brand.memberData?.memberFollowers ?? brand.brandFollowersCount ?? 0).toLocaleString()} followers
 												</Typography>
 											</Stack>
 											<Stack alignItems="center" direction="row" gap={0.5}>

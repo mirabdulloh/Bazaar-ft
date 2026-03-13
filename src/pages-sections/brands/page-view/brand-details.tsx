@@ -82,7 +82,7 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 								<Stack direction="row" alignItems="center" gap={0.5}>
 									<GroupIcon sx={{ fontSize: 16, color: "text.secondary" }} />
 									<Typography variant="body2" color="text.secondary">
-										{brand.brandFollowersCount?.toLocaleString()} followers
+										{(brand.memberData?.memberFollowers ?? brand.brandFollowersCount ?? 0).toLocaleString()} followers
 									</Typography>
 								</Stack>
 								<Stack direction="row" alignItems="center" gap={0.5}>
