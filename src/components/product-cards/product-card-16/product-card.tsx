@@ -22,7 +22,7 @@ import AddToCart from "./add-to-cart";
 import DiscountChip from "../discount-chip";
 // CUSTOM UTILS LIBRARY FUNCTIONS
 import { calculateDiscount, currency } from "lib";
-import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert, sweetTopSmallErrorAlert } from "lib/sweetAlert";
 // STYLED COMPONENTS
 import { PriceText, StyledRoot } from "./styles";
 // CUSTOM DATA MODEL
@@ -66,7 +66,11 @@ export default function ProductCard16({ product }: Props) {
       }
     } catch (err: any) {
       console.log("Err on handleLike:", err);
-      sweetMixinErrorAlert(err.message).then();
+      if (err.message === Message.NOT_AUTHENTICATED) {
+        sweetTopSmallErrorAlert("Please log in to like products", 2500);
+      } else {
+        sweetMixinErrorAlert(err.message).then();
+      }
     }
   };
 

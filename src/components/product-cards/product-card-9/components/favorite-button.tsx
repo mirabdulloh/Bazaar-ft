@@ -8,7 +8,7 @@ import { useMutation, useReactiveVar } from "@apollo/client/react";
 import { LIKE_TARGET_PRODUCT } from "../../../../../apollo/user/mutation";
 import { userVar } from "../../../../../apollo/store";
 // UTILS
-import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
+import { sweetLikeSuccessAlert, sweetUnlikeAlert, sweetMixinErrorAlert, sweetTopSmallErrorAlert } from "lib/sweetAlert";
 import { Message } from "../../../../lib/types/common";
 // DATA MODEL
 import Product from "models/Product.model";
@@ -51,7 +51,11 @@ export default function FavoriteButton({ product, mode = "floating", onLikesChan
       }
     } catch (err: any) {
       console.log("Err on FavoriteButton:", err);
-      sweetMixinErrorAlert(err.message).then();
+      if (err.message === Message.NOT_AUTHENTICATED) {
+        sweetTopSmallErrorAlert("Please log in to like products", 2500);
+      } else {
+        sweetMixinErrorAlert(err.message).then();
+      }
     }
   };
 

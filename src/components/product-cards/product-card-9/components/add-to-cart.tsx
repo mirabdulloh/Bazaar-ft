@@ -8,6 +8,9 @@ import Button from "@mui/material/Button";
 // GLOBAL CUSTOM HOOKS
 import useCart from "hooks/useCart";
 import { useVariantPicker } from "contexts/VariantPickerContext";
+// APOLLO
+import { useReactiveVar } from "@apollo/client/react";
+import { userVar } from "../../../../../apollo/store";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 
@@ -21,9 +24,14 @@ export default function AddToCartButton({ product }: Props) {
   const { dispatch } = useCart();
   const { openPicker } = useVariantPicker();
   const router = useRouter();
+  const user = useReactiveVar(userVar);
   const [isLoading, setLoading] = useState(false);
 
   const handleAddToCart = () => {
+    if (!user?._id) {
+      router.push("/login");
+      return;
+    }
     if (product.size?.length || product.colors?.length) {
       openPicker(product);
       return;
