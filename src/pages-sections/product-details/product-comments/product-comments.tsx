@@ -25,8 +25,18 @@ import { GET_COMMENTS } from "../../../../apollo/user/query";
 import { CREATE_COMMENT, UPDATE_COMMENT } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 
+type CommentGroupType = "PRODUCT" | "ARTICLE";
+
 // ================================================================
-type Props = { productId: string };
+type Props = {
+  productId?: string;
+  refId?: string;
+  commentGroup?: CommentGroupType;
+  emptyText?: string;
+  writePlaceholder?: string;
+  authText?: string;
+  maxWidth?: number | string;
+};
 // ================================================================
 
 interface GqlComment {
@@ -120,8 +130,17 @@ function ReplyForm({
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-export default function ProductComments({ productId }: Props) {
+export default function ProductComments({
+  productId,
+  refId,
+  commentGroup = "PRODUCT",
+  emptyText = "No comments yet. Be the first to share your thoughts!",
+  writePlaceholder = "Write a comment…",
+  authText = "Please log in to leave a comment.",
+  maxWidth = 720,
+}: Props) {
   const user = useReactiveVar(userVar);
+  const targetRefId = refId ?? productId ?? "";
 
   const [newComment, setNewComment] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -139,9 +158,10 @@ export default function ProductComments({ productId }: Props) {
   const { loading, error, refetch, data: rawData } = useQuery(GET_COMMENTS, {
     fetchPolicy: "cache-and-network",
     variables: {
-      input: { page, limit, search: { commentRefId: productId } }
+      input: { page, limit, search: { commentRefId: targetRefId } }
     },
-    notifyOnNetworkStatusChange: true
+    notifyOnNetworkStatusChange: true,
+    skip: !targetRefId,
   });
 
   // Derive comments directly from query data — always in sync with the cache
@@ -191,6 +211,11 @@ export default function ProductComments({ productId }: Props) {
     setSubmitting(true);
     try {
       await createComment({ variables: { input: { commentGroup: "PRODUCT", commentRefId: productId, commentContent: content } } });
+      await createComment({
+        variables: {
+          input: { commentGroup, commentRefId: targetRefId, commentContent: content }
+        }
+      });
       setNewComment("");
       setPage(1);
       await refetch();
@@ -224,7 +249,12 @@ export default function ProductComments({ productId }: Props) {
     try {
       await createComment({
         variables: {
-          input: { commentGroup: "PRODUCT", commentRefId: productId, commentReplyId: effectiveParentId, commentContent: content }
+          input: {
+            commentGroup,
+            commentRefId: targetRefId,
+            commentReplyId: effectiveParentId,
+            commentContent: content
+          }
         }
       });
       setReplyingToId(null);
@@ -370,11 +400,11 @@ export default function ProductComments({ productId }: Props) {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ maxWidth: 720 }}>
+    <Box sx={{ maxWidth }}>
       {/* ── COMMENT LIST ── */}
       {topLevelComments.length === 0 ? (
         <Typography variant="body1" color="text.secondary">
-          No comments yet. Be the first to share your thoughts!
+          {emptyText}
         </Typography>
       ) : (
         topLevelComments.map((comment) => {
@@ -426,7 +456,7 @@ export default function ProductComments({ productId }: Props) {
             <Box sx={{ flex: 1 }}>
               <TextField
                 fullWidth multiline minRows={2} size="small"
-                placeholder="Write a comment…"
+                placeholder={writePlaceholder}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 sx={{ mb: 1 }}
@@ -442,7 +472,7 @@ export default function ProductComments({ productId }: Props) {
           </Box>
         ) : (
           <Typography variant="body2" color="text.secondary">
-            Please <strong>log in</strong> to leave a comment.
+            {authText}
           </Typography>
         )}
       </Box>

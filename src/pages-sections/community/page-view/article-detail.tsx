@@ -22,7 +22,13 @@ import { LIKE_TARGET_BOARD_ARTICLE } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { useQuery } from "lib/hooks/useQuery";
 import { Article } from "../../../lib/types/Article";
-import { T } from "../../../lib/types/common";
+import { Message, T } from "../../../lib/types/common";
+import {
+	sweetLikeSuccessAlert,
+	sweetMixinErrorAlert,
+	sweetTopSmallErrorAlert,
+	sweetUnlikeAlert,
+} from "../../../lib/sweetAlert";
 
 const CATEGORY_LABELS: Record<string, string> = {
 	FASHIONGUIDES: "Fashion Guides",
@@ -45,7 +51,6 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 		loading: getBoardArticleLoading,
 		data: _getBoardArticleData,
 		error: getBoardArticleError,
-		refetch: getBoardArticleRefetch,
 	} = useQuery(GET_BOARD_ARTICLE, {
 		fetchPolicy: "cache-and-network",
 		variables: { input: initialInput.articleId },
@@ -86,34 +91,40 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const likeArticleHandler = async (e: T) => {
 		try {
 			e.preventDefault();
+			e.stopPropagation?.();
 			if (!article?._id) return;
-			if (!user._id) return;
+			if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
 
 			const currentlyLiked = article.meLiked?.[0]?.myFavorite ?? false;
+			const { data } = await likeTargetBoardArticle({ variables: { input: article._id } });
+			const updatedLikes =
+				(data as T)?.likeTargetBoardArticle?.articleLikes ?? article.articleLikes ?? 0;
+			const nextLiked = !currentlyLiked;
+
 			setArticle((prev) =>
 				prev
 					? {
 							...prev,
-							articleLikes: Math.max(
-								0,
-								prev.articleLikes + (currentlyLiked ? -1 : 1)
-							),
+							articleLikes: updatedLikes,
 							meLiked: [
 								{
 									memberId: user._id,
 									likeRefId: prev._id,
-									myFavorite: !currentlyLiked,
+									myFavorite: nextLiked,
 								},
 							],
 					  }
 					: prev
 			);
 
-			await likeTargetBoardArticle({ variables: { input: article._id } });
-			await getBoardArticleRefetch({ input: initialInput.articleId });
+			if (currentlyLiked) await sweetUnlikeAlert();
+			else await sweetLikeSuccessAlert();
 		} catch (err: any) {
-			console.log("Error on likeArticleHandler:", err);
-			await getBoardArticleRefetch({ input: initialInput.articleId });
+			if (err.message === Message.NOT_AUTHENTICATED) {
+				await sweetTopSmallErrorAlert("Please log in to like articles", 2500);
+			} else {
+				await sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
+			}
 		}
 	};
 

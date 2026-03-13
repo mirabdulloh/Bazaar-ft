@@ -24,7 +24,13 @@ import { GET_BOARD_ARTICLES } from "../../../../apollo/user/query";
 import { LIKE_TARGET_BOARD_ARTICLE } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { Article, ArticleCategory } from "../../../lib/types/Article";
-import { T } from "../../../lib/types/common";
+import { Message, T } from "../../../lib/types/common";
+import {
+	sweetLikeSuccessAlert,
+	sweetMixinErrorAlert,
+	sweetTopSmallErrorAlert,
+	sweetUnlikeAlert,
+} from "../../../lib/sweetAlert";
 
 const CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
 	{ value: "", label: "All" },
@@ -49,7 +55,6 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 		loading: getBoardArticlesLoading,
 		data: _getBoardArticlesData,
 		error: getBoardArticlesError,
-		refetch: getBoardArticlesRefetch,
 	} = useQuery(GET_BOARD_ARTICLES, {
 		fetchPolicy: "cache-and-network",
 		variables: { input: searchArticles },
@@ -74,27 +79,30 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 	const likeArticleHandler = async (e: T, articleId: string) => {
 		try {
 			e.preventDefault();
+			e.stopPropagation?.();
 			if (!articleId) return;
-			if (!user._id) return;
+			if (!user?._id) throw new Error(Message.NOT_AUTHENTICATED);
 
-			// Optimistic UI update to prevent card flicker while refetching
 			const currentArticle = articles.find((article) => article._id === articleId);
 			const currentlyLiked = currentArticle?.meLiked?.[0]?.myFavorite ?? false;
+			const { data } = await likeTargetBoardArticle({ variables: { input: articleId } });
+			const updatedLikes =
+				(data as T)?.likeTargetBoardArticle?.articleLikes ??
+				currentArticle?.articleLikes ??
+				0;
+			const nextLiked = !currentlyLiked;
 
 			setArticles((prev) =>
 				prev.map((article) =>
 					article._id === articleId
 						? {
 								...article,
-								articleLikes: Math.max(
-									0,
-									article.articleLikes + (currentlyLiked ? -1 : 1)
-								),
+								articleLikes: updatedLikes,
 								meLiked: [
 									{
 										memberId: user._id,
 										likeRefId: articleId,
-										myFavorite: !currentlyLiked,
+										myFavorite: nextLiked,
 									},
 								],
 						  }
@@ -102,11 +110,14 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 				)
 			);
 
-			await likeTargetBoardArticle({ variables: { input: articleId } });
-			await getBoardArticlesRefetch({ input: searchArticles });
+			if (currentlyLiked) await sweetUnlikeAlert();
+			else await sweetLikeSuccessAlert();
 		} catch (err: any) {
-			console.log("Error on likeArticleHandler:", err);
-			await getBoardArticlesRefetch({ input: searchArticles });
+			if (err.message === Message.NOT_AUTHENTICATED) {
+				await sweetTopSmallErrorAlert("Please log in to like articles", 2500);
+			} else {
+				await sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG);
+			}
 		}
 	};
 

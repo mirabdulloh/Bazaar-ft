@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useReactiveVar } from "@apollo/client/react";
 // MUI
 import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
@@ -7,6 +8,11 @@ import MenuItem from "@mui/material/MenuItem";
 import { styled } from "@mui/material/styles";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import { GET_MY_BRAND } from "../../../../../apollo/brand/query";
+import { useQuery } from "lib/hooks/useQuery";
+import { userVar } from "../../../../../apollo/store";
+import { T } from "lib/types/common";
 
 // STYLED COMPONENT
 const Divider = styled("div")(({ theme }) => ({
@@ -14,9 +20,28 @@ const Divider = styled("div")(({ theme }) => ({
   border: `1px dashed ${theme.palette.grey[200]}`
 }));
 
+function resolveImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 export default function AccountPopover() {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const open = Boolean(anchorEl);
+  const user = useReactiveVar(userVar);
+  const { data, loading } = useQuery(GET_MY_BRAND, {
+    fetchPolicy: "cache-and-network",
+    skip: user?.memberType !== "BRAND",
+  });
+
+  const brand = (data as T)?.getMyBrand;
+  const avatarSrc = resolveImage(brand?.brandLogo || user?.memberImage || "");
+  const displayName = brand?.brandName || user?.memberNick || "Brand";
+  const displayRole = brand?.brandStatus || user?.memberType || "BRAND";
 
   const handleClose = () => setAnchorEl(null);
 
@@ -29,7 +54,9 @@ export default function AccountPopover() {
         aria-expanded={open ? "true" : undefined}
         aria-controls={open ? "account-menu" : undefined}
       >
-        <Avatar alt="Remy Sharp" src="/assets/images/avatars/001-man.svg" />
+        <Avatar alt={displayName} src={avatarSrc}>
+          {displayName?.[0] || "B"}
+        </Avatar>
       </IconButton>
 
       <Menu
@@ -74,9 +101,11 @@ export default function AccountPopover() {
         }}
       >
         <Box px={2} pt={1}>
-          <Typography variant="h6">Gage Paquette</Typography>
+          <Typography variant="h6">
+            {displayName}
+          </Typography>
           <Typography variant="body1" sx={{ fontSize: 12, color: "grey.500" }}>
-            Admin
+            {loading ? <CircularProgress size={10} /> : String(displayRole)}
           </Typography>
         </Box>
 
