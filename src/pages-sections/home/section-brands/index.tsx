@@ -23,6 +23,15 @@ import { GET_BRANDS } from "../../../../apollo/user/query";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
 
+function resolveBrandImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 export default function FeaturedBrandsSection() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const { t } = useTranslation();
@@ -87,7 +96,7 @@ export default function FeaturedBrandsSection() {
                   <CardMedia
                     component="img"
                     height={180}
-                    image={brand.brandLogo}
+                    image={resolveBrandImage(brand.brandLogo)}
                     alt={brand.brandName}
                     sx={{ objectFit: "cover" }}
                   />

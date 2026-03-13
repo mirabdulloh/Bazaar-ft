@@ -32,6 +32,15 @@ import { Brand } from "../../../lib/types/Brand";
 import { Message, T } from "../../../lib/types/common";
 import { sweetLikeSuccessAlert, sweetMixinErrorAlert, sweetTopSmallErrorAlert, sweetUnlikeAlert } from "../../../lib/sweetAlert";
 
+function resolveBrandImage(img?: string | null): string {
+	if (!img || img === "null" || img === "undefined") return "";
+	if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+	const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+	const normalized = img.startsWith("/") ? img : `/${img}`;
+	return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: "memberRank", direction: "DESC" } }: T) => {
 	const [searchBrands, setSearchBrands] = useState({ ...initialInput });
 	const [brands, setBrands] = useState<Brand[]>([]);
@@ -191,7 +200,7 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 											sx={{
 												height: 210,
 												bgcolor: "grey.100",
-												backgroundImage: `url(${brand.brandLogo})`,
+												backgroundImage: `url(${resolveBrandImage(brand.brandLogo)})`,
 												backgroundRepeat: "no-repeat",
 												backgroundPosition: "center",
 												backgroundSize: "cover",

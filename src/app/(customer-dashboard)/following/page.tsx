@@ -24,6 +24,15 @@ import HeartLine from "icons/HeartLine";
 // CUSTOM TYPES
 import { T } from "../../../lib/types/common";
 
+function resolveBrandImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 export default function FollowingPage() {
   const user = useReactiveVar(userVar);
 
@@ -98,7 +107,7 @@ export default function FollowingPage() {
                       {brand.brandLogo ? (
                         <Box sx={{ position: "relative", width: 52, height: 52, flexShrink: 0, borderRadius: 1, overflow: "hidden" }}>
                           <Image
-                            src={brand.brandLogo as string}
+                            src={resolveBrandImage(brand.brandLogo as string)}
                             alt={brand.brandName as string}
                             fill
                             style={{ objectFit: "cover" }}

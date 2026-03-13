@@ -20,6 +20,15 @@ import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
 import ProductSearchPageView from "../../product-details/page-view/product-search";
 
+function resolveBrandImage(img?: string | null): string {
+	if (!img || img === "null" || img === "undefined") return "";
+	if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+	const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+	const normalized = img.startsWith("/") ? img : `/${img}`;
+	return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 	const [brand, setBrand] = useState<Brand | null>(null);
@@ -62,7 +71,7 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 					>
 						<Link href={`/member/${brand.memberData?._id ?? brandId}`}>
 							<Avatar
-								src={brand.brandLogo}
+								src={resolveBrandImage(brand.brandLogo)}
 								alt={brand.brandName}
 								sx={{ width: 100, height: 100, flexShrink: 0, cursor: "pointer", transition: "opacity 0.2s", "&:hover": { opacity: 0.8 } }}
 							/>
