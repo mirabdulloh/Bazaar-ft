@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { ProductCreatePageView } from "pages-sections/brand-dashboard/products/page-view";
 
 export const metadata: Metadata = {
-  title: "Product Create - Seoulé",
-  description: `Seoulé — Fashion platform connecting brands and shoppers`,
+  title: "Product Create - BAZAAR",
+  description: `BAZAAR — Fashion platform connecting brands and shoppers`,
   
   keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
 };

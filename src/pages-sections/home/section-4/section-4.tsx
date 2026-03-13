@@ -50,10 +50,10 @@ export default function Section4() {
             imgUrl="/assets/images/banners/banner-74-hq.jpg"
             href="/products/search?categoryName=Clothing"
             body={t(
-              "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.",
+              "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.",
               {
                 defaultValue:
-                  "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands."
+                  "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands."
               }
             )}
           />

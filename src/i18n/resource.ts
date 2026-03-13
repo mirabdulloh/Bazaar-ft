@@ -51,7 +51,7 @@ export const resources = {
       "TOPS & SHIRTS": "TOPS & SHIRTS",
       "Fresh styles from top brands.": "Fresh styles from top brands.",
       "OUTERWEAR": "OUTERWEAR",
-      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.": "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.",
       "My Profile": "My Profile"
     }
   },
@@ -107,7 +107,7 @@ export const resources = {
       "TOPS & SHIRTS": "ТОПЫ И РУБАШКИ",
       "Fresh styles from top brands.": "Свежие модели от лучших брендов.",
       "OUTERWEAR": "ВЕРХНЯЯ ОДЕЖДА",
-      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Утепляйтесь лучшими куртками и пальто сезона. Подборка верхней одежды от брендов Seoulé.",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.": "Утепляйтесь лучшими куртками и пальто сезона. Подборка верхней одежды от брендов BAZAAR.",
       "My Profile": "Мой профиль"
     }
   },
@@ -163,7 +163,7 @@ export const resources = {
       "TOPS & SHIRTS": "TOPLAR VA KO‘YLAKLAR",
       "Fresh styles from top brands.": "Eng yaxshi brendlardan yangi uslublar.",
       "OUTERWEAR": "USTKI KIYIM",
-      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "Mavsumning eng yaxshi kurtka va paltolari bilan qatlamlang. Seoulé brendlaridan saralangan ustki kiyimlar.",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.": "Mavsumning eng yaxshi kurtka va paltolari bilan qatlamlang. BAZAAR brendlaridan saralangan ustki kiyimlar.",
       "My Profile": "Mening profilim"
     }
   },
@@ -219,7 +219,7 @@ export const resources = {
       "TOPS & SHIRTS": "탑 & 셔츠",
       "Fresh styles from top brands.": "인기 브랜드의 새로운 스타일.",
       "OUTERWEAR": "아우터웨어",
-      "Layer up with the season's finest jackets and coats. Shop curated outerwear from Seoulé brands.": "이번 시즌 최고의 재킷과 코트로 레이어링하세요. Seoulé 브랜드의 엄선된 아우터를 만나보세요.",
+      "Layer up with the season's finest jackets and coats. Shop curated outerwear from BAZAAR brands.": "이번 시즌 최고의 재킷과 코트로 레이어링하세요. BAZAAR 브랜드의 엄선된 아우터를 만나보세요.",
       "My Profile": "내 프로필"
     }
   }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import NotificationsPageView from "pages-sections/customer-dashboard/notifications/page-view/notifications";
 
 export const metadata: Metadata = {
-  title: "Notifications - Seoulé",
+  title: "Notifications - BAZAAR",
   description: "View your notifications",
 };
 

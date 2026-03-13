@@ -3,8 +3,8 @@ import { ShopsPageView } from "pages-sections/brands/page-view";
 import { getShopList } from "utils/__api__/brands";
 
 export const metadata: Metadata = {
-  title: "Brands - Seoulé",
-  description: "Discover all fashion brands on Seoulé. Shop clothing, shoes, and accessories from independent brands.",
+  title: "Brands - BAZAAR",
+  description: "Discover all fashion brands on BAZAAR. Shop clothing, shoes, and accessories from independent brands.",
 };
 
 export default async function BrandsPage() {

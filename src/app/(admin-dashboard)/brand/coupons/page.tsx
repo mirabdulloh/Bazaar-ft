@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BrandCouponsPageView } from "pages-sections/brand-dashboard/brand-coupons/page-view";
 
 export const metadata: Metadata = {
-  title: "Coupons - Seoulé Brand Dashboard",
+  title: "Coupons - BAZAAR Brand Dashboard",
   description: "Create and manage brand coupons",
 };
 

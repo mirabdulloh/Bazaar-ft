@@ -4,8 +4,8 @@ import { TicketsPageView } from "pages-sections/customer-dashboard/support-ticke
 import api from "utils/__api__/ticket";
 
 export const metadata: Metadata = {
-  title: "Support Tickets - Seoulé",
-  description: `Seoulé — Fashion platform connecting brands and shoppers`,
+  title: "Support Tickets - BAZAAR",
+  description: `BAZAAR — Fashion platform connecting brands and shoppers`,
   
   keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
 };

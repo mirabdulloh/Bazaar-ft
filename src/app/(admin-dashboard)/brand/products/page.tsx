@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "My Products - Seoulé Brand Dashboard",
+  title: "My Products - BAZAAR Brand Dashboard",
   description: "Manage your brand's products",
 };
 

@@ -4,8 +4,8 @@ import { PaymentMethodsPageView } from "pages-sections/customer-dashboard/paymen
 import api from "utils/__api__/payments";
 
 export const metadata: Metadata = {
-  title: "Payment Methods - Seoulé",
-  description: `Seoulé — Fashion platform connecting brands and shoppers`,
+  title: "Payment Methods - BAZAAR",
+  description: `BAZAAR — Fashion platform connecting brands and shoppers`,
   
   keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
 };

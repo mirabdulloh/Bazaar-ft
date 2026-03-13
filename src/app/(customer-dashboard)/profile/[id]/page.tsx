@@ -14,8 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const name = `${user.name.firstName} ${user.name.lastName}`;
 
   return {
-    title: name + " - Seoulé",
-    description: "Seoulé — Fashion platform connecting brands and shoppers.",
+    title: name + " - BAZAAR",
+    description: "BAZAAR — Fashion platform connecting brands and shoppers.",
     
     keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
   };

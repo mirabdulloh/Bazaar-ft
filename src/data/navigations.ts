@@ -1,6 +1,6 @@
 import { CategoryMenuItem } from "models/Category.model";
 
-// Seoulé category sidebar menu (secondary header dropdown)
+// BAZAAR category sidebar menu (secondary header dropdown)
 export const categoryMenus: CategoryMenuItem[] = [
   {
     icon: "ShirtLine",

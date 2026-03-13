@@ -7,8 +7,8 @@ import api from "utils/__api__/dashboard";
 import { IdParams } from "models/Common";
 
 export const metadata: Metadata = {
-  title: "Order Details - Seoulé",
-  description: `Seoulé — Fashion platform connecting brands and shoppers`,
+  title: "Order Details - BAZAAR",
+  description: `BAZAAR — Fashion platform connecting brands and shoppers`,
   
   keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
 };

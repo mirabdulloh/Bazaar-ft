@@ -44,7 +44,7 @@ export const categories = [
 ];
 
 export const footerAboutLinks = [
-  { title: "About Seoulé", url: "#" },
+  { title: "About BAZAAR", url: "#" },
   { title: "Careers", url: "#" },
   { title: "Brand Registration", url: "/register" },
   { title: "Terms & Conditions", url: "#" },
@@ -68,7 +68,7 @@ export const footerSocialLinks = {
 };
 
 export const footerDescription =
-  "Seoulé is a multi-brand fashion platform connecting the best independent clothing brands with style-conscious shoppers. Discover, follow, and shop your favorite brands all in one place.";
+  "BAZAAR is a multi-brand fashion platform connecting the best independent clothing brands with style-conscious shoppers. Discover, follow, and shop your favorite brands all in one place.";
 
 export const footerContact = {
   phone: "+82 10-0000-0000",

@@ -1,6 +1,6 @@
 import { Menu } from "models/Navigation.model";
 
-// Seoulé MAIN NAVIGATION
+// BAZAAR MAIN NAVIGATION
 const navbarNavigation: Menu[] = [
   {
     title: "Home",

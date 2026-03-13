@@ -11,8 +11,8 @@ export async function generateMetadata({ params }: SlugParams): Promise<Metadata
   const ticket = await api.getTicket(slug);
 
   return {
-    title: ticket.title + " - Seoulé",
-    description: "Seoulé — Fashion platform connecting brands and shoppers.",
+    title: ticket.title + " - BAZAAR",
+    description: "BAZAAR — Fashion platform connecting brands and shoppers.",
     
     keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
   };

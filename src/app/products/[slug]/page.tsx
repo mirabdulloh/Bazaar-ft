@@ -8,9 +8,9 @@ export async function generateMetadata({ params }: SlugParams): Promise<Metadata
   const { slug } = await params;
 
   return {
-    title: `Product Details - Seoulé`,
-    description: `Shop product details on Seoulé.`,
-    keywords: ["fashion", "clothing", slug, "Seoulé"]
+    title: `Product Details - BAZAAR`,
+    description: `Shop product details on BAZAAR.`,
+    keywords: ["fashion", "clothing", slug, "BAZAAR"]
   };
 }
 
