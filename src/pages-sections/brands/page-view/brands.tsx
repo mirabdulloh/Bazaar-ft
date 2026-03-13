@@ -30,7 +30,7 @@ import { LIKE_TARGET_MEMBER } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { Brand } from "../../../lib/types/Brand";
 import { Message, T } from "../../../lib/types/common";
-import { sweetLikeSuccessAlert, sweetMixinErrorAlert, sweetUnlikeAlert } from "../../../lib/sweetAlert";
+import { sweetLikeSuccessAlert, sweetMixinErrorAlert, sweetTopSmallErrorAlert, sweetUnlikeAlert } from "../../../lib/sweetAlert";
 
 const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: "memberRank", direction: "DESC" } }: T) => {
 	const [searchBrands, setSearchBrands] = useState({ ...initialInput });
@@ -97,7 +97,7 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 			const currentlyLiked = !!brand.meLiked?.[0]?.myFavorite;
 
 			const { data } = await likeTargetMember({ variables: { input: brand._id } });
-			const updatedLikes = data?.likeTargetMember?.memberLikes ?? brand.memberData?.memberLikes ?? 0;
+			const updatedLikes = (data as T)?.likeTargetMember?.memberLikes ?? brand.memberData?.memberLikes ?? 0;
 			const nextLiked = !currentlyLiked;
 
 			setBrands((prev) =>
@@ -115,7 +115,11 @@ const ShopsPageView = ({ initialInput = { page: 1, limit: 12, search: {}, sort: 
 			if (nextLiked) await sweetLikeSuccessAlert();
 			else await sweetUnlikeAlert();
 		} catch (err: any) {
-			sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG).then();
+			if (err.message === Message.NOT_AUTHENTICATED) {
+				sweetTopSmallErrorAlert("Please log in to like brands", 2500);
+			} else {
+				sweetMixinErrorAlert(err.message ?? Message.SOMETHING_WENT_WRONG).then();
+			}
 		}
 	};
 
