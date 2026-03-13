@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -161,7 +161,12 @@ function WishlistCard({
   const [likeTargetProduct] = useMutation(LIKE_TARGET_PRODUCT);
   const { dispatch } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
   const { openPicker } = useVariantPicker();
+
+  useEffect(() => {
+    setQuickViewLoading(false);
+  }, [pathname]);
 
   const handleUnlike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -206,7 +211,7 @@ function WishlistCard({
         bgcolor: "grey.50",
         transition: "all 250ms ease-in-out",
         "&:hover": {
-          "& .hover-actions": { opacity: 1, bottom: 8 },
+          "& .hover-actions": { opacity: 1, transform: "translateY(0)" },
           "& .hover-img": { display: "block" },
           "& .main-img": { display: "none" },
         },
@@ -253,98 +258,118 @@ function WishlistCard({
       </Tooltip>
 
       {/* Image area */}
-      <Link href={`/products/${id}`} style={{ display: "block", position: "relative" }}>
-        <Box
-          sx={{
-            height: 200,
-            overflow: "hidden",
-            cursor: "pointer",
-            position: "relative",
-          }}
-        >
-          {/* Main image */}
+      <Box sx={{ position: "relative" }}>
+        <Link href={`/products/${id}`} style={{ display: "block", position: "relative" }}>
           <Box
-            component="img"
-            src={thumbnail}
-            alt={title}
-            className="main-img"
-            sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-          {/* Hover image */}
-          {images.length > 1 && (
+            sx={{
+              height: 200,
+              overflow: "hidden",
+              cursor: "pointer",
+              position: "relative",
+            }}
+          >
+            {/* Main image */}
             <Box
               component="img"
-              src={images[1]}
+              src={thumbnail}
               alt={title}
-              className="hover-img"
-              sx={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "none",
-                position: "absolute",
-                top: 0,
-                left: 0,
-              }}
+              className="main-img"
+              sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
-          )}
-        </Box>
+            {/* Hover image */}
+            {images.length > 1 && (
+              <Box
+                component="img"
+                src={images[1]}
+                alt={title}
+                className="hover-img"
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "none",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                }}
+              />
+            )}
+          </Box>
+        </Link>
 
         {/* Hover actions: Add to Cart + Quick View */}
         <Box
-          className="hover-actions"
           sx={{
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            opacity: 0,
-            zIndex: 2,
-            px: 1,
-            pb: 0.5,
-            display: "flex",
-            gap: 0.75,
-            transition: "all 0.3s ease-in-out",
+            pointerEvents: "none",
           }}
         >
-          <Button
-            size="small"
-            variant="contained"
-            loading={addingToCart}
-            onClick={handleAddToCart}
-            startIcon={<ShoppingCartOutlined sx={{ fontSize: "13px !important" }} />}
-            sx={{ flex: 1, fontSize: 10, py: 0.6, borderRadius: 1.5, minWidth: 0 }}
-          >
-            Add to Cart
-          </Button>
-
-          <Link
-            href={`/products/${id}/view`}
-            style={{ flex: 1 }}
-            onClick={() => setQuickViewLoading(true)}
-            onNavigate={() => setQuickViewLoading(false)}
+          <Box
+            className="hover-actions"
+            sx={{
+              opacity: 0,
+              px: 1,
+              pb: 0.5,
+              display: "flex",
+              gap: 0.75,
+              transition: "all 0.3s ease-in-out",
+              transform: "translateY(12px)",
+            }}
           >
             <Button
-              fullWidth
               size="small"
               variant="contained"
-              loading={quickViewLoading}
-              startIcon={<RemoveRedEyeOutlined sx={{ fontSize: "13px !important" }} />}
+              type="button"
               sx={{
+                pointerEvents: "auto",
+                flex: 1,
                 fontSize: 10,
                 py: 0.6,
                 borderRadius: 1.5,
                 minWidth: 0,
-                bgcolor: "white",
-                color: "text.primary",
-                "&:hover": { bgcolor: "grey.100" },
+              }}
+              loading={addingToCart}
+              onClick={handleAddToCart}
+              startIcon={<ShoppingCartOutlined sx={{ fontSize: "13px !important" }} />}
+            >
+              Add to Cart
+            </Button>
+
+            <Link
+              scroll={false}
+              href={`/products/${id}/view`}
+              style={{ flex: 1, pointerEvents: "auto" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickViewLoading(true);
               }}
             >
-              Quick View
-            </Button>
-          </Link>
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                type="button"
+                loading={quickViewLoading}
+                startIcon={<RemoveRedEyeOutlined sx={{ fontSize: "13px !important" }} />}
+                sx={{
+                  fontSize: 10,
+                  py: 0.6,
+                  borderRadius: 1.5,
+                  minWidth: 0,
+                  bgcolor: "white",
+                  color: "text.primary",
+                  "&:hover": { bgcolor: "grey.100" },
+                }}
+              >
+                Quick View
+              </Button>
+            </Link>
+          </Box>
         </Box>
-      </Link>
+      </Box>
 
       {/* Content */}
       <Box sx={{ p: 1.5, textAlign: "center" }}>
