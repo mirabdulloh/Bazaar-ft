@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -36,6 +36,8 @@ type Props = {
   writePlaceholder?: string;
   authText?: string;
   maxWidth?: number | string;
+  pageSize?: number;
+  onCountChange?: (count: number) => void;
 };
 // ================================================================
 
@@ -138,6 +140,8 @@ export default function ProductComments({
   writePlaceholder = "Write a comment…",
   authText = "Please log in to leave a comment.",
   maxWidth = 720,
+  pageSize = 10,
+  onCountChange,
 }: Props) {
   const user = useReactiveVar(userVar);
   const targetRefId = refId ?? productId ?? "";
@@ -149,7 +153,7 @@ export default function ProductComments({
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const limit = pageSize;
 
   const [createComment] = useMutation(CREATE_COMMENT);
   const [updateComment] = useMutation(UPDATE_COMMENT);
@@ -176,6 +180,14 @@ export default function ProductComments({
     return Number((rawData as T)?.getComments?.metaCounter?.[0]?.total ?? 0);
   }, [rawData, noDataError]);
   const pageCount = Math.max(1, Math.ceil(totalComments / limit));
+
+  useEffect(() => {
+    onCountChange?.(totalComments);
+  }, [onCountChange, totalComments]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [targetRefId, pageSize]);
 
   // ── Thread organisation ──────────────────────────────────────────────────
   const topLevelComments = useMemo(
@@ -210,7 +222,6 @@ export default function ProductComments({
     if (!user?._id) { await sweetMixinErrorAlert(Message.NOT_AUTHENTICATED); return; }
     setSubmitting(true);
     try {
-      await createComment({ variables: { input: { commentGroup: "PRODUCT", commentRefId: productId, commentContent: content } } });
       await createComment({
         variables: {
           input: { commentGroup, commentRefId: targetRefId, commentContent: content }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useReactiveVar } from "@apollo/client/react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Collapse from "@mui/material/Collapse";
 import Container from "@mui/material/Container";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
@@ -15,6 +16,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GET_BOARD_ARTICLE, GET_BOARD_ARTICLES } from "../../../../apollo/user/query";
@@ -23,6 +25,7 @@ import { userVar } from "../../../../apollo/store";
 import { useQuery } from "lib/hooks/useQuery";
 import { Article } from "../../../lib/types/Article";
 import { Message, T } from "../../../lib/types/common";
+import ProductComments from "../../product-details/product-comments/product-comments";
 import {
 	sweetLikeSuccessAlert,
 	sweetMixinErrorAlert,
@@ -43,6 +46,8 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const user = useReactiveVar(userVar);
 	const [article, setArticle] = useState<Article | null>(null);
 	const [moreArticles, setMoreArticles] = useState<Article[]>([]);
+	const [commentCount, setCommentCount] = useState(0);
+	const [commentsOpen, setCommentsOpen] = useState(false);
 
 	/** APOLLO REQUESTS **/
 	const [likeTargetBoardArticle] = useMutation(LIKE_TARGET_BOARD_ARTICLE);
@@ -127,6 +132,10 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 			}
 		}
 	};
+
+	useEffect(() => {
+		setCommentCount(article?.articleComments ?? 0);
+	}, [article?.articleComments]);
 
 	if (getBoardArticleLoading && !article) {
 		return (
@@ -250,6 +259,73 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 			>
 				{article.articleContent ?? "No content available."}
 			</Typography>
+
+			<Box
+				sx={{
+					mt: 6,
+					border: "1px solid",
+					borderColor: "divider",
+					borderRadius: 3,
+					bgcolor: "background.paper",
+					overflow: "hidden",
+				}}
+			>
+				<Stack
+					direction="row"
+					alignItems="center"
+					justifyContent="space-between"
+					gap={2}
+					onClick={() => setCommentsOpen((prev) => !prev)}
+					sx={{
+						px: { xs: 2, md: 3 },
+						py: { xs: 2, md: 2.5 },
+						cursor: "pointer",
+						userSelect: "none",
+					}}
+				>
+					<Box sx={{ minWidth: 0 }}>
+						<Typography variant="h5" fontWeight={700}>
+							Comments
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							{commentsOpen ? "Tap to hide the discussion." : "Tap to open the discussion."}
+						</Typography>
+					</Box>
+					<Stack direction="row" alignItems="center" gap={1} flexShrink={0}>
+						<Chip
+							label={`${commentCount} comments`}
+							variant="outlined"
+							size="small"
+						/>
+						<IconButton
+							size="small"
+							aria-label={commentsOpen ? "Hide comments" : "Show comments"}
+							sx={{
+								transform: commentsOpen ? "rotate(180deg)" : "rotate(0deg)",
+								transition: "transform 0.2s ease",
+							}}
+						>
+							<ExpandMoreIcon />
+						</IconButton>
+					</Stack>
+				</Stack>
+
+				<Collapse in={commentsOpen} timeout="auto" unmountOnExit>
+					<Divider />
+					<Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2.5, md: 3 } }}>
+						<ProductComments
+							refId={article._id}
+							commentGroup="ARTICLE"
+							onCountChange={setCommentCount}
+							maxWidth="100%"
+							pageSize={5}
+							emptyText="No comments on this article yet. Start the discussion."
+							writePlaceholder="Write a comment about this article…"
+							authText="Please log in to comment on this article."
+						/>
+					</Box>
+				</Collapse>
+			</Box>
 
 			<Box sx={{ mt: 6 }}>
 				<Typography variant="h5" fontWeight={700} mb={2}>
