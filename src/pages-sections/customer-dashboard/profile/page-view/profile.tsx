@@ -300,6 +300,21 @@ export function ProfilePageView() {
   const [subscribeMember] = useMutation(SUBSCRIBE);
   const [unsubscribeMember] = useMutation(UNSUBSCRIBE);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [pendingFollowIds, setPendingFollowIds] = useState<Record<string, boolean>>({});
+
+  const followingsQueryVariables = useMemo(
+    () => ({
+      input: { page: 1, limit: 50, search: { followerId: user._id } }
+    }),
+    [user._id]
+  );
+
+  const followersQueryVariables = useMemo(
+    () => ({
+      input: { page: 1, limit: 50, search: { followingId: user._id } }
+    }),
+    [user._id]
+  );
 
   // Sync edit form when user reactive var changes
   useEffect(() => {
@@ -441,12 +456,14 @@ export function ProfilePageView() {
 
   /** APOLLO QUERIES **/
   // Fetch full member profile to get email (not in JWT)
-  const { data: memberData } = useQuery(GET_MEMBER, {
+  const { data: memberData, refetch: memberRefetch } = useQuery(GET_MEMBER, {
     variables: { input: user._id },
     skip: !user._id,
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
   const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
+  const profileMember: T = ((memberData as T)?.getMember as T) ?? user;
 
   // Sync email when query data loads (email lives in GET_MEMBER, not in userVar)
   useEffect(() => {
@@ -465,16 +482,16 @@ export function ProfilePageView() {
     notifyOnNetworkStatusChange: true
   });
 
-  const { loading: followingsLoading, data: followingsData } = useQuery(GET_MEMBER_FOLLOWINGS, {
+  const { loading: followingsLoading, data: followingsData, refetch: followingsRefetch } = useQuery(GET_MEMBER_FOLLOWINGS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 50, search: { followerId: user._id } } },
+    variables: followingsQueryVariables,
     notifyOnNetworkStatusChange: true,
     skip: !user._id
   });
 
-  const { loading: followersLoading, data: followersData } = useQuery(GET_MEMBER_FOLLOWERS, {
+  const { loading: followersLoading, data: followersData, refetch: followersRefetch } = useQuery(GET_MEMBER_FOLLOWERS, {
     fetchPolicy: "cache-and-network",
-    variables: { input: { page: 1, limit: 50, search: { followingId: user._id } } },
+    variables: followersQueryVariables,
     notifyOnNetworkStatusChange: true,
     skip: !user._id
   });
@@ -514,25 +531,44 @@ export function ProfilePageView() {
   }, [createReview]);
 
   // ── Follow / Unfollow handlers ──
+  const refetchFollowPanels = useCallback(async () => {
+    if (!user._id) return;
+    await Promise.all([
+      memberRefetch({ input: user._id }),
+      followersRefetch(followersQueryVariables),
+      followingsRefetch(followingsQueryVariables),
+    ]);
+  }, [followingsQueryVariables, followingsRefetch, followersQueryVariables, followersRefetch, memberRefetch, user._id]);
+
   const handleFollow = useCallback(async (targetId: string) => {
+    if (pendingFollowIds[targetId]) return;
     try {
+      setPendingFollowIds((prev) => ({ ...prev, [targetId]: true }));
       await subscribeMember({ variables: { input: targetId } });
-      sweetTopSmallSuccessAlert("Followed");
+      await refetchFollowPanels();
+      await sweetTopSmallSuccessAlert("Followed");
     } catch (err: any) {
       console.error("Follow error:", err);
-      sweetTopSmallErrorAlert(err.message || "Failed to follow");
+      await sweetTopSmallErrorAlert(err.message || "Failed to follow");
+    } finally {
+      setPendingFollowIds((prev) => ({ ...prev, [targetId]: false }));
     }
-  }, [subscribeMember]);
+  }, [pendingFollowIds, refetchFollowPanels, subscribeMember]);
 
   const handleUnfollow = useCallback(async (targetId: string) => {
+    if (pendingFollowIds[targetId]) return;
     try {
+      setPendingFollowIds((prev) => ({ ...prev, [targetId]: true }));
       await unsubscribeMember({ variables: { input: targetId } });
-      sweetTopSmallSuccessAlert("Unfollowed");
+      await refetchFollowPanels();
+      await sweetTopSmallSuccessAlert("Unfollowed");
     } catch (err: any) {
       console.error("Unfollow error:", err);
-      sweetTopSmallErrorAlert(err.message || "Failed to unfollow");
+      await sweetTopSmallErrorAlert(err.message || "Failed to unfollow");
+    } finally {
+      setPendingFollowIds((prev) => ({ ...prev, [targetId]: false }));
     }
-  }, [unsubscribeMember]);
+  }, [pendingFollowIds, refetchFollowPanels, unsubscribeMember]);
 
   // Resolve avatar: preview > uploaded image > dicebear fallback
   const avatarSrc =
@@ -545,7 +581,7 @@ export function ProfilePageView() {
   const renderContent = () => {
     switch (activeTab) {
       case "overview":
-        return <OverviewPanel user={user} avatarSrc={avatarSrc} />;
+        return <OverviewPanel user={profileMember} avatarSrc={avatarSrc} />;
       case "orders":
         if (selectedOrderId) {
           return (
@@ -595,6 +631,7 @@ export function ProfilePageView() {
             emptyMsg="No followers yet."
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
+            pendingFollowIds={pendingFollowIds}
           />
         );
       case "followings":
@@ -607,6 +644,7 @@ export function ProfilePageView() {
             emptyMsg="You haven't followed anyone yet."
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
+            pendingFollowIds={pendingFollowIds}
           />
         );
       case "articles":
@@ -668,7 +706,7 @@ export function ProfilePageView() {
         <FlexBox justifyContent="center" gap={3} mt={1.5}>
           <Box textAlign="center">
             <Typography variant="subtitle2" fontWeight={700}>
-              {(user as T).memberFollowers ?? 0}
+              {(profileMember as T).memberFollowers ?? (user as T).memberFollowers ?? 0}
             </Typography>
             <Typography variant="caption" color="text.secondary" fontSize={10}>
               Followers
@@ -677,7 +715,7 @@ export function ProfilePageView() {
           <Divider orientation="vertical" flexItem />
           <Box textAlign="center">
             <Typography variant="subtitle2" fontWeight={700}>
-              {(user as T).memberFollowings ?? 0}
+              {(profileMember as T).memberFollowings ?? (user as T).memberFollowings ?? 0}
             </Typography>
             <Typography variant="caption" color="text.secondary" fontSize={10}>
               Following
@@ -1503,56 +1541,26 @@ function PeoplePanel({
   emptyMsg,
   onFollow,
   onUnfollow,
+  pendingFollowIds,
 }: {
   title: string;
   people: T[];
   loading: boolean;
   dataKey: "followerData" | "followingData";
   emptyMsg: string;
-  onFollow: (id: string) => void;
-  onUnfollow: (id: string) => void;
+  onFollow: (id: string) => Promise<void>;
+  onUnfollow: (id: string) => Promise<void>;
+  pendingFollowIds: Record<string, boolean>;
 }) {
   const ITEMS_PER_PAGE = 6;
   const [page, setPage] = useState(1);
-  const [localPeople, setLocalPeople] = useState<T[]>([]);
   const router = useRouter();
+  const totalPages = Math.max(1, Math.ceil(people.length / ITEMS_PER_PAGE));
+  const paginated = people.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   useEffect(() => {
-    setLocalPeople(people);
-  }, [people]);
-
-  const totalPages = Math.max(1, Math.ceil(localPeople.length / ITEMS_PER_PAGE));
-  const paginated = localPeople.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-  const isFollowingsList = title.toLowerCase().includes("followings");
-
-  const getMemberId = (row: T) => {
-    const fd = (row[dataKey] as T) ?? {};
-    return fd._id as string;
-  };
-
-  const toggleLocalFollow = (targetId: string, nextFollowing: boolean) => {
-    setLocalPeople((prev) =>
-      prev.map((row) => {
-        const fd = (row[dataKey] as T) ?? {};
-        if ((fd._id as string) !== targetId) return row;
-        return { ...row, meFollowed: [{ myFollowing: nextFollowing }] };
-      })
-    );
-  };
-
-  const handleFollowClick = (targetId: string) => {
-    toggleLocalFollow(targetId, true);
-    onFollow(targetId);
-  };
-
-  const handleUnfollowClick = (targetId: string) => {
-    if (isFollowingsList) {
-      setLocalPeople((prev) => prev.filter((row) => getMemberId(row) !== targetId));
-    } else {
-      toggleLocalFollow(targetId, false);
-    }
-    onUnfollow(targetId);
-  };
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const handleNavigate = (fd: T) => {
     const mt = fd.memberType as string;
@@ -1573,7 +1581,7 @@ function PeoplePanel({
         }
       />
 
-      {loading ? (
+      {loading && people.length === 0 ? (
         <Box>
           {[1, 2, 3, 4].map((i) => (
             <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 2, py: 2, px: 2.5, borderBottom: "1px solid", borderColor: "grey.100" }}>
@@ -1618,6 +1626,7 @@ function PeoplePanel({
             const memberId = fd._id as string;
             const isFollowing = !!(f.meFollowed as T[])?.[0]?.myFollowing;
             const isBrandOrAdmin = memberType === "BRAND" || memberType === "ADMIN";
+            const isPending = !!pendingFollowIds[memberId];
             return (
               <PeopleTableRow key={f._id as string}>
                 {/* Name Cell */}
@@ -1704,7 +1713,8 @@ function PeoplePanel({
                         size="small"
                         variant="outlined"
                         color="error"
-                        onClick={() => handleUnfollowClick(memberId)}
+                        disabled={isPending}
+                        onClick={() => onUnfollow(memberId)}
                         sx={{
                           borderRadius: 5,
                           fontSize: 11,
@@ -1723,7 +1733,8 @@ function PeoplePanel({
                       size="small"
                       variant="contained"
                       color="success"
-                      onClick={() => handleFollowClick(memberId)}
+                      disabled={isPending}
+                      onClick={() => onFollow(memberId)}
                       sx={{
                         borderRadius: 5,
                         fontSize: 11,
