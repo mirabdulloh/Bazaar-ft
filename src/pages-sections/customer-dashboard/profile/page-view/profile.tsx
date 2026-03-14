@@ -1177,7 +1177,7 @@ function OrdersPanel({
   onCancel: (orderId: string) => Promise<void>;
   onConfirmReceived: (orderId: string) => Promise<void>;
 }) {
-  const ITEMS_PER_PAGE = 3;
+  const ITEMS_PER_PAGE = 2;
   const [page, setPage] = useState(1);
   const activeOrders = useMemo(
     () =>
