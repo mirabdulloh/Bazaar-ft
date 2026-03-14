@@ -6,8 +6,12 @@ import { ErrorLink } from '@apollo/client/link/error';
 import { getJwtToken, getRefreshToken, setJwtToken, setRefreshToken } from '../src/lib/auth';
 import { setUserFromMemberData } from '../src/lib/auth';
 import { sweetErrorAlert } from '../src/lib/sweetAlert';
+import { jwtDecode } from 'jwt-decode';
 
 let apolloClient: ApolloClient;
+let refreshPromise: Promise<string> | null = null;
+
+type JwtPayload = { exp?: number };
 
 function getHeaders() {
 	const headers = {} as HeadersInit;
@@ -17,6 +21,64 @@ function getHeaders() {
 	return headers;
 }
 
+function isTokenExpiringSoon(token?: string, skewMs = 30_000): boolean {
+	if (!token) return true;
+	try {
+		const payload = jwtDecode<JwtPayload>(token);
+		if (!payload.exp) return true;
+		return payload.exp * 1000 <= Date.now() + skewMs;
+	} catch {
+		return true;
+	}
+}
+
+async function performRefresh(): Promise<string> {
+	if (refreshPromise) return refreshPromise;
+
+	refreshPromise = (async () => {
+		const refreshToken = getRefreshToken();
+		if (!refreshToken) throw new Error('Missing refresh token');
+
+		const response = await fetch(process.env.NEXT_PUBLIC_API_GRAPHQL_URL!, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				query: `mutation RefreshToken($refreshToken: String!) {
+					refreshToken(refreshToken: $refreshToken) {
+						_id memberType memberStatus memberAuthType memberPhone memberNick
+						memberFullName memberEmail memberImage memberAddress memberDesc
+						memberArticles memberFollowers memberFollowings memberPoints
+						memberLikes memberViews memberComments memberRank memberWarnings
+						memberBlocks memberProducts accessToken refreshToken
+					}
+				}`,
+				variables: { refreshToken },
+			}),
+		});
+
+		const json = await response.json();
+		if (json?.errors?.length) {
+			throw new Error(json.errors[0]?.message || 'Refresh failed');
+		}
+
+		const data = json?.data?.refreshToken;
+		if (!data?.accessToken) {
+			throw new Error('Refresh failed');
+		}
+
+		setJwtToken(data.accessToken);
+		if (data.refreshToken) setRefreshToken(data.refreshToken);
+		setUserFromMemberData(data);
+		return data.accessToken;
+	})();
+
+	try {
+		return await refreshPromise;
+	} finally {
+		refreshPromise = null;
+	}
+}
+
 function createIsomorphicLink(): ApolloLink {
 	if (typeof window === 'undefined') {
 		// SSR: plain HTTP, no auth
@@ -24,10 +86,34 @@ function createIsomorphicLink(): ApolloLink {
 	}
 
 	const authLink = new ApolloLink((operation, forward) => {
-		operation.setContext(({ headers = {} }) => ({
-			headers: { ...headers, ...getHeaders() },
-		}));
-		return forward(operation);
+		return new Observable<FetchResult>((observer) => {
+			let subscription: { unsubscribe: () => void } | null = null;
+			let cancelled = false;
+
+			(async () => {
+				const currentToken = getJwtToken();
+				const refreshToken = getRefreshToken();
+				let authToken = currentToken;
+
+				if ((currentToken && isTokenExpiringSoon(currentToken)) || (!currentToken && refreshToken)) {
+					authToken = await performRefresh();
+				}
+
+				operation.setContext(({ headers = {} }) => ({
+					headers: authToken ? { ...headers, Authorization: `Bearer ${authToken}` } : { ...headers },
+				}));
+
+				if (cancelled) return;
+				subscription = forward(operation).subscribe(observer);
+			})().catch((err) => {
+				if (!cancelled) observer.error(err);
+			});
+
+			return () => {
+				cancelled = true;
+				subscription?.unsubscribe();
+			};
+		});
 	});
 
 	const httpLink = new HttpLink({
@@ -43,15 +129,6 @@ function createIsomorphicLink(): ApolloLink {
 		sessionStorage.removeItem('refreshToken');
 		localStorage.setItem('logout', Date.now().toString());
 		window.location.replace('/');
-	};
-
-	// Track whether a refresh is already in-flight to avoid concurrent refreshes
-	let isRefreshing = false;
-	let pendingRequests: Array<() => void> = [];
-
-	const resolvePending = () => {
-		pendingRequests.forEach((cb) => cb());
-		pendingRequests = [];
 	};
 
 	const errorLink = new ErrorLink(({ error, operation, forward }) => {
@@ -78,66 +155,16 @@ function createIsomorphicLink(): ApolloLink {
 					return;
 				}
 
-				// If already refreshing, queue this request to retry after refresh completes
-				if (isRefreshing) {
-					return new Observable<FetchResult>((observer) => {
-						pendingRequests.push(() => {
-							operation.setContext(({ headers = {} }: { headers: Record<string, string> }) => ({
-								headers: { ...headers, Authorization: `Bearer ${getJwtToken()}` },
-							}));
-							forward(operation).subscribe(observer);
-						});
-					});
-				}
-
-				isRefreshing = true;
-
 				// Use a plain fetch to call refreshToken mutation (avoids going through this error link again)
 				return new Observable<FetchResult>((observer) => {
-					fetch(process.env.NEXT_PUBLIC_API_GRAPHQL_URL!, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							query: `mutation RefreshToken($refreshToken: String!) {
-								refreshToken(refreshToken: $refreshToken) {
-									_id memberType memberStatus memberAuthType memberPhone memberNick
-									memberFullName memberEmail memberImage memberAddress memberDesc
-									memberArticles memberFollowers memberFollowings memberPoints
-									memberLikes memberViews memberComments memberRank memberWarnings
-									memberBlocks memberProducts accessToken refreshToken
-								}
-							}`,
-							variables: { refreshToken },
-						}),
-					})
-						.then((res) => res.json())
-						.then((json) => {
-							const data = json?.data?.refreshToken;
-							if (!data?.accessToken) {
-								throw new Error('Refresh failed');
-							}
-
-							// Store new tokens
-							setJwtToken(data.accessToken);
-							if (data.refreshToken) setRefreshToken(data.refreshToken);
-							setUserFromMemberData(data);
-
-							isRefreshing = false;
-
-							// Retry the failed operation with the new token
+					performRefresh()
+						.then((accessToken) => {
 							operation.setContext(({ headers = {} }: { headers: Record<string, string> }) => ({
-								headers: { ...headers, Authorization: `Bearer ${data.accessToken}` },
+								headers: { ...headers, Authorization: `Bearer ${accessToken}` },
 							}));
-
-							// Resolve all queued requests
-							resolvePending();
-
-							// Retry this original operation
 							forward(operation).subscribe(observer);
 						})
 						.catch(() => {
-							isRefreshing = false;
-							pendingRequests = [];
 							silentLogout();
 						});
 				});
