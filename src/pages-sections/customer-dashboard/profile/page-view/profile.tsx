@@ -56,6 +56,7 @@ import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import {
   GET_MY_ORDERS,
+  GET_MY_COUPON_CLAIMS,
   GET_MY_REVIEWS,
   GET_MEMBER,
   GET_MEMBER_FOLLOWINGS,
@@ -564,6 +565,27 @@ export function ProfilePageView() {
     null
   );
   const [claimCoupon, { loading: claimLoading }] = useMutation(CLAIM_COUPON);
+  const {
+    loading: couponClaimsLoading,
+    data: couponClaimsData,
+    refetch: refetchCouponClaims
+  } = useQuery(GET_MY_COUPON_CLAIMS, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 20, sort: "claimedAt", direction: "DESC" } },
+    notifyOnNetworkStatusChange: true,
+    skip: !user._id
+  });
+
+  /** APOLLO QUERIES **/
+  // Fetch full member profile to get email (not in JWT)
+  const { data: memberData, refetch: memberRefetch } = useQuery(GET_MEMBER, {
+    variables: { input: user._id },
+    skip: !user._id,
+    fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
+  });
+  const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
+  const profileMember: T = ((memberData as T)?.getMember as T) ?? user;
 
   const handleClaimCoupon = useCallback(async () => {
     if (!couponCode.trim()) return;
@@ -577,24 +599,15 @@ export function ProfilePageView() {
 
       setCouponMsg({ type: "success", text: "Coupon claimed successfully!" });
       setCouponCode("");
+      await Promise.allSettled([memberRefetch(), refetchCouponClaims()]);
       await sweetMixinSuccessAlert("Coupon claimed!");
     } catch (err: any) {
       console.error("Coupon error:", err);
-      setCouponMsg({ type: "error", text: "Invalid or expired coupon code." });
-      await sweetMixinErrorAlert("Invalid or expired coupon code");
+      const message = err?.message || "Invalid or expired coupon code.";
+      setCouponMsg({ type: "error", text: message });
+      await sweetMixinErrorAlert(message);
     }
-  }, [couponCode, claimCoupon]);
-
-  /** APOLLO QUERIES **/
-  // Fetch full member profile to get email (not in JWT)
-  const { data: memberData, refetch: memberRefetch } = useQuery(GET_MEMBER, {
-    variables: { input: user._id },
-    skip: !user._id,
-    fetchPolicy: "cache-and-network",
-    notifyOnNetworkStatusChange: true,
-  });
-  const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
-  const profileMember: T = ((memberData as T)?.getMember as T) ?? user;
+  }, [couponCode, claimCoupon, memberRefetch, refetchCouponClaims]);
 
   // Sync email when query data loads (email lives in GET_MEMBER, not in userVar)
   useEffect(() => {
@@ -826,7 +839,8 @@ export function ProfilePageView() {
             setCouponMsg={setCouponMsg}
             handleClaimCoupon={handleClaimCoupon}
             claimLoading={claimLoading}
-            user={user}
+            claimsLoading={couponClaimsLoading}
+            couponClaims={(couponClaimsData as T)?.getMyCouponClaims?.list ?? []}
           />
         );
       case "edit-profile":
@@ -2471,7 +2485,8 @@ function CouponPanel({
   setCouponMsg,
   handleClaimCoupon,
   claimLoading,
-  user
+  claimsLoading,
+  couponClaims
 }: {
   couponCode: string;
   setCouponCode: (v: string) => void;
@@ -2479,7 +2494,8 @@ function CouponPanel({
   setCouponMsg: (v: { type: "success" | "error"; text: string } | null) => void;
   handleClaimCoupon: () => void;
   claimLoading: boolean;
-  user: T;
+  claimsLoading: boolean;
+  couponClaims: T[];
 }) {
   return (
     <Box>
@@ -2535,101 +2551,89 @@ function CouponPanel({
         <FlexBox alignItems="center" gap={1.5} mb={2}>
           <ConfirmationNumberOutlined color="primary" />
           <Typography variant="subtitle1" fontWeight={700}>
-            My Claimed Coupon
+            My Claimed Coupons
           </Typography>
         </FlexBox>
 
-        {(user as T).memberCouponId ? (
-          <Box>
-            {/* Coupon visual card */}
-            <Box
-              sx={{
-                p: 2.5,
-                mb: 2,
-                borderRadius: 2.5,
-                border: "2px dashed",
-                borderColor:
-                  ((user as T).memberCouponStatus as string) === "ACTIVE"
-                    ? "success.main"
-                    : "grey.300",
-                bgcolor:
-                  ((user as T).memberCouponStatus as string) === "ACTIVE"
-                    ? "success.50"
-                    : "grey.50",
-                textAlign: "center"
-              }}
-            >
-              <CardGiftcardOutlined
-                sx={{
-                  fontSize: 40,
-                  color:
-                    ((user as T).memberCouponStatus as string) === "ACTIVE"
-                      ? "success.main"
-                      : "grey.400",
-                  mb: 1
-                }}
-              />
-              <Typography variant="h6" fontWeight={700}>
-                Coupon
-              </Typography>
-              <Chip
-                label={((user as T).memberCouponStatus as string) || "ACTIVE"}
-                size="small"
-                color={
-                  ((user as T).memberCouponStatus as string) === "ACTIVE"
-                    ? "success"
-                    : ((user as T).memberCouponStatus as string) === "EXPIRED"
-                      ? "error"
-                      : "default"
-                }
-                sx={{ mt: 1, fontSize: 11, fontWeight: 700 }}
-              />
-            </Box>
+        {claimsLoading ? (
+          <Stack spacing={1.5}>
+            {[1, 2, 3].map((item) => (
+              <Skeleton key={item} variant="rounded" height={96} />
+            ))}
+          </Stack>
+        ) : couponClaims.length ? (
+          <Stack spacing={1.5}>
+            {couponClaims.map((claim: T) => {
+              const coupon = claim.coupon as T;
+              const isClaimed = claim.claimStatus === "CLAIMED";
+              const discountLabel =
+                coupon?.discountType === "PERCENTAGE"
+                  ? `${coupon?.discountValue ?? 0}% off`
+                  : `${currency(coupon?.discountValue ?? 0)} off`;
 
-            {/* Coupon info rows */}
-            <InfoRow label="Status" value={((user as T).memberCouponStatus as string) || "N/A"} />
-            {(user as T).memberCouponAssignedAt && (
-              <InfoRow
-                label="Claimed At"
-                value={new Date((user as T).memberCouponAssignedAt as string).toLocaleDateString(
-                  "en-US",
-                  {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  }
-                )}
-              />
-            )}
-            {(user as T).memberCouponUsedAt && (
-              <InfoRow
-                label="Used At"
-                value={new Date((user as T).memberCouponUsedAt as string).toLocaleDateString(
-                  "en-US",
-                  {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  }
-                )}
-              />
-            )}
+              return (
+                <Box
+                  key={String(claim._id)}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2.5,
+                    border: "1px solid",
+                    borderColor: isClaimed ? "success.main" : "divider",
+                    bgcolor: isClaimed ? "success.50" : "background.paper"
+                  }}
+                >
+                  <FlexBetween gap={2} alignItems="flex-start" flexWrap="wrap">
+                    <Box>
+                      <FlexBox alignItems="center" gap={1} mb={0.75}>
+                        <Typography variant="subtitle1" fontWeight={800}>
+                          {coupon?.couponCode || "Coupon"}
+                        </Typography>
+                        <Chip
+                          label={claim.claimStatus || "CLAIMED"}
+                          size="small"
+                          color={isClaimed ? "success" : "default"}
+                          sx={{ fontSize: 11, fontWeight: 700 }}
+                        />
+                      </FlexBox>
 
-            {((user as T).memberCouponStatus as string) === "ACTIVE" && (
-              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-                This coupon will be applied automatically at checkout.
-              </Alert>
-            )}
-            {((user as T).memberCouponStatus as string) === "EXPIRED" && (
-              <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
-                This coupon has been used. Claim a new one above!
-              </Alert>
-            )}
-          </Box>
+                      <Typography variant="body2" fontWeight={700}>
+                        {discountLabel}
+                      </Typography>
+
+                      <Typography variant="caption" color="text.secondary" display="block" mt={0.75}>
+                        {coupon?.couponType === "BRAND" ? "Brand coupon" : "Platform coupon"}
+                        {coupon?.minOrderCount ? ` · Min ${coupon.minOrderCount} delivered orders` : ""}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ minWidth: 180 }}>
+                      <InfoRow
+                        label="Claimed"
+                        value={new Date((claim.claimedAt as string) || (claim.createdAt as string)).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric"
+                          }
+                        )}
+                      />
+                      {claim.usedAt && (
+                        <InfoRow
+                          label="Used"
+                          value={new Date(claim.usedAt as string).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric"
+                          })}
+                        />
+                      )}
+                    </Box>
+                  </FlexBetween>
+                </Box>
+              );
+            })}
+          </Stack>
         ) : (
           <Box textAlign="center" py={3}>
             <ConfirmationNumberOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />

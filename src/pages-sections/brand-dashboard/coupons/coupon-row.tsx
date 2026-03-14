@@ -33,7 +33,7 @@ export default function CouponRow({ coupon, onEdit, onDelete }: Props) {
   const discountLabel =
     discountType === "PERCENTAGE"
       ? `${discountValue}%`
-      : `₩${Number(discountValue).toLocaleString()}`;
+      : `$${Number(discountValue).toLocaleString()}`;
 
   const formatDate = (d: string) => {
     try {

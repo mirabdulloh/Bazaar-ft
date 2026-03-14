@@ -64,7 +64,6 @@ const nextMonthStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString
 
 const emptyForm = {
   couponCode: "",
-  couponType: "PLATFORM",
   discountType: "PERCENTAGE",
   discountValue: "",
   couponMaxUsage: "",
@@ -110,7 +109,7 @@ export default function CouponsPageView() {
 
   // ─── Data ───────────────────────────────────────────────────────────────────
   const list = (data as T)?.getAllCouponsByAdmin?.list ?? [];
-  const total = (data as T)?.getAllCouponsByAdmin?.metaCounter?.total ?? 0;
+  const total = (data as T)?.getAllCouponsByAdmin?.metaCounter?.[0]?.total ?? 0;
 
   const {
     order,
@@ -132,7 +131,6 @@ export default function CouponsPageView() {
     setEditingCoupon(coupon);
     setForm({
       couponCode: coupon.couponCode || "",
-      couponType: coupon.couponType || "PLATFORM",
       discountType: coupon.discountType || "PERCENTAGE",
       discountValue: coupon.discountValue?.toString() || "",
       couponMaxUsage: coupon.couponMaxUsage?.toString() || "",
@@ -165,11 +163,10 @@ export default function CouponsPageView() {
     try {
       const payload: any = {
         couponCode: form.couponCode.toUpperCase(),
-        couponType: form.couponType,
         discountType: form.discountType,
         discountValue: Number(form.discountValue),
-        couponStartDate: new Date(form.couponStartDate).toISOString(),
-        couponEndDate: new Date(form.couponEndDate).toISOString()
+        couponStartDate: new Date(form.couponStartDate),
+        couponEndDate: new Date(form.couponEndDate)
       };
 
       if (form.couponMaxUsage) payload.couponMaxUsage = Number(form.couponMaxUsage);
@@ -337,21 +334,6 @@ export default function CouponsPageView() {
 
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
-                <InputLabel>Coupon Type</InputLabel>
-                <Select
-                  value={form.couponType}
-                  label="Coupon Type"
-                  onChange={(e) => setForm({ ...form, couponType: e.target.value })}
-                >
-                  {COUPON_TYPES.map((t) => (
-                    <MenuItem key={t} value={t}>{t}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
                 <InputLabel>Discount Type</InputLabel>
                 <Select
                   value={form.discountType}
@@ -367,7 +349,7 @@ export default function CouponsPageView() {
 
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
-                label={form.discountType === "PERCENTAGE" ? "Discount (%)" : "Discount (₩)"}
+                label={form.discountType === "PERCENTAGE" ? "Discount (%)" : "Discount Amount ($)"}
                 fullWidth
                 type="number"
                 value={form.discountValue}
@@ -393,6 +375,7 @@ export default function CouponsPageView() {
                 type="number"
                 value={form.minOrderCount}
                 onChange={(e) => setForm({ ...form, minOrderCount: e.target.value })}
+                helperText="Leave 0/empty for a public platform coupon."
               />
             </Grid>
 

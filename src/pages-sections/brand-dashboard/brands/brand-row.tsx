@@ -17,14 +17,24 @@ type Props = {
 };
 // ========================================================================
 
+function resolveBrandLogo(brandLogo?: string | null): string {
+  if (!brandLogo || brandLogo === "null" || brandLogo === "undefined") return "";
+  if (brandLogo.startsWith("http://") || brandLogo.startsWith("https://")) return brandLogo;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const normalized = brandLogo.startsWith("/") ? brandLogo : `/${brandLogo}`;
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 export default function BrandRow({ brand, onToggle, onDelete }: Props) {
   const { _id, brandName, brandLogo, brandStatus, brandRating, brandFollowersCount } = brand;
+  const resolvedBrandLogo = resolveBrandLogo(brandLogo);
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
       <StyledTableCell align="left">
         <FlexBox alignItems="center" gap={1.5}>
-          {brandLogo ? (
+          {resolvedBrandLogo ? (
             <Box
               sx={{
                 width: 40,
@@ -35,7 +45,7 @@ export default function BrandRow({ brand, onToggle, onDelete }: Props) {
                 img: { objectFit: "contain" }
               }}
             >
-              <Image fill src={brandLogo} alt={brandName} sizes="40px" />
+              <Image fill src={resolvedBrandLogo} alt={brandName} sizes="40px" />
             </Box>
           ) : null}
           <Typography variant="h6">{brandName}</Typography>

@@ -50,7 +50,7 @@ const tableHeading = [
   { id: "couponCode", label: "Code", align: "left" },
   { id: "couponStatus", label: "Status", align: "left" },
   { id: "discountValue", label: "Discount", align: "left" },
-  { id: "couponUsageCount", label: "Usage", align: "left" },
+  { id: "couponUsageCount", label: "Claims", align: "left" },
   { id: "couponStartDate", label: "Start", align: "left" },
   { id: "couponEndDate", label: "End", align: "left" },
   { id: "action", label: "Action", align: "center" }
@@ -315,9 +315,10 @@ export default function BrandCouponsPageView() {
                 fullWidth
                 size="small"
                 type="number"
-                label="Min Orders (optional)"
+                label="Min Delivered Orders (optional)"
                 value={form.minOrderCount}
                 onChange={(e) => setForm((f) => ({ ...f, minOrderCount: e.target.value }))}
+                helperText="Users must have this many delivered orders with your brand before they can claim it."
               />
             </Grid>
 

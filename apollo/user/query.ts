@@ -1029,3 +1029,43 @@ export const CHECK_COUPON = gql`
     }
   }
 `;
+
+export const GET_MY_COUPON_CLAIMS = gql`
+  query GetMyCouponClaims($input: CouponClaimsInquiry!) {
+    getMyCouponClaims(input: $input) {
+      list {
+        _id
+        couponId
+        memberId
+        brandId
+        orderId
+        claimStatus
+        claimedAt
+        usedAt
+        createdAt
+        updatedAt
+        coupon {
+          _id
+          couponCode
+          couponType
+          brandId
+          discountType
+          discountValue
+          couponMaxUsage
+          couponUsageCount
+          minOrderCount
+          couponStartDate
+          couponEndDate
+          couponStatus
+          createdAt
+          updatedAt
+        }
+      }
+      metaData {
+        total
+        page
+        limit
+      }
+    }
+  }
+`;
