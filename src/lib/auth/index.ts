@@ -5,6 +5,8 @@ import { CustomJwtPayload } from '../types/customJwtPayload';
 import { sweetTopSmallErrorAlert, sweetTopSmallSuccessAlert } from '../sweetAlert';
 import { LOGIN, SIGN_UP } from '../../../apollo/user/mutation';
 
+let refreshTokenMemory = '';
+
 export function getJwtToken(): any {
 	if (typeof window !== 'undefined') {
 		return localStorage.getItem('accessToken') ?? '';
@@ -16,14 +18,11 @@ export function setJwtToken(token: string) {
 }
 
 export function getRefreshToken(): string {
-	if (typeof window !== 'undefined') {
-		return localStorage.getItem('refreshToken') ?? '';
-	}
-	return '';
+	return refreshTokenMemory;
 }
 
 export function setRefreshToken(token: string) {
-	if (typeof window !== 'undefined') localStorage.setItem('refreshToken', token);
+	refreshTokenMemory = token ?? '';
 }
 
 export const logIn = async (nick: string, password: string): Promise<void> => {
@@ -137,6 +136,14 @@ const requestSignUpJwtToken = async ({
 // This is preferred over updateUserInfo(jwt) because the JWT only carries 4 fields.
 export const setUserFromMemberData = (member: any) => {
 	if (!member) return;
+	let tokenClaims: Partial<CustomJwtPayload> = {};
+	if (member.accessToken) {
+		try {
+			tokenClaims = jwtDecode<CustomJwtPayload>(member.accessToken);
+		} catch {
+			tokenClaims = {};
+		}
+	}
 	const base = process.env.NEXT_PUBLIC_API_URL ?? '';
 	const resolveImage = (img: string | undefined | null, nick: string) => {
 		if (img) {
@@ -146,12 +153,12 @@ export const setUserFromMemberData = (member: any) => {
 		return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nick || 'User')}&backgroundColor=6366f1&textColor=ffffff`;
 	};
 	const resolved: any = {
-		_id: member._id ?? '',
-		memberType: member.memberType ?? '',
-		memberStatus: member.memberStatus ?? '',
+		_id: tokenClaims._id ?? member._id ?? '',
+		memberType: tokenClaims.memberType ?? member.memberType ?? '',
+		memberStatus: tokenClaims.memberStatus ?? member.memberStatus ?? '',
 		memberAuthType: member.memberAuthType ?? '',
 		memberPhone: member.memberPhone ?? '',
-		memberNick: member.memberNick ?? '',
+		memberNick: tokenClaims.memberNick ?? member.memberNick ?? '',
 		memberFullName: member.memberFullName ?? '',
 		memberImage: resolveImage(member.memberImage, member.memberNick),
 		memberAddress: member.memberAddress ?? '',
@@ -165,8 +172,6 @@ export const setUserFromMemberData = (member: any) => {
 		memberWarnings: member.memberWarnings ?? 0,
 		memberBlocks: member.memberBlocks ?? 0,
 	};
-	// Persist so page refresh can restore full user data (memberImage etc.)
-	localStorage.setItem('memberData', JSON.stringify(resolved));
 	userVar(resolved);
 };
 
@@ -222,6 +227,7 @@ export const logOut = (redirect?: (href: string) => void) => {
 };
 
 const deleteStorage = () => {
+	setRefreshToken('');
 	localStorage.removeItem('accessToken');
 	localStorage.removeItem('refreshToken');
 	localStorage.removeItem('memberData');

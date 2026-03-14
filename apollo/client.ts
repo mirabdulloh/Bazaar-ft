@@ -36,6 +36,7 @@ function createIsomorphicLink(): ApolloLink {
 
 	// Silent logout — clear everything and redirect
 	const silentLogout = () => {
+		setRefreshToken('');
 		localStorage.removeItem('accessToken');
 		localStorage.removeItem('refreshToken');
 		localStorage.removeItem('memberData');
@@ -56,7 +57,15 @@ function createIsomorphicLink(): ApolloLink {
 		if (CombinedGraphQLErrors.is(error)) {
 			const isAuthError = error.errors.some(({ message }) => {
 				const lower = message.toLowerCase();
-				return lower.includes('unauthorized') || lower.includes('jwt expired') || lower.includes('token expired');
+				return (
+					lower.includes('unauthorized') ||
+					lower.includes('jwt expired') ||
+					lower.includes('token expired') ||
+					lower.includes('bearer token is not provided') ||
+					lower.includes('not authenticated') ||
+					lower.includes('invalid token') ||
+					lower.includes('jwt malformed')
+				);
 			});
 
 			if (isAuthError) {
