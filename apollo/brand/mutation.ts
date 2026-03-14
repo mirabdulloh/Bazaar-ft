@@ -123,3 +123,25 @@ export const UPDATE_BRAND_COUPON = gql`
     }
   }
 `;
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+export const UPDATE_ORDER_BY_BRAND = gql`
+  mutation UpdateOrderByBrand($input: BrandOrderUpdate!) {
+    updateOrderByBrand(input: $input) {
+      _id
+      memberId
+      brandId
+      orderStatus
+      orderTotalPrice
+      orderTotalDiscountPrice
+      orderFinalPrice
+      orderPaymentMethod
+      orderPaymentStatus
+      orderDeliveryAddressId
+      orderDeliveryStatus
+      createdAt
+      updatedAt
+    }
+  }
+`;

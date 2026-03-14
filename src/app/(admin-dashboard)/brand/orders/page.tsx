@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OrdersPageView } from "pages-sections/brand-dashboard/orders/page-view";
 
 export const metadata: Metadata = {
   title: "Orders - BAZAAR Brand Dashboard",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function VendorOrdersPage() {
-  return <div style={{ padding: 32 }}>Brand orders coming soon.</div>;
+  return <OrdersPageView />;
 }

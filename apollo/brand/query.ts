@@ -94,6 +94,7 @@ export const GET_BRAND_ORDERS = gql`
       orders {
         _id
         memberId
+        brandId
         orderStatus
         orderTotalPrice
         orderTotalDiscountPrice
@@ -107,15 +108,39 @@ export const GET_BRAND_ORDERS = gql`
         member {
           _id
           memberNick
+          memberImage
           memberEmail
           memberPhone
         }
+        deliveryAddress {
+          _id
+          addressName
+          addressPhone
+          addressCountry
+          addressCity
+          addressZipCode
+          addressLine1
+          addressLine2
+          isDefault
+        }
         orderItems {
           _id
+          orderId
           productId
           priceAtPurchase
           itemQuantity
           subtotal
+          selectedSize
+          selectedColor
+          product {
+            _id
+            productTitle
+            productImages
+            productPrice
+            productDiscountPrice
+            productSize
+            productColor
+          }
         }
       }
       metaData {
@@ -126,4 +151,3 @@ export const GET_BRAND_ORDERS = gql`
     }
   }
 `;
-

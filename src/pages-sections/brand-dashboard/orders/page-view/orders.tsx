@@ -1,118 +1,291 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button, { type ButtonProps } from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
 import Typography from "@mui/material/Typography";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-// GLOBAL CUSTOM COMPONENTS
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import CancelOutlined from "@mui/icons-material/CancelOutlined";
+import ShoppingBagOutlined from "@mui/icons-material/ShoppingBagOutlined";
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
 import FlexBox from "components/flex-box/flex-box";
-// GLOBAL CUSTOM HOOK
-import useMuiTable from "hooks/useMuiTable";
-// LOCAL CUSTOM COMPONENT
-import OrderRow from "../order-row";
 import PageWrapper from "../../page-wrapper";
-// TABLE HEAD COLUMN DATA
+import OrderRow, { OrderData } from "../order-row";
 import { tableHeading } from "../table-heading";
-// APOLLO
+import { StatusWrapper } from "../../styles";
+import {
+  ActionButtonRow,
+  DetailDrawerContent,
+  DetailHeaderCard,
+  DetailSectionCard,
+  FilterPillButton,
+  FilterToolbarCard,
+  ProductLine,
+  ProductThumb,
+  SummaryGrid,
+  SummaryMetricCard,
+} from "../styles";
 import { useQuery } from "lib/hooks/useQuery";
+import { useMutation } from "@apollo/client/react";
 import { GET_BRAND_ORDERS } from "../../../../../apollo/brand/query";
+import { UPDATE_ORDER_BY_BRAND } from "../../../../../apollo/brand/mutation";
+import { sweetConfirmAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "lib/sweetAlert";
+import { currency } from "lib";
 import { T } from "lib/types/common";
-// TYPES
-import type { OrderData } from "../order-row";
+import { getComparator, stableSort } from "hooks/useMuiTable";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
-const ORDER_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"];
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-// =============================================================================
+const STATUS_FILTERS = [
+  { label: "All", value: "" },
+  { label: "New", value: "PENDING" },
+  { label: "Confirmed", value: "CONFIRMED" },
+  { label: "Shipped", value: "SHIPPED" },
+  { label: "Completed", value: "DELIVERED" },
+  { label: "Cancelled", value: "CANCELLED" },
+  { label: "Refunded", value: "REFUNDED" },
+];
+
+type StatusAction = {
+  label: string;
+  nextStatus: string;
+  color: ButtonProps["color"];
+  variant?: ButtonProps["variant"];
+};
+
+function resolveImage(img?: string | null): string {
+  if (!img) return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return API_URL ? `${API_URL}${normalized}` : normalized;
+}
+
+function formatAddress(address?: OrderData["deliveryAddress"]): string {
+  if (!address) return "No delivery address saved for this order.";
+  return [
+    address.addressLine1,
+    address.addressLine2,
+    [address.addressCity, address.addressZipCode].filter(Boolean).join(", "),
+    address.addressCountry,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function getStatusAction(orderStatus: string): StatusAction[] {
+  if (orderStatus === "PENDING") {
+    return [
+      { label: "Confirm Order", nextStatus: "CONFIRMED", color: "primary" as const },
+      { label: "Cancel Order", nextStatus: "CANCELLED", color: "error" as const, variant: "outlined" as const },
+    ];
+  }
+
+  if (orderStatus === "CONFIRMED") {
+    return [
+      { label: "Mark as Shipped", nextStatus: "SHIPPED", color: "warning" as const },
+    ];
+  }
+
+  return [];
+}
+
+function getConfirmCopy(nextStatus: string) {
+  switch (nextStatus) {
+    case "CONFIRMED":
+      return {
+        title: "Confirm this order?",
+        text: "This will accept the order, mark payment as paid, and move it into preparation.",
+        confirm: "Yes, Confirm",
+        success: "Order confirmed",
+      };
+    case "CANCELLED":
+      return {
+        title: "Cancel this order?",
+        text: "This will cancel the order and restore stock for the ordered products.",
+        confirm: "Yes, Cancel",
+        success: "Order cancelled",
+      };
+    case "SHIPPED":
+      return {
+        title: "Mark this order as shipped?",
+        text: "This will notify the customer that the order is on the way.",
+        confirm: "Yes, Mark Shipped",
+        success: "Order marked as shipped",
+      };
+    default:
+      return {
+        title: "Update order?",
+        text: "This action will update the order status.",
+        confirm: "Continue",
+        success: "Order updated",
+      };
+  }
+}
 
 export default function OrdersPageView() {
-  // ─── Filters ────────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [orderBy, setOrderBy] = useState("createdAt");
+  const [orderDirection, setOrderDirection] = useState<"asc" | "desc">("desc");
+  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
+  const [actingStatus, setActingStatus] = useState<string>("");
 
-  // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading } = useQuery(GET_BRAND_ORDERS, {
-    fetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true,
-    variables: {
+  const queryVariables = useMemo(
+    () => ({
       input: {
         page: currentPage,
         limit: PAGE_SIZE,
         sort: "createdAt",
         direction: "DESC",
-        ...(statusFilter ? { search: { orderStatus: statusFilter } } : {})
-      }
-    }
+        ...(statusFilter ? { search: { orderStatus: statusFilter } } : {}),
+      },
+    }),
+    [currentPage, statusFilter]
+  );
+
+  const { data, loading, refetch } = useQuery(GET_BRAND_ORDERS, {
+    fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
+    variables: queryVariables,
   });
 
-  // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getBrandOrders?.orders ?? [];
+  const [updateOrderByBrand] = useMutation(UPDATE_ORDER_BY_BRAND);
+
+  const rawList: OrderData[] = (data as T)?.getBrandOrders?.orders ?? [];
   const total = (data as T)?.getBrandOrders?.metaData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const { order, orderBy, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+  const sortedList = useMemo(
+    () => stableSort(rawList, getComparator(orderDirection, orderBy)),
+    [orderBy, orderDirection, rawList]
+  );
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
-  const handlePageChange = (_: any, page: number) => setCurrentPage(page);
+  useEffect(() => {
+    if (!selectedOrder?._id) return;
+    const fresh = rawList.find((item) => item._id === selectedOrder._id);
+    if (fresh) {
+      setSelectedOrder(fresh);
+      return;
+    }
 
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value);
-    setCurrentPage(1);
-  };
+    if (!loading) {
+      setSelectedOrder(null);
+    }
+  }, [loading, rawList, selectedOrder?._id]);
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  const handleRequestSort = useCallback((property: string) => {
+    if (property === "action" || property === "member") return;
+    const isAsc = orderBy === property && orderDirection === "asc";
+    setOrderDirection(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  }, [orderBy, orderDirection]);
+
+  const handleView = useCallback((order: OrderData) => {
+    setSelectedOrder(order);
+  }, []);
+
+  const handleStatusUpdate = useCallback(async (order: OrderData, nextStatus: string) => {
+    const copy = getConfirmCopy(nextStatus);
+    const confirmed = await sweetConfirmAlert(copy.title, copy.text, copy.confirm);
+    if (!confirmed) return;
+
+    const lockId = `${order._id}:${nextStatus}`;
+    setActingStatus(lockId);
+
+    try {
+      const { data: result } = await updateOrderByBrand({
+        variables: {
+          input: {
+            _id: order._id,
+            orderStatus: nextStatus,
+          },
+        },
+      });
+
+      const updated = (result as T)?.updateOrderByBrand as T | undefined;
+      if (updated && selectedOrder?._id === order._id) {
+        setSelectedOrder((prev) => (prev ? ({ ...prev, ...updated } as OrderData) : prev));
+      }
+
+      await sweetTopSmallSuccessAlert(copy.success);
+      await refetch();
+
+      if (statusFilter && statusFilter !== nextStatus) {
+        setSelectedOrder(null);
+      }
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err.message || "Failed to update order");
+    } finally {
+      setActingStatus("");
+    }
+  }, [refetch, selectedOrder?._id, statusFilter, updateOrderByBrand]);
+
+  const activeActions = selectedOrder ? getStatusAction(selectedOrder.orderStatus) : [];
+
   return (
     <PageWrapper title="Orders">
-      {/* Filters */}
-      <FlexBox mb={2} gap={2} flexWrap="wrap">
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>Order Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Order Status"
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
+      <FilterToolbarCard>
+        {STATUS_FILTERS.map((item) => (
+          <FilterPillButton
+            key={item.label}
+            active={statusFilter === item.value}
+            onClick={() => {
+              setStatusFilter(item.value);
+              setCurrentPage(1);
+            }}
           >
-            <MenuItem value="">All</MenuItem>
-            {ORDER_STATUSES.map((s) => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </FlexBox>
+            {item.label}
+          </FilterPillButton>
+        ))}
+      </FilterToolbarCard>
 
-      {loading ? (
-        <Typography variant="body1">Loading orders...</Typography>
-      ) : list.length === 0 ? (
-        <Card sx={{ p: 4, textAlign: "center" }}>
-          <Typography color="text.secondary">No orders found.</Typography>
+      {loading && rawList.length === 0 ? (
+        <Stack gap={1.5}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} variant="rounded" height={72} sx={{ borderRadius: 3 }} />
+          ))}
+        </Stack>
+      ) : rawList.length === 0 ? (
+        <Card sx={{ p: 5, textAlign: "center", borderRadius: 4, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
+          <ShoppingBagOutlined sx={{ fontSize: 48, color: "grey.400", mb: 1.5 }} />
+          <Typography variant="h6" sx={{ mb: 0.75 }}>
+            No orders found
+          </Typography>
+          <Typography color="text.secondary">
+            Orders for this brand will appear here once customers start buying your products.
+          </Typography>
         </Card>
       ) : (
-        <Card>
+        <Card sx={{ borderRadius: 4, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
           <OverlayScrollbar>
             <TableContainer sx={{ minWidth: 900 }}>
               <Table>
                 <TableHeader
-                  order={order}
+                  order={orderDirection}
                   orderBy={orderBy}
                   heading={tableHeading}
                   onRequestSort={handleRequestSort}
                 />
-
                 <TableBody>
-                  {list.map((orderItem: OrderData) => (
+                  {sortedList.map((item) => (
                     <OrderRow
-                      key={orderItem._id}
-                      order={orderItem}
+                      key={item._id}
+                      order={item}
+                      onView={handleView}
                     />
                   ))}
                 </TableBody>
@@ -122,13 +295,222 @@ export default function OrdersPageView() {
 
           <Stack alignItems="center" my={4}>
             <TablePagination
-              onChange={handlePageChange}
-              count={Math.ceil(total / PAGE_SIZE)}
+              onChange={(_, page) => setCurrentPage(page)}
+              count={totalPages}
               page={currentPage}
             />
           </Stack>
         </Card>
       )}
+
+      <Drawer
+        anchor="right"
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 620 }, maxWidth: "100%" } }}
+      >
+        {selectedOrder && (
+          <DetailDrawerContent>
+            <FlexBox alignItems="flex-start" justifyContent="space-between" gap={2}>
+              <Box>
+                <Typography variant="h5" fontWeight={700}>
+                  Order #{selectedOrder._id.slice(-8).toUpperCase()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Created {new Date(selectedOrder.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </Typography>
+              </Box>
+              <Button
+                variant="text"
+                color="inherit"
+                onClick={() => setSelectedOrder(null)}
+                startIcon={<CloseRounded />}
+                sx={{ textTransform: "none" }}
+              >
+                Close
+              </Button>
+            </FlexBox>
+
+            <DetailHeaderCard>
+              <FlexBox justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
+                <FlexBox alignItems="center" gap={1.5}>
+                  <Avatar
+                    src={resolveImage(selectedOrder.member?.memberImage)}
+                    alt={selectedOrder.member?.memberNick ?? "Customer"}
+                    sx={{ width: 56, height: 56 }}
+                  />
+
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Customer
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                      {selectedOrder.member?.memberNick ?? "Customer"}
+                    </Typography>
+                    {!!selectedOrder.member?.memberEmail && (
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedOrder.member.memberEmail}
+                      </Typography>
+                    )}
+                    {!!selectedOrder.member?.memberPhone && (
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedOrder.member.memberPhone}
+                      </Typography>
+                    )}
+                  </Box>
+                </FlexBox>
+
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <StatusWrapper status={selectedOrder.orderStatus}>{selectedOrder.orderStatus}</StatusWrapper>
+                  <StatusWrapper status={selectedOrder.orderPaymentStatus === "PAID" ? "Accepted" : selectedOrder.orderPaymentStatus === "FAILED" ? "Rejected" : "Pending"}>
+                    {selectedOrder.orderPaymentStatus}
+                  </StatusWrapper>
+                  <StatusWrapper status={selectedOrder.orderDeliveryStatus === "DELIVERED" ? "Delivered" : selectedOrder.orderDeliveryStatus === "SHIPPING" ? "Processing" : "Pending"}>
+                    {selectedOrder.orderDeliveryStatus}
+                  </StatusWrapper>
+                </Stack>
+              </FlexBox>
+
+              <SummaryGrid sx={{ mt: 2 }}>
+                <SummaryMetricCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Total
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                    {currency(selectedOrder.orderFinalPrice ?? 0)}
+                  </Typography>
+                </SummaryMetricCard>
+
+                <SummaryMetricCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Items
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                    {selectedOrder.orderItems?.reduce((sum, item) => sum + Number(item.itemQuantity ?? 0), 0) ?? 0}
+                  </Typography>
+                </SummaryMetricCard>
+
+                <SummaryMetricCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Payment Method
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                    {selectedOrder.orderPaymentMethod.replaceAll("_", " ")}
+                  </Typography>
+                </SummaryMetricCard>
+              </SummaryGrid>
+
+              {activeActions.length > 0 && (
+                <ActionButtonRow>
+                  {activeActions.map((action) => {
+                    const lockId = `${selectedOrder._id}:${action.nextStatus}`;
+                    return (
+                      <Button
+                        key={action.nextStatus}
+                        variant={action.variant ?? "contained"}
+                        color={action.color}
+                        onClick={() => handleStatusUpdate(selectedOrder, action.nextStatus)}
+                        disabled={actingStatus === lockId}
+                        loading={actingStatus === lockId}
+                        startIcon={
+                          action.nextStatus === "CONFIRMED" ? <Inventory2Outlined /> :
+                          action.nextStatus === "SHIPPED" ? <LocalShippingOutlined /> :
+                          <CancelOutlined />
+                        }
+                      >
+                        {action.label}
+                      </Button>
+                    );
+                  })}
+                </ActionButtonRow>
+              )}
+            </DetailHeaderCard>
+
+            <DetailSectionCard>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1.25 }}>
+                Ordered Items
+              </Typography>
+
+              {selectedOrder.orderItems?.map((item) => {
+                const image = resolveImage(item.product?.productImages?.[0]);
+                return (
+                  <ProductLine key={item._id}>
+                    <ProductThumb>
+                      {image ? <img src={image} alt={item.product?.productTitle ?? "Product"} /> : null}
+                    </ProductThumb>
+
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body1" fontWeight={700}>
+                        {item.product?.productTitle ?? `Product #${item.productId.slice(-6)}`}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {currency(item.priceAtPurchase)} x {item.itemQuantity}
+                      </Typography>
+
+                      <FlexBox gap={0.75} flexWrap="wrap" sx={{ mt: 1 }}>
+                        {item.selectedSize && <Chip size="small" label={`Size ${item.selectedSize}`} variant="outlined" />}
+                        {item.selectedColor && <Chip size="small" label={`Color ${item.selectedColor}`} variant="outlined" />}
+                      </FlexBox>
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      fontWeight={700}
+                      sx={{ justifySelf: "end", textAlign: "right", display: { xs: "none", sm: "block" } }}
+                    >
+                      {currency(item.subtotal)}
+                    </Typography>
+                  </ProductLine>
+                );
+              })}
+            </DetailSectionCard>
+
+            <DetailSectionCard>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1.25 }}>
+                Delivery Address
+              </Typography>
+              <Typography variant="body1" whiteSpace="pre-line">
+                {formatAddress(selectedOrder.deliveryAddress)}
+              </Typography>
+              {!!selectedOrder.deliveryAddress?.addressPhone && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Phone: {selectedOrder.deliveryAddress.addressPhone}
+                </Typography>
+              )}
+            </DetailSectionCard>
+
+            <DetailSectionCard>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1.25 }}>
+                Order Summary
+              </Typography>
+
+              <Stack spacing={1.25}>
+                <FlexBox justifyContent="space-between" alignItems="center">
+                  <Typography color="text.secondary">Subtotal</Typography>
+                  <Typography fontWeight={700}>{currency(selectedOrder.orderTotalPrice ?? 0)}</Typography>
+                </FlexBox>
+                <FlexBox justifyContent="space-between" alignItems="center">
+                  <Typography color="text.secondary">Discount</Typography>
+                  <Typography fontWeight={700}>
+                    -{currency(selectedOrder.orderTotalDiscountPrice ?? 0)}
+                  </Typography>
+                </FlexBox>
+                <Divider />
+                <FlexBox justifyContent="space-between" alignItems="center">
+                  <Typography variant="subtitle1" fontWeight={700}>Final Total</Typography>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {currency(selectedOrder.orderFinalPrice ?? 0)}
+                  </Typography>
+                </FlexBox>
+              </Stack>
+            </DetailSectionCard>
+          </DetailDrawerContent>
+        )}
+      </Drawer>
     </PageWrapper>
   );
 }
