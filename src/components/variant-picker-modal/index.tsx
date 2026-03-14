@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 // MUI
 import Box from "@mui/material/Box";
@@ -27,6 +26,16 @@ function toArray(val: string | string[] | undefined | null): string[] {
   const raw = Array.isArray(val) ? val : [val];
   const split = raw.flatMap((item) => String(item).split(/[,/|]/));
   return Array.from(new Set(split.map((s) => s.trim()).filter(Boolean)));
+}
+
+function resolveProductImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") {
+    return "/assets/images/products/product-1.png";
+  }
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  return apiBase ? `${apiBase}${normalized}` : normalized;
 }
 
 export default function VariantPickerModal() {
@@ -55,6 +64,7 @@ export default function VariantPickerModal() {
   const colorOptions = toArray(product.colors as unknown as string | string[]);
   const hasSizes  = sizeOptions.length > 0;
   const hasColors = colorOptions.length > 0;
+  const previewImage = resolveProductImage(product.thumbnail);
 
   const handleConfirm = () => {
     if (!user?._id) {
@@ -110,7 +120,12 @@ export default function VariantPickerModal() {
         {/* Product info row */}
         <Box sx={{ display: "flex", gap: 2, mb: 2.5 }}>
           <Box sx={{ position: "relative", width: 72, height: 72, flexShrink: 0, borderRadius: 2, overflow: "hidden", bgcolor: "grey.100" }}>
-            <Image src={product.thumbnail} alt={product.title} fill style={{ objectFit: "cover" }} />
+            <Box
+              component="img"
+              src={previewImage}
+              alt={product.title}
+              sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
           </Box>
           <Box>
             <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3, mb: 0.5 }}>
