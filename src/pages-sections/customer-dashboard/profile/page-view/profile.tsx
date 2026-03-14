@@ -107,6 +107,15 @@ import {
   StatCard,
   InfoRowWrapper,
   OrderCard,
+  OrderStatusRow,
+  OrderSummaryGrid,
+  OrderSummaryCard,
+  OrderItemsPreview,
+  OrderProductLine,
+  OrderProductThumb,
+  OrderProductInfo,
+  OrderActionBar,
+  OrderVariantBadge,
   EmptyCard,
   ProductCard,
   ProductImageBox,
@@ -253,6 +262,54 @@ function toProductModel(product: T): Product {
     productRank: Number(product?.productRank ?? 0),
     productRatingCount: Number(product?.productRatingCount ?? 0),
   };
+}
+
+function countOrderUnits(order: T): number {
+  return (Array.isArray(order.orderItems) ? order.orderItems : []).reduce(
+    (sum: number, item: T) => sum + Number(item?.itemQuantity ?? 0),
+    0
+  );
+}
+
+function getOrderDisplayDate(order: T): string {
+  return new Date(String(order.createdAt ?? "")).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function getOrderStatusMessage(status: string): string {
+  switch (status) {
+    case "PENDING":
+      return "Waiting for the brand to confirm and prepare your order.";
+    case "CONFIRMED":
+      return "The brand accepted your order and is preparing it.";
+    case "SHIPPED":
+      return "The brand shipped your order. Mark it received when it arrives.";
+    case "DELIVERED":
+      return "Order completed. You can review purchased items or reorder them.";
+    case "CANCELLED":
+      return "This order was cancelled before completion.";
+    case "REFUNDED":
+      return "This order has been refunded.";
+    default:
+      return "Order status updated.";
+  }
+}
+
+function getOrderItemVariantText(item: T): string {
+  const parts = [
+    item?.selectedSize ? `Size ${String(item.selectedSize)}` : "",
+    item?.selectedColor ? `Color ${String(item.selectedColor)}` : "",
+  ].filter(Boolean);
+
+  return parts.join(" • ");
+}
+
+function getOrderProductImage(item: T): string {
+  const raw = Array.isArray(item?.product?.productImages) ? (item.product.productImages as string[]) : [];
+  return resolveImage(raw[0]);
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -1028,12 +1085,19 @@ function OrdersPanel({
 
   return (
     <Box>
-      <SectionTitle title="My Orders" />
+      <SectionTitle
+        title="My Orders"
+        action={
+          <Typography variant="body2" color="text.secondary">
+            {activeOrders.length} active
+          </Typography>
+        }
+      />
 
-      {loading ? (
+      {loading && activeOrders.length === 0 ? (
         <Stack spacing={1.5}>
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={64} variant="rounded" sx={{ borderRadius: 2 }} />
+            <Skeleton key={i} height={220} variant="rounded" sx={{ borderRadius: 2.5 }} />
           ))}
         </Stack>
       ) : activeOrders.length === 0 ? (
@@ -1049,48 +1113,161 @@ function OrdersPanel({
           </Link>
         </EmptyCard>
       ) : (
-        <Stack spacing={1}>
+        <Stack spacing={2}>
           {activeOrders.map((order: T) => (
             <OrderCard key={order._id as string}>
-              <FlexBetween flexWrap="wrap" gap={1}>
-                <Box>
-                  <Typography variant="body2" fontWeight={700}>
-                    Order #{(order._id as string).slice(-8).toUpperCase()}
-                  </Typography>
-                  {!!order.brand?.memberNick && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                      Brand: {String(order.brand.memberNick)}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    {new Date(order.createdAt as string).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric"
-                    })}
-                  </Typography>
-                </Box>
-                <FlexBox alignItems="center" gap={2}>
-                  <Chip
-                    label={order.orderStatus as string}
-                    size="small"
-                    color={orderStatusColor(order.orderStatus as string)}
-                    sx={{ fontWeight: 600, fontSize: 10 }}
+              <FlexBetween flexWrap="wrap" gap={2}>
+                <FlexBox alignItems="center" gap={1.5}>
+                  <Avatar
+                    src={resolveImage(order.brand?.memberImage as string)}
+                    alt={String(order.brand?.memberNick ?? "Brand")}
+                    sx={{ width: 52, height: 52 }}
                   />
-                  <Typography variant="body2" fontWeight={700} color="primary.main">
-                    {currency((order.orderFinalPrice ?? order.orderTotalPrice) as number)}
-                  </Typography>
-                </FlexBox>
-              </FlexBetween>
 
-              <FlexBetween sx={{ mt: 1.5 }} gap={1} flexWrap="wrap">
-                <FlexBetween flexWrap="wrap" gap={1}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {Array.isArray(order.orderItems) ? order.orderItems.length : 0} items
+                    <Typography variant="subtitle1" fontWeight={800}>
+                      {String(order.brand?.memberNick ?? "Brand")}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Order #{String(order._id).slice(-8).toUpperCase()} • {getOrderDisplayDate(order)}
                     </Typography>
                   </Box>
-                </FlexBetween>
+                </FlexBox>
+
+                <Box textAlign={{ xs: "left", sm: "right" }}>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Final total
+                  </Typography>
+                  <Typography variant="h6" fontWeight={800} color="primary.main">
+                    {currency(Number(order.orderFinalPrice ?? order.orderTotalPrice ?? 0))}
+                  </Typography>
+                </Box>
+              </FlexBetween>
+
+              <OrderStatusRow>
+                <FlexBox gap={1} flexWrap="wrap">
+                  <Chip
+                    label={String(order.orderStatus)}
+                    size="small"
+                    color={orderStatusColor(String(order.orderStatus))}
+                    sx={{ fontWeight: 700, fontSize: 10 }}
+                  />
+                  <Chip
+                    label={`Payment ${String(order.orderPaymentStatus ?? "PENDING")}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontWeight: 600, fontSize: 10 }}
+                  />
+                  <Chip
+                    label={`Delivery ${String(order.orderDeliveryStatus ?? "PREPARING")}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontWeight: 600, fontSize: 10 }}
+                  />
+                </FlexBox>
+
+                <Typography variant="body2" color="text.secondary">
+                  {getOrderStatusMessage(String(order.orderStatus))}
+                </Typography>
+              </OrderStatusRow>
+
+              <OrderSummaryGrid>
+                <OrderSummaryCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Items
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                    {countOrderUnits(order)}
+                  </Typography>
+                </OrderSummaryCard>
+                <OrderSummaryCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Payment
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                    {String(order.orderPaymentStatus ?? "PENDING")}
+                  </Typography>
+                </OrderSummaryCard>
+                <OrderSummaryCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Delivery
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                    {String(order.orderDeliveryStatus ?? "PREPARING")}
+                  </Typography>
+                </OrderSummaryCard>
+                <OrderSummaryCard>
+                  <Typography variant="caption" color="text.secondary">
+                    Method
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                    {String(order.orderPaymentMethod ?? "CARD").replaceAll("_", " ")}
+                  </Typography>
+                </OrderSummaryCard>
+              </OrderSummaryGrid>
+
+              <Divider sx={{ my: 2 }} />
+
+              <OrderItemsPreview>
+                {(Array.isArray(order.orderItems) ? order.orderItems : []).slice(0, 2).map((item: T) => {
+                  const productImage = getOrderProductImage(item);
+                  const variantText = getOrderItemVariantText(item);
+
+                  return (
+                    <OrderProductLine key={String(item._id)}>
+                      <OrderProductThumb>
+                        {productImage ? (
+                          <Image
+                            src={productImage}
+                            alt={String(item?.product?.productTitle ?? "Product")}
+                            fill
+                            style={{ objectFit: "cover" }}
+                          />
+                        ) : null}
+                      </OrderProductThumb>
+
+                      <OrderProductInfo>
+                        <Typography variant="body2" fontWeight={700}>
+                          {String(item?.product?.productTitle ?? "Product")}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                          Qty {Number(item?.itemQuantity ?? 1)} • {currency(Number(item?.subtotal ?? item?.priceAtPurchase ?? 0))}
+                        </Typography>
+                        {variantText && (
+                          <FlexBox gap={0.75} sx={{ mt: 0.9 }} flexWrap="wrap">
+                            {variantText.split(" • ").map((part) => (
+                              <OrderVariantBadge key={part}>{part}</OrderVariantBadge>
+                            ))}
+                          </FlexBox>
+                        )}
+                      </OrderProductInfo>
+
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        sx={{ display: { xs: "none", sm: "block" }, textAlign: "right" }}
+                      >
+                        {currency(Number(item?.subtotal ?? 0))}
+                      </Typography>
+                    </OrderProductLine>
+                  );
+                })}
+
+                {(Array.isArray(order.orderItems) ? order.orderItems.length : 0) > 2 && (
+                  <Typography variant="caption" color="text.secondary">
+                    +{(order.orderItems as T[]).length - 2} more item(s) in this order
+                  </Typography>
+                )}
+              </OrderItemsPreview>
+
+              <Divider />
+
+              <OrderActionBar>
+                <Typography variant="body2" color="text.secondary">
+                  {String(order.deliveryAddress?.addressCity ?? "")}
+                  {order.deliveryAddress?.addressCountry ? `, ${String(order.deliveryAddress.addressCountry)}` : ""}
+                </Typography>
+
                 <FlexBox gap={1} flexWrap="wrap">
                   <Link href={`/profile?tab=orders&orderId=${order._id}`} style={{ textDecoration: "none" }}>
                     <Button size="small" variant="outlined">
@@ -1118,7 +1295,7 @@ function OrdersPanel({
                     </Button>
                   )}
                 </FlexBox>
-              </FlexBetween>
+              </OrderActionBar>
             </OrderCard>
           ))}
         </Stack>
@@ -1152,20 +1329,6 @@ function OrderHistoryPanel({
         ["DELIVERED", "CANCELLED", "REFUNDED"].includes(String(order.orderStatus ?? ""))
       ),
     [orders]
-  );
-
-  const historyItems = useMemo(
-    () =>
-      historyOrders.flatMap((order) =>
-        (Array.isArray(order.orderItems) ? order.orderItems : [])
-          .filter((item: T) => item?.product?._id)
-          .map((item: T) => ({
-            order,
-            item,
-            product: item.product as T,
-          }))
-      ),
-    [historyOrders]
   );
 
   const openReviewDialog = useCallback((target: T) => {
@@ -1230,15 +1393,22 @@ function OrderHistoryPanel({
 
   return (
     <Box>
-      <SectionTitle title="Order History" />
+      <SectionTitle
+        title="Order History"
+        action={
+          <Typography variant="body2" color="text.secondary">
+            {historyOrders.length} completed
+          </Typography>
+        }
+      />
 
-      {loading ? (
+      {loading && historyOrders.length === 0 ? (
         <Stack spacing={2}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={110} variant="rounded" sx={{ borderRadius: 2 }} />
+            <Skeleton key={i} height={260} variant="rounded" sx={{ borderRadius: 2.5 }} />
           ))}
         </Stack>
-      ) : historyItems.length === 0 ? (
+      ) : historyOrders.length === 0 ? (
         <EmptyCard>
           <ConfirmationNumberOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
           <Typography variant="body1" color="text.secondary">
@@ -1247,78 +1417,186 @@ function OrderHistoryPanel({
         </EmptyCard>
       ) : (
         <Stack spacing={2}>
-          {historyItems.map((entry: T) => {
-            const product = entry.product as T;
-            const order = entry.order as T;
-            const item = entry.item as T;
-            const productImages = Array.isArray(product?.productImages) ? (product.productImages as string[]) : [];
-            const alreadyReviewed = reviewingItemIds.includes(String(item._id));
-            const canReview = String(order.orderStatus) === "DELIVERED";
-
+          {historyOrders.map((order: T) => {
+            const orderItems = (Array.isArray(order.orderItems) ? order.orderItems : []).filter((item: T) => item?.product?._id);
             return (
-              <PanelCard key={String(item._id)} sx={{ p: 2 }}>
-                <FlexBetween gap={2} flexWrap="wrap" alignItems="flex-start">
-                  <FlexBox gap={2} alignItems="flex-start" flex="1 1 420px">
-                    <Box
-                      sx={{
-                        position: "relative",
-                        width: 88,
-                        minWidth: 88,
-                        height: 88,
-                        borderRadius: 2,
-                        overflow: "hidden",
-                        bgcolor: "grey.100"
-                      }}
-                    >
-                      {productImages[0] ? (
-                        <Image
-                          src={resolveImage(productImages[0])}
-                          alt={String(product?.productTitle ?? "Product")}
-                          fill
-                          style={{ objectFit: "cover" }}
-                        />
-                      ) : null}
-                    </Box>
+              <OrderCard key={String(order._id)}>
+                <FlexBetween flexWrap="wrap" gap={2}>
+                  <FlexBox alignItems="center" gap={1.5}>
+                    <Avatar
+                      src={resolveImage(order.brand?.memberImage as string)}
+                      alt={String(order.brand?.memberNick ?? "Brand")}
+                      sx={{ width: 52, height: 52 }}
+                    />
 
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        {String(product?.productTitle ?? "Product")}
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={800}>
+                        {String(order.brand?.memberNick ?? "Brand")}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Order #{String(order._id ?? "").slice(-8).toUpperCase()} · Qty {Number(item?.itemQuantity ?? 1)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {new Date(order.createdAt as string).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric"
-                        })}
-                      </Typography>
-                      <Typography variant="subtitle2" color="primary.main" fontWeight={700} sx={{ mt: 1 }}>
-                        {currency(Number(item?.subtotal ?? item?.priceAtPurchase ?? 0))}
+                      <Typography variant="body2" color="text.secondary">
+                        Order #{String(order._id).slice(-8).toUpperCase()} • {getOrderDisplayDate(order)}
                       </Typography>
                     </Box>
                   </FlexBox>
 
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ minWidth: { xs: "100%", sm: "auto" } }}>
-                    <Button
+                  <Box textAlign={{ xs: "left", sm: "right" }}>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Final total
+                    </Typography>
+                    <Typography variant="h6" fontWeight={800} color="primary.main">
+                      {currency(Number(order.orderFinalPrice ?? order.orderTotalPrice ?? 0))}
+                    </Typography>
+                  </Box>
+                </FlexBetween>
+
+                <OrderStatusRow>
+                  <FlexBox gap={1} flexWrap="wrap">
+                    <Chip
+                      label={String(order.orderStatus)}
+                      size="small"
+                      color={orderStatusColor(String(order.orderStatus))}
+                      sx={{ fontWeight: 700, fontSize: 10 }}
+                    />
+                    <Chip
+                      label={`Payment ${String(order.orderPaymentStatus ?? "PENDING")}`}
                       size="small"
                       variant="outlined"
-                      onClick={() => handleReorder(product)}
-                    >
-                      Reorder
-                    </Button>
-                    <Button
+                      sx={{ fontWeight: 600, fontSize: 10 }}
+                    />
+                    <Chip
+                      label={`Delivery ${String(order.orderDeliveryStatus ?? "PREPARING")}`}
                       size="small"
-                      variant="contained"
-                      disabled={!canReview || alreadyReviewed}
-                      onClick={() => openReviewDialog(entry)}
-                    >
-                      {alreadyReviewed ? "Reviewed" : "Write Review"}
-                    </Button>
-                  </Stack>
-                </FlexBetween>
-              </PanelCard>
+                      variant="outlined"
+                      sx={{ fontWeight: 600, fontSize: 10 }}
+                    />
+                  </FlexBox>
+
+                  <Typography variant="body2" color="text.secondary">
+                    {getOrderStatusMessage(String(order.orderStatus))}
+                  </Typography>
+                </OrderStatusRow>
+
+                <OrderSummaryGrid>
+                  <OrderSummaryCard>
+                    <Typography variant="caption" color="text.secondary">
+                      Items
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                      {countOrderUnits(order)}
+                    </Typography>
+                  </OrderSummaryCard>
+                  <OrderSummaryCard>
+                    <Typography variant="caption" color="text.secondary">
+                      Payment
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                      {String(order.orderPaymentStatus ?? "PENDING")}
+                    </Typography>
+                  </OrderSummaryCard>
+                  <OrderSummaryCard>
+                    <Typography variant="caption" color="text.secondary">
+                      Delivery
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                      {String(order.orderDeliveryStatus ?? "PREPARING")}
+                    </Typography>
+                  </OrderSummaryCard>
+                  <OrderSummaryCard>
+                    <Typography variant="caption" color="text.secondary">
+                      Method
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
+                      {String(order.orderPaymentMethod ?? "CARD").replaceAll("_", " ")}
+                    </Typography>
+                  </OrderSummaryCard>
+                </OrderSummaryGrid>
+
+                <Divider sx={{ my: 2 }} />
+
+                <OrderItemsPreview>
+                  {orderItems.map((item: T) => {
+                    const product = item.product as T;
+                    const productImage = getOrderProductImage(item);
+                    const variantText = getOrderItemVariantText(item);
+                    const alreadyReviewed = reviewingItemIds.includes(String(item._id));
+                    const canReview = String(order.orderStatus) === "DELIVERED";
+
+                    return (
+                      <Box key={String(item._id)}>
+                        <OrderProductLine>
+                          <OrderProductThumb>
+                            {productImage ? (
+                              <Image
+                                src={productImage}
+                                alt={String(product?.productTitle ?? "Product")}
+                                fill
+                                style={{ objectFit: "cover" }}
+                              />
+                            ) : null}
+                          </OrderProductThumb>
+
+                          <OrderProductInfo>
+                            <Typography variant="body2" fontWeight={700}>
+                              {String(product?.productTitle ?? "Product")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
+                              Qty {Number(item?.itemQuantity ?? 1)} • {currency(Number(item?.subtotal ?? item?.priceAtPurchase ?? 0))}
+                            </Typography>
+                            {variantText && (
+                              <FlexBox gap={0.75} sx={{ mt: 0.9 }} flexWrap="wrap">
+                                {variantText.split(" • ").map((part) => (
+                                  <OrderVariantBadge key={part}>{part}</OrderVariantBadge>
+                                ))}
+                              </FlexBox>
+                            )}
+                          </OrderProductInfo>
+
+                          <Stack
+                            direction={{ xs: "row", sm: "column" }}
+                            spacing={1}
+                            alignItems={{ xs: "flex-start", sm: "flex-end" }}
+                            sx={{ display: { xs: "none", sm: "flex" } }}
+                          >
+                            <Button size="small" variant="outlined" onClick={() => handleReorder(product)}>
+                              Reorder
+                            </Button>
+                            {canReview && (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                disabled={alreadyReviewed}
+                                onClick={() => openReviewDialog({ order, item, product })}
+                              >
+                                {alreadyReviewed ? "Reviewed" : "Write Review"}
+                              </Button>
+                            )}
+                          </Stack>
+                        </OrderProductLine>
+
+                        <FlexBox
+                          gap={1}
+                          flexWrap="wrap"
+                          sx={{ display: { xs: "flex", sm: "none" }, mt: 1.25 }}
+                        >
+                          <Button size="small" variant="outlined" onClick={() => handleReorder(product)}>
+                            Reorder
+                          </Button>
+                          {canReview && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              disabled={alreadyReviewed}
+                              onClick={() => openReviewDialog({ order, item, product })}
+                            >
+                              {alreadyReviewed ? "Reviewed" : "Write Review"}
+                            </Button>
+                          )}
+                        </FlexBox>
+                      </Box>
+                    );
+                  })}
+                </OrderItemsPreview>
+              </OrderCard>
             );
           })}
         </Stack>

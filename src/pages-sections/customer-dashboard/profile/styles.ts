@@ -176,6 +176,94 @@ export const OrderCard = styled(Card)(({ theme }) => ({
   },
 }));
 
+export const OrderStatusRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(1.5),
+  flexWrap: "wrap",
+  marginTop: theme.spacing(2),
+}));
+
+export const OrderSummaryGrid = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: theme.spacing(1.25),
+  marginTop: theme.spacing(2),
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr",
+  },
+}));
+
+export const OrderSummaryCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1.5),
+  borderRadius: 12,
+  border: `1px solid ${theme.palette.grey[200]}`,
+  backgroundColor: theme.palette.grey[50],
+}));
+
+export const OrderItemsPreview = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1.5),
+  paddingTop: theme.spacing(2),
+  paddingBottom: theme.spacing(2),
+}));
+
+export const OrderProductLine = styled(Box)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "72px minmax(0, 1fr) auto",
+  gap: theme.spacing(1.5),
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "64px minmax(0, 1fr)",
+  },
+}));
+
+export const OrderProductThumb = styled(Box)(({ theme }) => ({
+  width: 72,
+  height: 72,
+  borderRadius: 12,
+  overflow: "hidden",
+  border: `1px solid ${theme.palette.grey[200]}`,
+  backgroundColor: theme.palette.grey[100],
+  position: "relative",
+  flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    width: 64,
+    height: 64,
+  },
+}));
+
+export const OrderProductInfo = styled(Box)({
+  minWidth: 0,
+});
+
+export const OrderActionBar = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  flexWrap: "wrap",
+  paddingTop: theme.spacing(1.5),
+}));
+
+export const OrderVariantBadge = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(0.5),
+  padding: `${theme.spacing(0.35)} ${theme.spacing(1)}`,
+  borderRadius: 999,
+  border: `1px solid ${theme.palette.grey[200]}`,
+  backgroundColor: theme.palette.common.white,
+  color: theme.palette.text.secondary,
+  fontSize: 12,
+  fontWeight: 600,
+}));
+
 // ─── Empty state card ────────────────────────────────────────────────────────
 export const EmptyCard = styled(Card)(({ theme }) => ({
   padding: theme.spacing(4),
