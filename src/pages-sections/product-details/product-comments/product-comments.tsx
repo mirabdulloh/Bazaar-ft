@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -94,6 +94,13 @@ function ReplyForm({
   userImage?: string;
   userNick?: string;
 }) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      if (replyContent.trim()) onSubmit();
+    }
+  };
+
   return (
     <Box sx={{ display: "flex", gap: 1.5, mt: 1.5, pl: 6.5 }}>
       <Avatar
@@ -110,6 +117,7 @@ function ReplyForm({
           placeholder={`Reply to ${toNick}…`}
           value={replyContent}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           sx={{ mb: 1 }}
         />
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -157,6 +165,17 @@ export default function ProductComments({
 
   const [createComment] = useMutation(CREATE_COMMENT);
   const [updateComment] = useMutation(UPDATE_COMMENT);
+
+  const handleSubmitOnEnter = (
+    e: KeyboardEvent<HTMLDivElement>,
+    submit: () => void,
+    disabled: boolean
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      if (!disabled) submit();
+    }
+  };
 
   // ── Query ────────────────────────────────────────────────────────────────
   const { loading, error, refetch, data: rawData } = useQuery(GET_COMMENTS, {
@@ -470,6 +489,7 @@ export default function ProductComments({
                 placeholder={writePlaceholder}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => handleSubmitOnEnter(e, handlePost, submitting || !newComment.trim())}
                 sx={{ mb: 1 }}
               />
               <Button

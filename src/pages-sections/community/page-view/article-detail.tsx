@@ -14,6 +14,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ModeCommentOutlinedIcon from "@mui/icons-material/ModeCommentOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -46,7 +47,6 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const user = useReactiveVar(userVar);
 	const [article, setArticle] = useState<Article | null>(null);
 	const [moreArticles, setMoreArticles] = useState<Article[]>([]);
-	const [commentCount, setCommentCount] = useState(0);
 	const [commentsOpen, setCommentsOpen] = useState(false);
 
 	/** APOLLO REQUESTS **/
@@ -134,8 +134,15 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	};
 
 	useEffect(() => {
-		setCommentCount(article?.articleComments ?? 0);
-	}, [article?.articleComments]);
+		if (typeof window === "undefined" || window.location.hash !== "#article-comments") return;
+		setCommentsOpen(true);
+		window.setTimeout(() => {
+			document.getElementById("article-comments")?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		}, 120);
+	}, [article?._id]);
 
 	if (getBoardArticleLoading && !article) {
 		return (
@@ -156,6 +163,16 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const isLiked = article.meLiked?.[0]?.myFavorite ?? false;
 	const coverImage =
 		article.articleImages?.[0] ?? "/assets/images/products/product-1.png";
+
+	const openCommentsSection = () => {
+		setCommentsOpen(true);
+		window.setTimeout(() => {
+			document.getElementById("article-comments")?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		}, 120);
+	};
 
 	return (
 		<Container sx={{ py: 6, maxWidth: "lg" }}>
@@ -221,6 +238,15 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 							{article.articleLikes}
 						</Typography>
 					</Stack>
+					<Stack direction="row" alignItems="center" gap={0.5}>
+						<IconButton
+							size="small"
+							onClick={openCommentsSection}
+							sx={{ color: "text.secondary" }}
+						>
+							<ModeCommentOutlinedIcon sx={{ fontSize: 18 }} />
+						</IconButton>
+					</Stack>
 				</Stack>
 			</Stack>
 
@@ -261,6 +287,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 			</Typography>
 
 			<Box
+				id="article-comments"
 				sx={{
 					mt: 6,
 					border: "1px solid",
@@ -292,11 +319,6 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 						</Typography>
 					</Box>
 					<Stack direction="row" alignItems="center" gap={1} flexShrink={0}>
-						<Chip
-							label={`${commentCount} comments`}
-							variant="outlined"
-							size="small"
-						/>
 						<IconButton
 							size="small"
 							aria-label={commentsOpen ? "Hide comments" : "Show comments"}
@@ -316,7 +338,6 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 						<ProductComments
 							refId={article._id}
 							commentGroup="ARTICLE"
-							onCountChange={setCommentCount}
 							maxWidth="100%"
 							pageSize={5}
 							emptyText="No comments on this article yet. Start the discussion."
