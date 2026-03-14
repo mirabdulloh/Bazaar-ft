@@ -44,6 +44,15 @@ interface GqlCategory {
   categoryName: string;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+
+function resolveProductImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return API_URL ? `${API_URL}${normalized}` : normalized;
+}
+
 const parseVariantValues = (value?: string[] | string): string[] => {
   if (!value) return [];
 
@@ -67,8 +76,8 @@ const toProductModel = (p: GqlProduct, categoryById: Map<string, string>): Produ
     title: p.productTitle,
     price: p.productPrice,
     discount: discountPct,
-    thumbnail: p.productImages?.[0] ?? "/assets/images/products/product-1.png",
-    images: p.productImages ?? [],
+    thumbnail: resolveProductImage(p.productImages?.[0]) || "/assets/images/products/product-1.png",
+    images: (p.productImages ?? []).map(resolveProductImage).filter(Boolean),
     rating: p.productRatingAverage ?? 0,
     description: p.productDesc,
     size: parseVariantValues(p.productSize),

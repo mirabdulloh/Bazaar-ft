@@ -40,6 +40,7 @@ function createIsomorphicLink(): ApolloLink {
 		localStorage.removeItem('accessToken');
 		localStorage.removeItem('refreshToken');
 		localStorage.removeItem('memberData');
+		sessionStorage.removeItem('refreshToken');
 		localStorage.setItem('logout', Date.now().toString());
 		window.location.replace('/');
 	};

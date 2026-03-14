@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment } from "react";
-import Image from "next/image";
 import Box from "@mui/material/Box";
 // GLOBAL CUSTOM COMPONENTS
 import { Carousel, CarouselArrows, useCarousel } from "components/slider";
@@ -22,23 +21,36 @@ interface Props {
 
 export default function ImageCarousel({ images, title }: Props) {
   const { ref, api, arrows } = useCarousel();
+  const safeImages = images.filter(Boolean);
+  const carouselImages = safeImages.length
+    ? safeImages
+    : ["/assets/images/products/product-1.png"];
 
   return (
     <Fragment>
       <Carousel ref={ref} api={api}>
-        {images!.map((item: string, index: number) => (
+        {carouselImages.map((item: string, index: number) => (
           <Box
             key={index}
             height={300}
             sx={{
               display: "flex",
-              img: {
-                objectFit: "contain",
-                objectPosition: "center"
-              }
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Image fill src={item} alt={title} sizes="100vw" />
+            <Box
+              component="img"
+              src={item}
+              alt={title}
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                objectPosition: "center",
+                display: "block",
+              }}
+            />
           </Box>
         ))}
       </Carousel>

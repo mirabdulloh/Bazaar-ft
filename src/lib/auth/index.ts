@@ -18,11 +18,18 @@ export function setJwtToken(token: string) {
 }
 
 export function getRefreshToken(): string {
+	if (!refreshTokenMemory && typeof window !== 'undefined') {
+		refreshTokenMemory = sessionStorage.getItem('refreshToken') ?? '';
+	}
 	return refreshTokenMemory;
 }
 
 export function setRefreshToken(token: string) {
 	refreshTokenMemory = token ?? '';
+	if (typeof window !== 'undefined') {
+		if (refreshTokenMemory) sessionStorage.setItem('refreshToken', refreshTokenMemory);
+		else sessionStorage.removeItem('refreshToken');
+	}
 }
 
 export const logIn = async (nick: string, password: string): Promise<void> => {
@@ -231,6 +238,7 @@ const deleteStorage = () => {
 	localStorage.removeItem('accessToken');
 	localStorage.removeItem('refreshToken');
 	localStorage.removeItem('memberData');
+	sessionStorage.removeItem('refreshToken');
 	window.localStorage.setItem('logout', Date.now().toString());
 };
 
