@@ -147,8 +147,13 @@ export function OrderDetailsPageView({
       ) : (
         <>
           <DetailHeroCard>
-            <FlexBox alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
-              <FlexBox alignItems="center" gap={1.75} flexWrap="wrap">
+            <FlexBox
+              alignItems={{ xs: "flex-start", md: "center" }}
+              justifyContent="space-between"
+              gap={{ xs: 1.5, md: 2 }}
+              flexWrap="wrap"
+            >
+              <FlexBox alignItems="center" gap={{ xs: 1.25, md: 1.75 }} flexWrap="wrap">
                 {order.brand?.memberImage ? (
                   <DetailBrandAvatar src={resolveImage(order.brand.memberImage as string)} alt={String(order.brand.memberNick ?? "Brand")} />
                 ) : (
@@ -157,11 +162,11 @@ export function OrderDetailsPageView({
                   </DetailBrandAvatar>
                 )}
 
-                <Box>
-                  <Typography variant="h5" fontWeight={800}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="h5" fontWeight={800} sx={{ fontSize: { xs: 26, sm: 34 } }}>
                     {String(order.brand?.memberNick ?? "Brand")}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35, lineHeight: 1.45 }}>
                     Order #{String(order._id).slice(-8).toUpperCase()} • placed {formatOrderDate(order.createdAt)}
                   </Typography>
 
@@ -188,11 +193,14 @@ export function OrderDetailsPageView({
                 </Box>
               </FlexBox>
 
-              <Box textAlign={{ xs: "left", md: "right" }}>
+              <Box
+                textAlign={{ xs: "left", md: "right" }}
+                sx={{ width: { xs: "100%", md: "auto" }, pt: { xs: 0.5, md: 0 } }}
+              >
                 <Typography variant="caption" color="text.secondary" display="block">
                   Final total
                 </Typography>
-                <Typography variant="h4" fontWeight={800} color="primary.main">
+                <Typography variant="h4" fontWeight={800} color="primary.main" sx={{ fontSize: { xs: 30, sm: 34 } }}>
                   {currency(Number(order.orderFinalPrice ?? order.orderTotalPrice ?? 0))}
                 </Typography>
               </Box>
@@ -236,7 +244,7 @@ export function OrderDetailsPageView({
               </DetailMetaCard>
             </DetailMetaGrid>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: { xs: 1.5, md: 2 } }} />
 
             <FlexBox gap={0.75} flexWrap="wrap">
               <InlineMetaBadge>
@@ -264,6 +272,7 @@ export function OrderDetailsPageView({
                     onClick={handleConfirmReceived}
                     disabled={confirmingReceived}
                     loading={confirmingReceived}
+                    sx={{ minHeight: { xs: 42, sm: "auto" } }}
                   >
                     Mark as Received
                   </Button>
@@ -277,6 +286,7 @@ export function OrderDetailsPageView({
                     onClick={handleCancel}
                     disabled={cancelling}
                     loading={cancelling}
+                    sx={{ minHeight: { xs: 42, sm: "auto" } }}
                   >
                     Cancel Order
                   </Button>

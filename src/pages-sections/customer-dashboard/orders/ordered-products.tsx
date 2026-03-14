@@ -1,8 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns/format";
 // MUI
-import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -19,8 +17,34 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function resolveImage(img?: string | null): string {
   if (!img) return "";
-  if (img.startsWith("http")) return img;
-  return `${API_URL}/${img}`;
+  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!value || value === "null" || value === "undefined") return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  return API_URL ? `${API_URL}${normalized}` : normalized;
+}
+
+function getProductImageCandidates(img?: string | null): string[] {
+  if (!img) return ["/assets/images/products/product-1.png"];
+
+  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!value || value === "null" || value === "undefined") {
+    return ["/assets/images/products/product-1.png"];
+  }
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return [value];
+  }
+
+  const clean = value.replace(/^\/+/, "");
+  const candidates = [resolveImage(value)];
+
+  if (clean && !clean.startsWith("uploads/")) {
+    candidates.push(resolveImage(`/uploads/products/${clean}`));
+    candidates.push(resolveImage(`/uploads/${clean}`));
+  }
+
+  candidates.push("/assets/images/products/product-1.png");
+  return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 type Props = { order: T };
@@ -59,7 +83,8 @@ export default function OrderedProducts({ order }: Props) {
 
       {items.map((item: T) => {
         const product = item.product as T | undefined;
-        const imgSrc = resolveImage((product?.productImages as string[])?.[0]);
+        const rawImage = Array.isArray(product?.productImages) ? (product.productImages as string[])?.[0] : "";
+        const imageCandidates = getProductImageCandidates(rawImage);
         const name = (product?.productTitle as string) ?? `Product #${String(item.productId).slice(-6)}`;
         const price = Number(item.priceAtPurchase ?? 0);
         const qty = Number(item.itemQuantity ?? 1);
@@ -81,21 +106,35 @@ export default function OrderedProducts({ order }: Props) {
           >
             <FlexBetween gap={2} flexWrap="wrap" alignItems="stretch">
               <FlexBox gap={2} alignItems="flex-start" flex="1 1 460px">
-                <Avatar
-                  variant="rounded"
+                <Box
+                  component="img"
+                  src={imageCandidates[0]}
+                  alt={name}
+                  onError={(event) => {
+                    const current = event.currentTarget;
+                    const fallbackIndex = Number(current.dataset.fallbackIndex ?? "0");
+                    const nextIndex = fallbackIndex + 1;
+
+                    if (nextIndex < imageCandidates.length) {
+                      current.dataset.fallbackIndex = String(nextIndex);
+                      current.src = imageCandidates[nextIndex];
+                      return;
+                    }
+
+                    current.src = "/assets/images/products/product-1.png";
+                  }}
                   sx={{
                     height: 92,
                     width: 92,
                     borderRadius: 2,
                     backgroundColor: "grey.50",
-                    position: "relative",
+                    border: "1px solid",
+                    borderColor: "grey.200",
+                    objectFit: "cover",
+                    display: "block",
                     flexShrink: 0
                   }}
-                >
-                  {imgSrc ? (
-                    <Image fill alt={name} src={imgSrc} sizes="92px" style={{ objectFit: "cover" }} />
-                  ) : null}
-                </Avatar>
+                />
 
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.35 }}>

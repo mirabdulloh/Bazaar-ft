@@ -162,10 +162,10 @@ export const InfoRowWrapper = styled(Box)(({ theme }) => ({
 
 // ─── Order item card ─────────────────────────────────────────────────────────
 export const OrderCard = styled(Card)(({ theme }) => ({
-  paddingLeft: theme.spacing(2.5),
-  paddingRight: theme.spacing(2.5),
-  paddingTop: theme.spacing(2),
-  paddingBottom: theme.spacing(2),
+  paddingLeft: theme.spacing(2),
+  paddingRight: theme.spacing(2),
+  paddingTop: theme.spacing(1.5),
+  paddingBottom: theme.spacing(1.5),
   border: `1px solid ${theme.palette.grey[100]}`,
   borderRadius: 8,
   boxShadow: "none",
@@ -180,16 +180,16 @@ export const OrderStatusRow = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: theme.spacing(1.5),
+  gap: theme.spacing(1),
   flexWrap: "wrap",
-  marginTop: theme.spacing(2),
+  marginTop: theme.spacing(1.5),
 }));
 
 export const OrderSummaryGrid = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: theme.spacing(1.25),
-  marginTop: theme.spacing(2),
+  gap: theme.spacing(1),
+  marginTop: theme.spacing(1.5),
   [theme.breakpoints.down("md")]: {
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   },
@@ -199,8 +199,8 @@ export const OrderSummaryGrid = styled(Box)(({ theme }) => ({
 }));
 
 export const OrderSummaryCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(1.5),
-  borderRadius: 12,
+  padding: theme.spacing(1.1),
+  borderRadius: 10,
   border: `1px solid ${theme.palette.grey[200]}`,
   backgroundColor: theme.palette.grey[50],
 }));
@@ -208,33 +208,33 @@ export const OrderSummaryCard = styled(Box)(({ theme }) => ({
 export const OrderItemsPreview = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing(1.5),
-  paddingTop: theme.spacing(2),
-  paddingBottom: theme.spacing(2),
+  gap: theme.spacing(1),
+  paddingTop: theme.spacing(1.25),
+  paddingBottom: theme.spacing(1.25),
 }));
 
 export const OrderProductLine = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "72px minmax(0, 1fr) auto",
+  gridTemplateColumns: "60px minmax(0, 1fr) auto",
   gap: theme.spacing(1.5),
   alignItems: "center",
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "64px minmax(0, 1fr)",
+    gridTemplateColumns: "56px minmax(0, 1fr)",
   },
 }));
 
 export const OrderProductThumb = styled(Box)(({ theme }) => ({
-  width: 72,
-  height: 72,
-  borderRadius: 12,
+  width: 60,
+  height: 60,
+  borderRadius: 10,
   overflow: "hidden",
   border: `1px solid ${theme.palette.grey[200]}`,
   backgroundColor: theme.palette.grey[100],
   position: "relative",
   flexShrink: 0,
   [theme.breakpoints.down("sm")]: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
   },
 }));
 
@@ -248,7 +248,7 @@ export const OrderActionBar = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing(1),
   flexWrap: "wrap",
-  paddingTop: theme.spacing(1.5),
+  paddingTop: theme.spacing(1),
 }));
 
 export const OrderVariantBadge = styled(Box)(({ theme }) => ({
@@ -260,7 +260,7 @@ export const OrderVariantBadge = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.grey[200]}`,
   backgroundColor: theme.palette.common.white,
   color: theme.palette.text.secondary,
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 600,
 }));
 
@@ -395,7 +395,7 @@ export const PaginationWrapper = styled(Box)(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  padding: theme.spacing(2),
+  padding: theme.spacing(1.5, 0, 0.5),
   gap: theme.spacing(1),
 }));
 

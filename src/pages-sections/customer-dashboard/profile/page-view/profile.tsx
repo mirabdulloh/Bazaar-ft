@@ -46,6 +46,8 @@ import PersonOutlined from "@mui/icons-material/PersonOutlined";
 import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlined from "@mui/icons-material/VisibilityOffOutlined";
 import HomeOutlined from "@mui/icons-material/HomeOutlined";
+import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 // REACT-i18n
 import { useTranslation } from "../../../../../node_modules/react-i18next";
 // APOLLO
@@ -215,11 +217,38 @@ function orderStatusColor(status: string): "warning" | "success" | "error" | "de
 }
 
 function resolveImage(img: string | undefined | null): string {
-  if (!img || img.trim() === "") return "";
-  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  if (!img) return "";
+  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!value || value === "null" || value === "undefined") return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
   const base = process.env.NEXT_PUBLIC_API_URL ?? "";
-  const path = img.startsWith("/") ? img : `/${img}`;
+  const path = value.startsWith("/") ? value : `/${value}`;
   return `${base}${path}`;
+}
+
+function getProductImageCandidates(rawImage: string | undefined | null): string[] {
+  if (!rawImage) return ["/assets/images/products/product-1.png"];
+
+  const normalized = rawImage.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!normalized || normalized === "null" || normalized === "undefined") {
+    return ["/assets/images/products/product-1.png"];
+  }
+
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+    return [normalized];
+  }
+
+  const candidates = [resolveImage(normalized)];
+  const clean = normalized.replace(/^\/+/, "");
+
+  if (clean && !clean.startsWith("uploads/")) {
+    candidates.push(resolveImage(`/uploads/products/${clean}`));
+    candidates.push(resolveImage(`/uploads/${clean}`));
+  }
+
+  candidates.push("/assets/images/products/product-1.png");
+
+  return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 function parseOptionArray(value: unknown): string[] {
@@ -307,9 +336,43 @@ function getOrderItemVariantText(item: T): string {
   return parts.join(" • ");
 }
 
-function getOrderProductImage(item: T): string {
+function getOrderProductImageCandidates(item: T): string[] {
   const raw = Array.isArray(item?.product?.productImages) ? (item.product.productImages as string[]) : [];
-  return resolveImage(raw[0]);
+  return getProductImageCandidates(raw[0]);
+}
+
+function SafeProductImage({
+  srcCandidates,
+  alt
+}: {
+  srcCandidates: string[];
+  alt: string;
+}) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [srcCandidates.join("|")]);
+
+  const currentSrc =
+    srcCandidates[index] ||
+    srcCandidates[0] ||
+    "/assets/images/products/product-1.png";
+
+  return (
+    <Box
+      component="img"
+      src={currentSrc}
+      alt={alt}
+      onError={() => {
+        setIndex((prev) => {
+          if (prev >= srcCandidates.length - 1) return prev;
+          return prev + 1;
+        });
+      }}
+      sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+    />
+  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -1075,6 +1138,8 @@ function OrdersPanel({
   onCancel: (orderId: string) => Promise<void>;
   onConfirmReceived: (orderId: string) => Promise<void>;
 }) {
+  const ITEMS_PER_PAGE = 3;
+  const [page, setPage] = useState(1);
   const activeOrders = useMemo(
     () =>
       orders.filter((order) =>
@@ -1082,6 +1147,12 @@ function OrdersPanel({
       ),
     [orders]
   );
+  const totalPages = Math.max(1, Math.ceil(activeOrders.length / ITEMS_PER_PAGE));
+  const paginatedOrders = activeOrders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <Box>
@@ -1097,7 +1168,7 @@ function OrdersPanel({
       {loading && activeOrders.length === 0 ? (
         <Stack spacing={1.5}>
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={220} variant="rounded" sx={{ borderRadius: 2.5 }} />
+            <Skeleton key={i} height={180} variant="rounded" sx={{ borderRadius: 2.5 }} />
           ))}
         </Stack>
       ) : activeOrders.length === 0 ? (
@@ -1114,14 +1185,14 @@ function OrdersPanel({
         </EmptyCard>
       ) : (
         <Stack spacing={2}>
-          {activeOrders.map((order: T) => (
-            <OrderCard key={order._id as string}>
+          {paginatedOrders.map((order: T) => (
+            <OrderCard key={order._id as string} sx={{ p: 1.75 }}>
               <FlexBetween flexWrap="wrap" gap={2}>
                 <FlexBox alignItems="center" gap={1.5}>
                   <Avatar
                     src={resolveImage(order.brand?.memberImage as string)}
                     alt={String(order.brand?.memberNick ?? "Brand")}
-                    sx={{ width: 52, height: 52 }}
+                    sx={{ width: 46, height: 46 }}
                   />
 
                   <Box>
@@ -1196,34 +1267,22 @@ function OrdersPanel({
                     {String(order.orderDeliveryStatus ?? "PREPARING")}
                   </Typography>
                 </OrderSummaryCard>
-                <OrderSummaryCard>
-                  <Typography variant="caption" color="text.secondary">
-                    Method
-                  </Typography>
-                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
-                    {String(order.orderPaymentMethod ?? "CARD").replaceAll("_", " ")}
-                  </Typography>
-                </OrderSummaryCard>
               </OrderSummaryGrid>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 1.5 }} />
 
               <OrderItemsPreview>
-                {(Array.isArray(order.orderItems) ? order.orderItems : []).slice(0, 2).map((item: T) => {
-                  const productImage = getOrderProductImage(item);
+                {(Array.isArray(order.orderItems) ? order.orderItems : []).slice(0, 1).map((item: T) => {
+                  const productImageCandidates = getOrderProductImageCandidates(item);
                   const variantText = getOrderItemVariantText(item);
 
                   return (
                     <OrderProductLine key={String(item._id)}>
                       <OrderProductThumb>
-                        {productImage ? (
-                          <Image
-                            src={productImage}
-                            alt={String(item?.product?.productTitle ?? "Product")}
-                            fill
-                            style={{ objectFit: "cover" }}
-                          />
-                        ) : null}
+                        <SafeProductImage
+                          srcCandidates={productImageCandidates}
+                          alt={String(item?.product?.productTitle ?? "Product")}
+                        />
                       </OrderProductThumb>
 
                       <OrderProductInfo>
@@ -1253,9 +1312,9 @@ function OrdersPanel({
                   );
                 })}
 
-                {(Array.isArray(order.orderItems) ? order.orderItems.length : 0) > 2 && (
+                {(Array.isArray(order.orderItems) ? order.orderItems.length : 0) > 1 && (
                   <Typography variant="caption" color="text.secondary">
-                    +{(order.orderItems as T[]).length - 2} more item(s) in this order
+                    +{(order.orderItems as T[]).length - 1} more item(s) in this order
                   </Typography>
                 )}
               </OrderItemsPreview>
@@ -1298,6 +1357,50 @@ function OrdersPanel({
               </OrderActionBar>
             </OrderCard>
           ))}
+
+          {totalPages > 1 && (
+            <PaginationWrapper>
+              <IconButton
+                size="small"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((value) => (
+                <Box
+                  key={value}
+                  onClick={() => setPage(value)}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.15s ease",
+                    ...(value === page
+                      ? { backgroundColor: "primary.main", color: "white" }
+                      : { "&:hover": { backgroundColor: "grey.100" } }),
+                  }}
+                >
+                  {value}
+                </Box>
+              ))}
+
+              <IconButton
+                size="small"
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </PaginationWrapper>
+          )}
         </Stack>
       )}
     </Box>
@@ -1322,6 +1425,9 @@ function OrderHistoryPanel({
   const [reviewComment, setReviewComment] = useState("");
   const [reviewRating, setReviewRating] = useState<number | null>(5);
   const [reviewingItemIds, setReviewingItemIds] = useState<string[]>([]);
+  const [reviewFiles, setReviewFiles] = useState<File[]>([]);
+  const [reviewPreviews, setReviewPreviews] = useState<string[]>([]);
+  const [uploadingReviewImages, setUploadingReviewImages] = useState(false);
 
   const historyOrders = useMemo(
     () =>
@@ -1330,20 +1436,51 @@ function OrderHistoryPanel({
       ),
     [orders]
   );
+  const ITEMS_PER_PAGE = 2;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(historyOrders.length / ITEMS_PER_PAGE));
+  const paginatedOrders = historyOrders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const openReviewDialog = useCallback((target: T) => {
     setReviewTarget(target);
     setReviewComment("");
     setReviewRating(5);
+    reviewPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    setReviewFiles([]);
+    setReviewPreviews([]);
     setReviewDialogOpen(true);
-  }, []);
+  }, [reviewPreviews]);
 
   const closeReviewDialog = useCallback(() => {
     setReviewDialogOpen(false);
     setReviewTarget(null);
     setReviewComment("");
     setReviewRating(5);
-  }, []);
+    reviewPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    setReviewFiles([]);
+    setReviewPreviews([]);
+  }, [reviewPreviews]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const handleReviewFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    const remaining = 5 - reviewFiles.length;
+    if (!remaining) return;
+
+    const toAdd = selected.slice(0, remaining);
+    setReviewFiles((prev) => [...prev, ...toAdd]);
+    setReviewPreviews((prev) => [...prev, ...toAdd.map((file) => URL.createObjectURL(file))]);
+    e.target.value = "";
+  }, [reviewFiles.length]);
+
+  const removeReviewImage = useCallback((index: number) => {
+    URL.revokeObjectURL(reviewPreviews[index]);
+    setReviewFiles((prev) => prev.filter((_, i) => i !== index));
+    setReviewPreviews((prev) => prev.filter((_, i) => i !== index));
+  }, [reviewPreviews]);
 
   const handleSubmitReview = useCallback(async () => {
     if (!reviewTarget?.item?._id || !reviewTarget?.product?._id || !reviewRating || !reviewComment.trim()) {
@@ -1351,21 +1488,63 @@ function OrderHistoryPanel({
       return;
     }
 
+    if (reviewFiles.length < 1 || reviewFiles.length > 5) {
+      await sweetMixinErrorAlert("Add between 1 and 5 review images.");
+      return;
+    }
+
     const itemId = String(reviewTarget.item._id);
     try {
+      let reviewImages: string[] = [];
+
+      if (reviewFiles.length > 0) {
+        setUploadingReviewImages(true);
+
+        const token = getJwtToken();
+        const fileVars: Record<string, string[]> = {};
+        reviewFiles.forEach((_, index) => {
+          fileVars[String(index)] = [`variables.files.${index}`];
+        });
+
+        const formData = new FormData();
+        formData.append(
+          "operations",
+          JSON.stringify({
+            query: `mutation ImagesUploader($files: [Upload!]!, $target: String!) {
+              imagesUploader(files: $files, target: $target)
+            }`,
+            variables: { files: reviewFiles.map(() => null), target: "reviews" },
+          })
+        );
+        formData.append("map", JSON.stringify(fileVars));
+        reviewFiles.forEach((file, index) => formData.append(String(index), file));
+
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_GRAPHQL_URL}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "apollo-require-preflight": "true",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        reviewImages = response.data?.data?.imagesUploader ?? [];
+        setUploadingReviewImages(false);
+      }
+
       await onCreateReview({
         productId: String(reviewTarget.product._id),
         orderItemId: itemId,
         reviewRating,
         reviewComment: reviewComment.trim(),
-        reviewImages: [],
+        reviewImages,
       });
       setReviewingItemIds((prev) => Array.from(new Set([...prev, itemId])));
       closeReviewDialog();
     } catch (err: any) {
+      setUploadingReviewImages(false);
       await sweetMixinErrorAlert(err?.message || "Failed to submit review");
     }
-  }, [closeReviewDialog, onCreateReview, reviewComment, reviewRating, reviewTarget]);
+  }, [closeReviewDialog, onCreateReview, reviewComment, reviewFiles, reviewRating, reviewTarget]);
 
   const handleReorder = useCallback((productRaw: T) => {
     const product = toProductModel(productRaw);
@@ -1405,7 +1584,7 @@ function OrderHistoryPanel({
       {loading && historyOrders.length === 0 ? (
         <Stack spacing={2}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={260} variant="rounded" sx={{ borderRadius: 2.5 }} />
+            <Skeleton key={i} height={220} variant="rounded" sx={{ borderRadius: 2.5 }} />
           ))}
         </Stack>
       ) : historyOrders.length === 0 ? (
@@ -1417,16 +1596,16 @@ function OrderHistoryPanel({
         </EmptyCard>
       ) : (
         <Stack spacing={2}>
-          {historyOrders.map((order: T) => {
+          {paginatedOrders.map((order: T) => {
             const orderItems = (Array.isArray(order.orderItems) ? order.orderItems : []).filter((item: T) => item?.product?._id);
             return (
-              <OrderCard key={String(order._id)}>
+              <OrderCard key={String(order._id)} sx={{ p: 1.75 }}>
                 <FlexBetween flexWrap="wrap" gap={2}>
                   <FlexBox alignItems="center" gap={1.5}>
                     <Avatar
                       src={resolveImage(order.brand?.memberImage as string)}
                       alt={String(order.brand?.memberNick ?? "Brand")}
-                      sx={{ width: 52, height: 52 }}
+                      sx={{ width: 46, height: 46 }}
                     />
 
                     <Box>
@@ -1501,14 +1680,6 @@ function OrderHistoryPanel({
                       {String(order.orderDeliveryStatus ?? "PREPARING")}
                     </Typography>
                   </OrderSummaryCard>
-                  <OrderSummaryCard>
-                    <Typography variant="caption" color="text.secondary">
-                      Method
-                    </Typography>
-                    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.4 }}>
-                      {String(order.orderPaymentMethod ?? "CARD").replaceAll("_", " ")}
-                    </Typography>
-                  </OrderSummaryCard>
                 </OrderSummaryGrid>
 
                 <Divider sx={{ my: 2 }} />
@@ -1516,7 +1687,7 @@ function OrderHistoryPanel({
                 <OrderItemsPreview>
                   {orderItems.map((item: T) => {
                     const product = item.product as T;
-                    const productImage = getOrderProductImage(item);
+                    const productImageCandidates = getOrderProductImageCandidates(item);
                     const variantText = getOrderItemVariantText(item);
                     const alreadyReviewed = reviewingItemIds.includes(String(item._id));
                     const canReview = String(order.orderStatus) === "DELIVERED";
@@ -1525,14 +1696,10 @@ function OrderHistoryPanel({
                       <Box key={String(item._id)}>
                         <OrderProductLine>
                           <OrderProductThumb>
-                            {productImage ? (
-                              <Image
-                                src={productImage}
-                                alt={String(product?.productTitle ?? "Product")}
-                                fill
-                                style={{ objectFit: "cover" }}
-                              />
-                            ) : null}
+                            <SafeProductImage
+                              srcCandidates={productImageCandidates}
+                              alt={String(product?.productTitle ?? "Product")}
+                            />
                           </OrderProductThumb>
 
                           <OrderProductInfo>
@@ -1599,6 +1766,50 @@ function OrderHistoryPanel({
               </OrderCard>
             );
           })}
+
+          {totalPages > 1 && (
+            <PaginationWrapper>
+              <IconButton
+                size="small"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((value) => (
+                <Box
+                  key={value}
+                  onClick={() => setPage(value)}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.15s ease",
+                    ...(value === page
+                      ? { backgroundColor: "primary.main", color: "white" }
+                      : { "&:hover": { backgroundColor: "grey.100" } }),
+                  }}
+                >
+                  {value}
+                </Box>
+              ))}
+
+              <IconButton
+                size="small"
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </PaginationWrapper>
+          )}
         </Stack>
       )}
 
@@ -1626,11 +1837,74 @@ function OrderHistoryPanel({
               fullWidth
             />
 
+            <Box>
+              <Typography variant="body2" fontWeight={600} mb={1}>
+                Review Images
+              </Typography>
+              <FlexBox gap={1.25} flexWrap="wrap">
+                {reviewPreviews.map((src, index) => (
+                  <Box
+                    key={`${src}-${index}`}
+                    sx={{ position: "relative", width: 76, height: 76, borderRadius: 2, overflow: "hidden" }}
+                  >
+                    <Box
+                      component="img"
+                      src={src}
+                      alt={`Review preview ${index + 1}`}
+                      sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => removeReviewImage(index)}
+                      sx={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        width: 22,
+                        height: 22,
+                        bgcolor: "rgba(17, 24, 39, 0.82)",
+                        color: "common.white",
+                        "&:hover": { bgcolor: "error.main" },
+                      }}
+                    >
+                      <CloseIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                ))}
+
+                {reviewFiles.length < 5 && (
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<AddPhotoAlternateOutlinedIcon />}
+                    sx={{ minHeight: 76, px: 2 }}
+                  >
+                    Add Photos ({reviewFiles.length}/5)
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleReviewFileChange}
+                    />
+                  </Button>
+                )}
+              </FlexBox>
+              <Typography variant="caption" color="text.secondary">
+                Upload between 1 and 5 images with your review.
+              </Typography>
+            </Box>
+
             <FlexBetween>
               <Button variant="text" onClick={closeReviewDialog}>
                 Cancel
               </Button>
-              <Button variant="contained" onClick={handleSubmitReview}>
+              <Button
+                variant="contained"
+                onClick={handleSubmitReview}
+                loading={uploadingReviewImages}
+                disabled={reviewFiles.length < 1 || reviewFiles.length > 5}
+              >
                 Submit Review
               </Button>
             </FlexBetween>

@@ -5,9 +5,7 @@ import { format } from "date-fns/format";
 // MUI
 import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
-import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
-import { styled } from "@mui/material/styles";
 import Done from "@mui/icons-material/Done";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import VerifiedOutlined from "@mui/icons-material/VerifiedOutlined";
@@ -16,66 +14,15 @@ import HomeOutlined from "@mui/icons-material/HomeOutlined";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import ReplayOutlined from "@mui/icons-material/ReplayOutlined";
 // GLOBAL CUSTOM COMPONENTS
-import { FlexBetween } from "components/flex-box";
 import { T } from "../../../lib/types/common";
-import { DetailSectionCard } from "./styles";
-
-// ─── STYLED ──────────────────────────────────────────────────────────────────
-
-const StepRow = styled(FlexBetween)(({ theme }) => ({
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "center",
-  },
-  "& .line": {
-    height: 2,
-    minWidth: 40,
-    flex: "1 1 0",
-    alignSelf: "flex-start",
-    marginTop: 31,
-    [theme.breakpoints.down("sm")]: {
-      flex: "unset",
-      width: 2,
-      height: 28,
-      minWidth: "unset",
-      marginTop: 0,
-      alignSelf: "unset",
-    },
-  },
-}));
-
-const StatusAvatar = styled(Avatar)(({ theme }) => ({
-  width: 64,
-  height: 64,
-  transition: "all 0.3s ease",
-  "&.done": {
-    color: theme.palette.common.white,
-    backgroundColor: theme.palette.primary.main,
-  },
-  "&.active": {
-    color: theme.palette.primary.main,
-    backgroundColor: theme.palette.primary.light,
-    boxShadow: `0 0 0 4px ${theme.palette.primary.light}`,
-  },
-  "&.idle": {
-    color: theme.palette.text.disabled,
-    backgroundColor: theme.palette.grey[100],
-  },
-}));
-
-const CheckBadge = styled(Avatar)(({ theme }) => ({
-  top: -4,
-  right: -4,
-  width: 20,
-  height: 20,
-  position: "absolute",
-  color: theme.palette.primary.main,
-  backgroundColor: theme.palette.primary.light,
-  boxShadow: theme.shadows[1],
-  "& svg": { fontSize: 14 },
-}));
+import {
+  DetailSectionCard,
+  OrderStepsScroller,
+  OrderStepsRow,
+  OrderStepItem,
+  OrderStepAvatar,
+  OrderStepCheckBadge,
+} from "./styles";
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
@@ -163,7 +110,8 @@ export default function OrderProgress({ order }: Props) {
       )}
 
       {/* ── Step icons ── */}
-      <StepRow>
+      <OrderStepsScroller>
+      <OrderStepsRow>
         {STEPS.map((step, idx) => {
           const { label, Icon } = step;
           const isDone = !terminal && idx < currentIndex;
@@ -173,16 +121,16 @@ export default function OrderProgress({ order }: Props) {
 
           return (
             <Fragment key={step.key}>
-              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, minWidth: 76 }}>
+              <OrderStepItem>
                 <Box position="relative">
-                  <StatusAvatar className={avatarClass}>
+                  <OrderStepAvatar className={avatarClass}>
                     <Icon color="inherit" fontSize="large" />
-                  </StatusAvatar>
+                  </OrderStepAvatar>
 
                   {isDone && (
-                    <CheckBadge>
+                    <OrderStepCheckBadge>
                       <Done color="inherit" />
-                    </CheckBadge>
+                    </OrderStepCheckBadge>
                   )}
                 </Box>
 
@@ -206,7 +154,7 @@ export default function OrderProgress({ order }: Props) {
                     {stepDate}
                   </Typography>
                 )}
-              </Box>
+              </OrderStepItem>
 
               {idx < STEPS.length - 1 && (
                 <Box className="line" bgcolor={isDone ? "primary.main" : "grey.100"} />
@@ -214,7 +162,8 @@ export default function OrderProgress({ order }: Props) {
             </Fragment>
           );
         })}
-      </StepRow>
+      </OrderStepsRow>
+      </OrderStepsScroller>
 
       {/* ── Current status description ── */}
       {!terminal && (
