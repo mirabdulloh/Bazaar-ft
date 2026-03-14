@@ -83,25 +83,25 @@ const STEPS = [
   {
     key: "PENDING",
     label: "Order Placed",
-    desc: "Your order has been received and is awaiting payment verification.",
+    desc: "Your order has been placed and is waiting for the brand to confirm it.",
     Icon: Inventory2Outlined,
   },
   {
     key: "CONFIRMED",
     label: "Confirmed",
-    desc: "Payment verified by our team. Your order is being prepared.",
+    desc: "The brand has confirmed your order and is preparing it for shipment.",
     Icon: VerifiedOutlined,
   },
   {
     key: "SHIPPED",
     label: "Shipped",
-    desc: "Your package has been dispatched and is on its way.",
+    desc: "The brand has shipped your package. Mark it as received once it arrives.",
     Icon: LocalShippingOutlined,
   },
   {
     key: "DELIVERED",
     label: "Delivered",
-    desc: "Your order has been delivered successfully.",
+    desc: "You confirmed that the order was received and the order is now complete.",
     Icon: HomeOutlined,
   },
 ];

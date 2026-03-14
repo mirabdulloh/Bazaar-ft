@@ -10,15 +10,10 @@ import East from "@mui/icons-material/East";
 import TableRow from "../table-row";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
+import { T } from "../../../lib/types/common";
 
 // =================================================
-type OrderRowData = {
-  _id: string;
-  orderStatus: string;
-  orderFinalPrice: number;
-  createdAt: string;
-};
-type Props = { order: OrderRowData };
+type Props = { order: T };
 // =================================================
 
 const STATUS_COLOR: Record<string, "secondary" | "info" | "success" | "error" | "warning" | "default"> = {
@@ -31,14 +26,18 @@ const STATUS_COLOR: Record<string, "secondary" | "info" | "success" | "error" | 
 };
 
 export default function OrderRow({ order }: Props) {
-  const color = STATUS_COLOR[order.orderStatus] ?? "default";
-  const label = order.orderStatus.charAt(0) + order.orderStatus.slice(1).toLowerCase();
+  const orderStatus = String(order.orderStatus ?? "PENDING");
+  const orderId = String(order._id ?? "");
+  const orderFinalPrice = Number(order.orderFinalPrice ?? 0);
+  const createdAt = String(order.createdAt ?? new Date().toISOString());
+  const color = STATUS_COLOR[orderStatus] ?? "default";
+  const label = orderStatus.charAt(0) + orderStatus.slice(1).toLowerCase();
 
   return (
-    <Link href={`/profile?tab=orders&orderId=${order._id}`}>
+    <Link href={`/profile?tab=orders&orderId=${orderId}`}>
       <TableRow elevation={0} sx={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
         <Typography noWrap variant="h5">
-          #{order._id.substring(0, 18)}
+          #{orderId.substring(0, 18)}
         </Typography>
 
         <Box textAlign={{ sm: "center", xs: "right" }}>
@@ -46,11 +45,11 @@ export default function OrderRow({ order }: Props) {
         </Box>
 
         <Typography noWrap variant="body1" sx={{ textAlign: { sm: "center", xs: "left" } }}>
-          {format(new Date(order.createdAt), "MMM dd, yyyy")}
+          {format(new Date(createdAt), "MMM dd, yyyy")}
         </Typography>
 
         <Typography variant="body1" fontWeight={500} sx={{ textAlign: { sm: "center", xs: "right" } }}>
-          {currency(order.orderFinalPrice)}
+          {currency(orderFinalPrice)}
         </Typography>
 
         <Box justifyContent="end" display={{ sm: "inline-flex", xs: "none" }}>
