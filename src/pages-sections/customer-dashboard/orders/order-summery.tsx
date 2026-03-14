@@ -1,5 +1,4 @@
 import Grid from "@mui/material/Grid";
-import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
@@ -8,6 +7,7 @@ import FlexBetween from "components/flex-box/flex-between";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
 import { T } from "../../../lib/types/common";
+import { DetailSectionCard } from "./styles";
 
 // ==============================================================
 type Props = { order: T };
@@ -34,7 +34,7 @@ export default function OrderSummery({ order }: Props) {
   return (
     <Grid container spacing={3}>
       <Grid size={{ md: 6, xs: 12 }}>
-        <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.100" }}>
+        <DetailSectionCard sx={{ mb: 0, height: "100%" }}>
           <Typography variant="h5" sx={{ mb: 2 }}>
             Shipping Address
           </Typography>
@@ -51,11 +51,11 @@ export default function OrderSummery({ order }: Props) {
               {addr.addressPhone as string}
             </Typography>
           )}
-        </Card>
+        </DetailSectionCard>
       </Grid>
 
       <Grid size={{ md: 6, xs: 12 }}>
-        <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.100" }}>
+        <DetailSectionCard sx={{ mb: 0, height: "100%" }}>
           <Typography variant="h5" sx={{ mb: 2 }}>
             Total Summary
           </Typography>
@@ -80,7 +80,7 @@ export default function OrderSummery({ order }: Props) {
             color="primary"
             sx={{ fontWeight: 600 }}
           />
-        </Card>
+        </DetailSectionCard>
       </Grid>
     </Grid>
   );

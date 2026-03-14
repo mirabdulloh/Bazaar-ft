@@ -5,7 +5,6 @@ import { format } from "date-fns/format";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
@@ -14,6 +13,7 @@ import { FlexBetween, FlexBox } from "components/flex-box";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
 import { T } from "../../../lib/types/common";
+import { DetailSectionCard, InlineMetaBadge } from "./styles";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -31,17 +31,7 @@ export default function OrderedProducts({ order }: Props) {
   const itemsCount = items.reduce((sum, item) => sum + Number(item.itemQuantity ?? 0), 0);
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        mb: 4,
-        p: 0,
-        overflow: "hidden",
-        borderRadius: 3,
-        border: "1px solid",
-        borderColor: "grey.200"
-      }}
-    >
+    <DetailSectionCard sx={{ p: 0, overflow: "hidden" }}>
       <FlexBetween px={3} py={2} flexWrap="wrap" gap={1.5} bgcolor="grey.50">
         <Box>
           <Typography variant="h6" fontWeight={700}>
@@ -152,20 +142,12 @@ export default function OrderedProducts({ order }: Props) {
           </Box>
         );
       })}
-    </Card>
+    </DetailSectionCard>
   );
 }
 
 function MetaChip({ label }: { label: string }) {
   return (
-    <Chip
-      label={label}
-      size="small"
-      variant="outlined"
-      sx={{
-        fontWeight: 600,
-        bgcolor: "background.paper"
-      }}
-    />
+    <InlineMetaBadge>{label}</InlineMetaBadge>
   );
 }

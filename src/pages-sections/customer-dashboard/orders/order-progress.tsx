@@ -4,7 +4,6 @@ import { Fragment } from "react";
 import { format } from "date-fns/format";
 // MUI
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
@@ -19,6 +18,7 @@ import ReplayOutlined from "@mui/icons-material/ReplayOutlined";
 // GLOBAL CUSTOM COMPONENTS
 import { FlexBetween } from "components/flex-box";
 import { T } from "../../../lib/types/common";
+import { DetailSectionCard } from "./styles";
 
 // ─── STYLED ──────────────────────────────────────────────────────────────────
 
@@ -143,7 +143,7 @@ export default function OrderProgress({ order }: Props) {
   };
 
   return (
-    <Card elevation={0} sx={{ mb: 4, p: 3, border: "1px solid", borderColor: "grey.100" }}>
+    <DetailSectionCard>
       {/* ── Terminal state banner ── */}
       {terminal && (
         <Alert
@@ -237,6 +237,6 @@ export default function OrderProgress({ order }: Props) {
           </Typography>
         </Box>
       )}
-    </Card>
+    </DetailSectionCard>
   );
 }
