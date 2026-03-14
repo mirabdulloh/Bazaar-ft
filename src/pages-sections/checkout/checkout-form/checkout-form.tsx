@@ -1,30 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 // MUI
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Radio from "@mui/material/Radio";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import CreditCardOutlined from "@mui/icons-material/CreditCardOutlined";
-import AccountBalanceOutlined from "@mui/icons-material/AccountBalanceOutlined";
-import PhoneAndroidOutlined from "@mui/icons-material/PhoneAndroidOutlined";
 import AddLocationAltOutlined from "@mui/icons-material/AddLocationAltOutlined";
 // APOLLO
-import { useMutation, useReactiveVar } from "@apollo/client/react";
+import { useReactiveVar } from "@apollo/client/react";
 import { userVar } from "../../../../apollo/store";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import { GET_ADDRESSES } from "../../../../apollo/user/query";
-import { CREATE_ORDER } from "../../../../apollo/user/mutation";
 // CONTEXT
 import useCart from "hooks/useCart";
 // UTILS
@@ -35,73 +26,37 @@ export default function CheckoutForm() {
   const router = useRouter();
   const user = useReactiveVar(userVar);
   const { state, dispatch } = useCart();
-  const cart = state.cart;
-
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<string>("CREDIT_CARD");
-  const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "", name: "" });
-  const [placing, setPlacing] = useState(false);
 
   const { data: addressData, loading: addressLoading } = useQuery(GET_ADDRESSES, {
     skip: !user?._id,
     fetchPolicy: "cache-and-network",
   });
 
-  const [createOrder] = useMutation(CREATE_ORDER);
-
   const addresses: T[] = (addressData as T)?.getAddresses ?? [];
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddressId) {
+  useEffect(() => {
+    if (!state.selectedAddressId && addresses.length) {
+      dispatch({ type: "SET_CHECKOUT_ADDRESS", addressId: String(addresses[0]._id ?? "") });
+    }
+  }, [addresses, dispatch, state.selectedAddressId]);
+
+  const handleContinue = () => {
+    if (!state.selectedAddressId) {
       sweetMixinErrorAlert("Please select a delivery address.");
       return;
     }
-    if (!cart.length) {
-      sweetMixinErrorAlert("Your cart is empty.");
-      return;
-    }
 
-    setPlacing(true);
-    try {
-      const { data } = await createOrder({
-        variables: {
-          input: {
-            orderDeliveryAddressId: selectedAddressId,
-            orderPaymentMethod: paymentMethod,
-            items: cart.map((item) => ({
-              productId: item.id,
-              itemQuantity: item.qty,
-              selectedSize: item.size || undefined,
-              selectedColor: item.color || undefined,
-            })),
-          },
-        },
-      });
-
-      const createdOrders: T[] = (data as T)?.createOrder?.orders ?? [];
-      if (!createdOrders.length) {
-        throw new Error("Order creation returned no orders.");
-      }
-
-      dispatch({ type: "CLEAR_CART" });
-      if (createdOrders.length === 1) {
-        router.push(`/profile?tab=orders&orderId=${createdOrders[0]._id as string}`);
-      } else {
-        router.push("/profile?tab=orders");
-      }
-    } catch (err: any) {
-      sweetMixinErrorAlert(err.message ?? "Failed to place order.");
-    } finally {
-      setPlacing(false);
-    }
+    router.push("/payment");
   };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      {/* ── Delivery Address ── */}
       <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>
-          Delivery Address
+        <Typography variant="h5" sx={{ mb: 0.75 }}>
+          Delivery Details
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Select the address for this order. Coupon usage is shown in the summary on the right. Payment happens in the next step.
         </Typography>
 
         {addressLoading ? (
@@ -140,11 +95,13 @@ export default function CheckoutForm() {
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             {addresses.map((addr: T) => {
-              const isSelected = selectedAddressId === String(addr._id);
+              const addressId = String(addr._id ?? "");
+              const isSelected = state.selectedAddressId === addressId;
+
               return (
                 <Box
-                  key={String(addr._id)}
-                  onClick={() => setSelectedAddressId(String(addr._id))}
+                  key={addressId}
+                  onClick={() => dispatch({ type: "SET_CHECKOUT_ADDRESS", addressId })}
                   sx={{
                     p: 2,
                     borderRadius: 2,
@@ -158,12 +115,7 @@ export default function CheckoutForm() {
                     gap: 1.5,
                   }}
                 >
-                  <Radio
-                    checked={isSelected}
-                    size="small"
-                    sx={{ mt: -0.5, p: 0.5 }}
-                    color="primary"
-                  />
+                  <Radio checked={isSelected} size="small" sx={{ mt: -0.5, p: 0.5 }} color="primary" />
                   <Box>
                     <Typography variant="body2" fontWeight={700}>
                       {addr.addressName as string}
@@ -173,8 +125,7 @@ export default function CheckoutForm() {
                       {addr.addressLine2 ? `, ${addr.addressLine2 as string}` : ""}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {addr.addressCity as string}, {addr.addressZipCode as string},{" "}
-                      {addr.addressCountry as string}
+                      {addr.addressCity as string}, {addr.addressZipCode as string}, {addr.addressCountry as string}
                     </Typography>
                     {addr.addressPhone && (
                       <Typography variant="caption" color="text.disabled">
@@ -200,194 +151,13 @@ export default function CheckoutForm() {
         )}
       </Card>
 
-      {/* ── Payment Method ── */}
-      <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>
-          Payment Method
-        </Typography>
-
-        <RadioGroup
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-        >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            {(
-              [
-                { value: "CREDIT_CARD", label: "Credit Card", Icon: CreditCardOutlined },
-                { value: "DEBIT_CARD", label: "Debit Card", Icon: CreditCardOutlined },
-                { value: "BANK_TRANSFER", label: "Bank Transfer", Icon: AccountBalanceOutlined },
-                { value: "MOBILE_PAYMENT", label: "Mobile Payment", Icon: PhoneAndroidOutlined },
-              ] as { value: string; label: string; Icon: React.ElementType }[]
-            ).map(({ value, label, Icon }) => {
-              const isSelected = paymentMethod === value;
-              return (
-                <Box
-                  key={value}
-                  onClick={() => setPaymentMethod(value)}
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    border: "2px solid",
-                    borderColor: isSelected ? "primary.main" : "grey.200",
-                    bgcolor: isSelected ? "primary.50" : "transparent",
-                    transition: "all 0.15s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                  }}
-                >
-                  <FormControlLabel
-                    value={value}
-                    control={<Radio size="small" color="primary" />}
-                    label=""
-                    sx={{ m: 0, p: 0 }}
-                  />
-                  <Icon sx={{ color: isSelected ? "primary.main" : "grey.500" }} />
-                  <Typography variant="body2" fontWeight={isSelected ? 700 : 500}>
-                    {label}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Box>
-        </RadioGroup>
-      </Card>
-
-      {/* ── Payment Information ── */}
-      <Card elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "grey.200", borderRadius: 3 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>
-          Payment Information
-        </Typography>
-
-        {(paymentMethod === "CREDIT_CARD" || paymentMethod === "DEBIT_CARD") && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Card Number"
-              placeholder="0000 0000 0000 0000"
-              value={cardInfo.number}
-              inputProps={{ maxLength: 19 }}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
-                const formatted = raw.replace(/(\d{4})(?=\d)/g, "$1 ");
-                setCardInfo((prev) => ({ ...prev, number: formatted }));
-              }}
-            />
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Expiry (MM/YY)"
-                placeholder="MM/YY"
-                value={cardInfo.expiry}
-                inputProps={{ maxLength: 5 }}
-                onChange={(e) => {
-                  let val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                  if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
-                  setCardInfo((prev) => ({ ...prev, expiry: val }));
-                }}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label="CVV"
-                placeholder="123"
-                type="password"
-                value={cardInfo.cvv}
-                inputProps={{ maxLength: 4 }}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                  setCardInfo((prev) => ({ ...prev, cvv: val }));
-                }}
-              />
-            </Box>
-            <TextField
-              fullWidth
-              size="small"
-              label="Cardholder Name"
-              placeholder="Name on card"
-              value={cardInfo.name}
-              onChange={(e) => setCardInfo((prev) => ({ ...prev, name: e.target.value }))}
-            />
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Card details are reviewed and confirmed by our team after order placement.
-            </Alert>
-          </Box>
-        )}
-
-        {paymentMethod === "BANK_TRANSFER" && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Box sx={{ p: 2, borderRadius: 2, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200" }}>
-              <Typography variant="body2" color="text.secondary" mb={1.5} fontWeight={700}>
-                TRANSFER TO
-              </Typography>
-              {[
-                { label: "Bank", value: "Kookmin Bank (국민은행)" },
-                { label: "Account", value: "012-345-6789012" },
-                { label: "Account Holder", value: "BAZAAR LLC" },
-              ].map(({ label, value }) => (
-                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", py: 0.75 }}>
-                  <Typography variant="body2" color="text.secondary">{label}</Typography>
-                  <Typography variant="body2" fontWeight={600}>{value}</Typography>
-                </Box>
-              ))}
-            </Box>
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Please transfer the exact order total. Your order will be confirmed after manual payment verification.
-            </Alert>
-          </Box>
-        )}
-
-        {paymentMethod === "MOBILE_PAYMENT" && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Box sx={{ p: 2, borderRadius: 2, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200" }}>
-              <Typography variant="body2" color="text.secondary" mb={1.5} fontWeight={700}>
-                SEND PAYMENT TO
-              </Typography>
-              {[
-                { label: "KakaoPay / TossPay", value: "010-1234-5678" },
-                { label: "Recipient", value: "BAZAAR LLC" },
-              ].map(({ label, value }) => (
-                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", py: 0.75 }}>
-                  <Typography variant="body2" color="text.secondary">{label}</Typography>
-                  <Typography variant="body2" fontWeight={600}>{value}</Typography>
-                </Box>
-              ))}
-            </Box>
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Complete the mobile payment first, then place your order. We'll confirm once payment is received.
-            </Alert>
-          </Box>
-        )}
-      </Card>
-
-      <Divider />
-
-      {/* ── Actions ── */}
       <Box sx={{ display: "flex", gap: 2 }}>
-        <Button
-          size="large"
-          fullWidth
-          href="/cart"
-          component={Link}
-          variant="outlined"
-          color="primary"
-        >
+        <Button size="large" fullWidth href="/cart" component={Link} variant="outlined" color="primary">
           Back to Cart
         </Button>
 
-        <Button
-          size="large"
-          fullWidth
-          variant="contained"
-          color="primary"
-          onClick={handlePlaceOrder}
-          loading={placing}
-          disabled={!cart.length || placing}
-        >
-          Place Order
+        <Button size="large" fullWidth variant="contained" color="primary" onClick={handleContinue}>
+          Continue to Payment
         </Button>
       </Box>
     </Box>

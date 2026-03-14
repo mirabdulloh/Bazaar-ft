@@ -19,7 +19,7 @@ import OverlayScrollbar from "components/overlay-scrollbar";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
 // CUSTOM DATA MODEL
-import { CartItem } from "contexts/CartContext";
+import { CartItem, getCartItemKey } from "contexts/CartContext";
 
 export default function MiniCart() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function MiniCart() {
         {CART_LENGTH > 0 ? (
           <OverlayScrollbar>
             {state.cart.map((item) => (
-              <MiniCartItem item={item} key={item.id} onCart={handleCartAmountChange} />
+              <MiniCartItem item={item} key={getCartItemKey(item)} onCart={handleCartAmountChange} />
             ))}
           </OverlayScrollbar>
         ) : (

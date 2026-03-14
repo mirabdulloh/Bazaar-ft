@@ -176,14 +176,15 @@ export default function CouponsPageView() {
         await updateCoupon({
           variables: { input: { _id: editingCoupon._id, ...payload } }
         });
+        handleClose();
+        await refetch();
         await sweetTopSmallSuccessAlert("Coupon updated successfully");
       } else {
         await createCoupon({ variables: { input: payload } });
+        handleClose();
+        await refetch();
         await sweetTopSmallSuccessAlert("Coupon created successfully");
       }
-
-      handleClose();
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Something went wrong");
     }

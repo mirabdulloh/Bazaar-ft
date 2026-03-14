@@ -39,13 +39,11 @@ const StyledChip = styled(Chip, {
 const STEPPER_LIST = [
   { title: "Cart", disabled: false, path: "/cart" },
   { title: "Details", disabled: false, path: "/checkout" },
-  { title: "Payment", disabled: false, path: "/payment" },
-  { title: "Review", disabled: true, path: "/orders" }
+  { title: "Payment", disabled: false, path: "/payment" }
 ];
 
 const PATH_TO_STEP: Record<string, number> = {
   "/cart": 0,
-  "/orders": 3,
   "/payment": 2,
   "/checkout": 1
 };

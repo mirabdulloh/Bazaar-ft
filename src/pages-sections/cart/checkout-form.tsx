@@ -1,146 +1,105 @@
-import Link from "next/link";
-// MUI
-import Card from "@mui/material/Card";
-import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
-import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Autocomplete from "@mui/material/Autocomplete";
-import Typography from "@mui/material/Typography";
-// GLOBAL CUSTOM HOOK
-import useCart from "hooks/useCart";
-// GLOBAL CUSTOM COMPONENTS
-import { FlexBetween, FlexBox } from "components/flex-box";
-// DUMMY CUSTOM DATA
-import countryList from "data/countryList";
-// CUSTOM UTILS LIBRARY FUNCTION
-import { currency } from "lib";
+"use client";
 
-const STATE_LIST = [
-  { value: "new-york", label: "New York" },
-  { value: "chicago", label: "Chicago" }
-];
+import Link from "next/link";
+import { useMemo } from "react";
+// MUI
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import Divider from "@mui/material/Divider";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+// HOOKS / UTILS
+import useCart from "hooks/useCart";
+import { getCartQuantity, getCartSubtotal } from "contexts/CartContext";
+import { currency } from "lib";
 
 export default function CheckoutForm() {
   const { state } = useCart();
 
-  const getTotalPrice = () => state.cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+  const pricing = useMemo(() => {
+    const subtotal = getCartSubtotal(state.cart);
+    const quantity = getCartQuantity(state.cart);
+
+    return {
+      quantity,
+      subtotal,
+      total: subtotal,
+    };
+  }, [state.cart]);
 
   return (
     <Card
       elevation={0}
       sx={{
-        padding: 3,
+        p: 3,
         border: "1px solid",
         borderColor: "divider",
-        backgroundColor: "grey.50"
+        borderRadius: 3,
+        position: { md: "sticky" },
+        top: { md: 24 },
       }}
     >
-      <FlexBetween mb={2}>
-        <Typography variant="body1" fontSize={16} fontWeight={600}>
-          Total:
-        </Typography>
-
-        <Typography variant="body1" fontSize={18} fontWeight={600} lineHeight={1}>
-          {currency(getTotalPrice())}
-        </Typography>
-      </FlexBetween>
-
-      <Divider sx={{ mb: 2 }} />
-
-      <FlexBox alignItems="center" columnGap={1} mb={2}>
-        <Typography variant="body1" fontWeight={500}>
-          Additional Comments
-        </Typography>
-
-        <Typography
-          variant="body1"
-          sx={{
-            fontSize: 12,
-            lineHeight: 1,
-            padding: "2px 6px",
-            borderRadius: "3px",
-            bgcolor: "grey.200"
-          }}
-        >
-          Note
-        </Typography>
-      </FlexBox>
-
-      {/* COMMENTS TEXT FIELD */}
-      <TextField variant="outlined" rows={3} fullWidth multiline />
-
-      {/* APPLY VOUCHER TEXT FIELD */}
-      <FlexBox alignItems="center" gap={1} my={2}>
-        <TextField
-          fullWidth
-          size="small"
-          label="Voucher"
-          variant="outlined"
-          placeholder="Voucher"
-        />
-
-        <Button variant="outlined" color="primary">
-          Apply
-        </Button>
-      </FlexBox>
-
-      <Divider sx={{ mb: 2 }} />
-
-      <Typography variant="body1" fontWeight={500} sx={{ mb: 2 }}>
-        Shipping Estimates
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 0.75 }}>
+        Cart Summary
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+        Review your cart items here. Delivery details and coupon usage continue in the next step.
       </Typography>
 
-      {/* COUNTRY TEXT FIELD */}
-      <Autocomplete
-        fullWidth
-        sx={{ mb: 2 }}
-        options={countryList}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            size="small"
-            label="Country"
-            variant="outlined"
-            placeholder="Select Country"
-          />
-        )}
+      <Stack spacing={1.25}>
+        <SummaryRow label="Items" value={`${pricing.quantity}`} />
+        <SummaryRow label="Subtotal" value={currency(pricing.subtotal)} />
+        <SummaryRow label="Shipping" value="Added only if needed later" />
+      </Stack>
+
+      <Divider sx={{ my: 2.5 }} />
+
+      <SummaryRow
+        label="Current Total"
+        value={currency(pricing.total)}
+        labelVariant="subtitle1"
+        valueVariant="h6"
       />
 
-      {/* STATE/CITY TEXT FIELD */}
-      <TextField
-        select
-        fullWidth
-        size="small"
-        label="State"
-        variant="outlined"
-        placeholder="Select State"
-        defaultValue="new-york"
-      >
-        {STATE_LIST.map(({ label, value }) => (
-          <MenuItem value={value} key={label}>
-            {label}
-          </MenuItem>
-        ))}
-      </TextField>
+      <Box sx={{ mt: 1.25 }}>
+        <Typography variant="caption" color="text.secondary">
+          We do not apply tax here. Coupon discount is applied in the Details step and the final discounted total is written to the order in the database.
+        </Typography>
+      </Box>
 
-      {/* ZIP-CODE TEXT FIELD */}
-      <TextField
-        fullWidth
-        size="small"
-        label="Zip Code"
-        placeholder="3100"
-        variant="outlined"
-        sx={{ mt: 2 }}
-      />
+      <Stack spacing={1.25} sx={{ mt: 3 }}>
+        <Button component={Link} href="/checkout" variant="contained" size="large" fullWidth>
+          Continue to Details
+        </Button>
 
-      <Button variant="outlined" color="primary" fullWidth sx={{ my: 2 }}>
-        Calculate Shipping
-      </Button>
-
-      <Button fullWidth color="primary" href="/checkout" variant="contained" LinkComponent={Link}>
-        Checkout Now
-      </Button>
+        <Button component={Link} href="/products/search" variant="outlined" size="large" fullWidth>
+          Continue Shopping
+        </Button>
+      </Stack>
     </Card>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  labelVariant = "body2",
+  valueVariant = "body1",
+}: {
+  label: string;
+  value: string;
+  labelVariant?: "body2" | "subtitle1";
+  valueVariant?: "body1" | "h6";
+}) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+      <Typography variant={labelVariant} color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant={valueVariant} fontWeight={700}>
+        {value}
+      </Typography>
+    </Box>
   );
 }

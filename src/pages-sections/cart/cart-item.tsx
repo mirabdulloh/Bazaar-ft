@@ -11,6 +11,7 @@ import Remove from "@mui/icons-material/Remove";
 import Trash from "icons/Trash";
 import useCart from "hooks/useCart";
 import { currency } from "lib";
+import { resolveCartImage } from "lib/cart";
 import { toCssColor } from "lib/colorUtils";
 import { ContentWrapper, ImageWrapper, QuantityButton, Wrapper } from "./styles";
 import { CartItem as CartModel } from "contexts/CartContext";
@@ -21,6 +22,7 @@ type Props = { item: CartModel };
 
 export default function CartItem({ item }: Props) {
   const { id, title, price, thumbnail, slug, qty, size, color } = item;
+  const resolvedThumbnail = resolveCartImage(thumbnail);
 
   const { dispatch } = useCart();
 
@@ -34,7 +36,7 @@ export default function CartItem({ item }: Props) {
   return (
     <Wrapper elevation={0}>
       <ImageWrapper>
-        <Image alt={title} fill src={thumbnail} sizes="100px" />
+        <Image alt={title} fill src={resolvedThumbnail} sizes="100px" unoptimized />
       </ImageWrapper>
 
       <ContentWrapper>

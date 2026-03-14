@@ -42,7 +42,7 @@ export default function EmptyCart() {
         Looks like you haven't added anything to your cart yet.
       </Typography>
 
-      <Button variant="contained" color="primary" href="/products" LinkComponent={Link}>
+      <Button variant="contained" color="primary" href="/products/search" LinkComponent={Link}>
         Start Shopping
       </Button>
     </EmptyCartWrapper>

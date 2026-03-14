@@ -10,6 +10,7 @@ import Trash from "icons/Trash";
 import CartItem from "../cart-item";
 import EmptyCart from "../empty-cart";
 import CheckoutForm from "../checkout-form";
+import { getCartItemKey } from "contexts/CartContext";
 
 export default function CartPageView() {
   const { state, dispatch } = useCart();
@@ -22,7 +23,7 @@ export default function CartPageView() {
     <Grid container spacing={3}>
       <Grid size={{ md: 8, xs: 12 }}>
         {state.cart.map((item) => (
-          <CartItem key={item.id} item={item} />
+          <CartItem key={getCartItemKey(item)} item={item} />
         ))}
 
         <Box textAlign="end">

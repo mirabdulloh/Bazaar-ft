@@ -1069,3 +1069,29 @@ export const GET_MY_COUPON_CLAIMS = gql`
     }
   }
 `;
+
+export const GET_AVAILABLE_COUPONS_FOR_ME = gql`
+  query GetAvailableCouponsForMe($input: CouponsInquiry!) {
+    getAvailableCouponsForMe(input: $input) {
+      list {
+        _id
+        couponCode
+        couponType
+        brandId
+        discountType
+        discountValue
+        couponMaxUsage
+        couponUsageCount
+        minOrderCount
+        couponStartDate
+        couponEndDate
+        couponStatus
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;

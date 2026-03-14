@@ -66,6 +66,7 @@ const emptyForm = {
   discountValue: "",
   couponMaxUsage: "",
   minOrderCount: "",
+  couponStatus: "ACTIVE",
   couponStartDate: "",
   couponEndDate: ""
 };
@@ -124,6 +125,7 @@ export default function BrandCouponsPageView() {
       discountValue: String(coupon.discountValue ?? ""),
       couponMaxUsage: String(coupon.couponMaxUsage ?? ""),
       minOrderCount: String(coupon.minOrderCount ?? ""),
+      couponStatus: coupon.couponStatus || "ACTIVE",
       couponStartDate: coupon.couponStartDate
         ? new Date(coupon.couponStartDate).toISOString().slice(0, 10)
         : "",
@@ -156,11 +158,14 @@ export default function BrandCouponsPageView() {
               discountValue: Number(form.discountValue),
               ...(form.couponMaxUsage ? { couponMaxUsage: Number(form.couponMaxUsage) } : {}),
               ...(form.minOrderCount ? { minOrderCount: Number(form.minOrderCount) } : {}),
+              couponStatus: form.couponStatus,
               couponStartDate: new Date(form.couponStartDate),
               couponEndDate: new Date(form.couponEndDate)
             }
           }
         });
+        handleClose();
+        await refetch();
         await sweetTopSmallSuccessAlert("Coupon updated!");
       } else {
         await createCoupon({
@@ -176,10 +181,10 @@ export default function BrandCouponsPageView() {
             }
           }
         });
+        handleClose();
+        await refetch();
         await sweetTopSmallSuccessAlert("Coupon created!");
       }
-      handleClose();
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Operation failed");
     }
@@ -322,7 +327,24 @@ export default function BrandCouponsPageView() {
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6 }} />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              {editingCoupon ? (
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={form.couponStatus}
+                    label="Status"
+                    onChange={(e) => setForm((f) => ({ ...f, couponStatus: e.target.value }))}
+                  >
+                    {COUPON_STATUSES.map((status) => (
+                      <MenuItem key={status} value={status}>
+                        {status}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : null}
+            </Grid>
 
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField

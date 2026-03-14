@@ -56,6 +56,7 @@ import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import {
   GET_MY_ORDERS,
+  GET_AVAILABLE_COUPONS_FOR_ME,
   GET_MY_COUPON_CLAIMS,
   GET_MY_REVIEWS,
   GET_MEMBER,
@@ -566,6 +567,16 @@ export function ProfilePageView() {
   );
   const [claimCoupon, { loading: claimLoading }] = useMutation(CLAIM_COUPON);
   const {
+    loading: availableCouponsLoading,
+    data: availableCouponsData,
+    refetch: refetchAvailableCoupons
+  } = useQuery(GET_AVAILABLE_COUPONS_FOR_ME, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 20, sort: "createdAt", direction: "DESC" } },
+    notifyOnNetworkStatusChange: true,
+    skip: !user._id
+  });
+  const {
     loading: couponClaimsLoading,
     data: couponClaimsData,
     refetch: refetchCouponClaims
@@ -587,11 +598,12 @@ export function ProfilePageView() {
   const memberEmail: string = (memberData as T)?.getMember?.memberEmail ?? "";
   const profileMember: T = ((memberData as T)?.getMember as T) ?? user;
 
-  const handleClaimCoupon = useCallback(async () => {
-    if (!couponCode.trim()) return;
+  const handleClaimCoupon = useCallback(async (code?: string) => {
+    const targetCouponCode = (code ?? couponCode).trim();
+    if (!targetCouponCode) return;
     setCouponMsg(null);
     try {
-      const result = await claimCoupon({ variables: { couponCode: couponCode.trim() } });
+      const result = await claimCoupon({ variables: { couponCode: targetCouponCode } });
 
       const claimedMember = (result?.data as T)?.claimCoupon;
       if (claimedMember?.accessToken) updateStorage({ jwtToken: claimedMember.accessToken });
@@ -599,7 +611,7 @@ export function ProfilePageView() {
 
       setCouponMsg({ type: "success", text: "Coupon claimed successfully!" });
       setCouponCode("");
-      await Promise.allSettled([memberRefetch(), refetchCouponClaims()]);
+      await Promise.allSettled([memberRefetch(), refetchCouponClaims(), refetchAvailableCoupons()]);
       await sweetMixinSuccessAlert("Coupon claimed!");
     } catch (err: any) {
       console.error("Coupon error:", err);
@@ -607,7 +619,7 @@ export function ProfilePageView() {
       setCouponMsg({ type: "error", text: message });
       await sweetMixinErrorAlert(message);
     }
-  }, [couponCode, claimCoupon, memberRefetch, refetchCouponClaims]);
+  }, [couponCode, claimCoupon, memberRefetch, refetchCouponClaims, refetchAvailableCoupons]);
 
   // Sync email when query data loads (email lives in GET_MEMBER, not in userVar)
   useEffect(() => {
@@ -839,6 +851,8 @@ export function ProfilePageView() {
             setCouponMsg={setCouponMsg}
             handleClaimCoupon={handleClaimCoupon}
             claimLoading={claimLoading}
+            availableCouponsLoading={availableCouponsLoading}
+            availableCoupons={(availableCouponsData as T)?.getAvailableCouponsForMe?.list ?? []}
             claimsLoading={couponClaimsLoading}
             couponClaims={(couponClaimsData as T)?.getMyCouponClaims?.list ?? []}
           />
@@ -2485,6 +2499,8 @@ function CouponPanel({
   setCouponMsg,
   handleClaimCoupon,
   claimLoading,
+  availableCouponsLoading,
+  availableCoupons,
   claimsLoading,
   couponClaims
 }: {
@@ -2492,8 +2508,10 @@ function CouponPanel({
   setCouponCode: (v: string) => void;
   couponMsg: { type: "success" | "error"; text: string } | null;
   setCouponMsg: (v: { type: "success" | "error"; text: string } | null) => void;
-  handleClaimCoupon: () => void;
+  handleClaimCoupon: (code?: string) => void;
   claimLoading: boolean;
+  availableCouponsLoading: boolean;
+  availableCoupons: T[];
   claimsLoading: boolean;
   couponClaims: T[];
 }) {
@@ -2501,17 +2519,111 @@ function CouponPanel({
     <Box>
       <SectionTitle title="Coupons" />
 
-      {/* Claim coupon */}
+      {/* Available coupons */}
       <PanelCard sx={{ mb: 3 }}>
         <FlexBox alignItems="center" gap={1.5} mb={2}>
           <CardGiftcardOutlined color="primary" />
           <Typography variant="subtitle1" fontWeight={700}>
-            Claim a Coupon
+            Available Coupons
           </Typography>
         </FlexBox>
 
         <Typography variant="body2" color="text.secondary" mb={2}>
-          Enter your coupon code below to claim your discount.
+          Eligible coupons appear here automatically. Claims are first-come, first-served until the limit is reached.
+        </Typography>
+
+        {availableCouponsLoading ? (
+          <Stack spacing={1.5}>
+            {[1, 2].map((item) => (
+              <Skeleton key={item} variant="rounded" height={116} />
+            ))}
+          </Stack>
+        ) : availableCoupons.length ? (
+          <Stack spacing={1.5}>
+            {availableCoupons.map((coupon: T) => {
+              const remainingClaims =
+                coupon.couponMaxUsage == null
+                  ? "Unlimited claims"
+                  : `${Math.max(0, Number(coupon.couponMaxUsage ?? 0) - Number(coupon.couponUsageCount ?? 0))} left`;
+              const discountLabel =
+                coupon.discountType === "PERCENTAGE"
+                  ? `${coupon.discountValue ?? 0}% off`
+                  : `${currency(coupon.discountValue ?? 0)} off`;
+
+              return (
+                <Box
+                  key={String(coupon._id)}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2.5,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: "background.paper"
+                  }}
+                >
+                  <FlexBetween gap={2} alignItems="flex-start" flexWrap="wrap">
+                    <Box>
+                      <FlexBox alignItems="center" gap={1} mb={0.75}>
+                        <Typography variant="subtitle1" fontWeight={800}>
+                          {coupon.couponCode}
+                        </Typography>
+                        <Chip
+                          label={coupon.couponType === "BRAND" ? "Brand" : "Platform"}
+                          size="small"
+                          color={coupon.couponType === "BRAND" ? "info" : "primary"}
+                          sx={{ fontSize: 11, fontWeight: 700 }}
+                        />
+                      </FlexBox>
+
+                      <Typography variant="body2" fontWeight={700}>
+                        {discountLabel}
+                      </Typography>
+
+                      <Typography variant="caption" color="text.secondary" display="block" mt={0.75}>
+                        {coupon.minOrderCount ? `Min ${coupon.minOrderCount} delivered orders` : "No order minimum"}
+                        {` · ${remainingClaims}`}
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      onClick={() => handleClaimCoupon(String(coupon.couponCode ?? ""))}
+                      disabled={claimLoading}
+                    >
+                      Claim
+                    </Button>
+                  </FlexBetween>
+                </Box>
+              );
+            })}
+          </Stack>
+        ) : (
+          <Box textAlign="center" py={3}>
+            <CardGiftcardOutlined sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+            <Typography variant="body1" color="text.secondary">
+              No eligible coupons right now.
+            </Typography>
+          </Box>
+        )}
+
+        {couponMsg && (
+          <Alert severity={couponMsg.type} sx={{ mt: 2, borderRadius: 2 }}>
+            {couponMsg.text}
+          </Alert>
+        )}
+      </PanelCard>
+
+      {/* Manual code claim */}
+      <PanelCard sx={{ mb: 3 }}>
+        <FlexBox alignItems="center" gap={1.5} mb={2}>
+          <ConfirmationNumberOutlined color="primary" />
+          <Typography variant="subtitle1" fontWeight={700}>
+            Claim by Code
+          </Typography>
+        </FlexBox>
+
+        <Typography variant="body2" color="text.secondary" mb={2}>
+          If you received a private code, you can still claim it manually here.
         </Typography>
 
         <FlexBox gap={1.5} alignItems="flex-start" flexWrap="wrap">
@@ -2529,21 +2641,14 @@ function CouponPanel({
             }}
           />
           <Button
-            variant="contained"
-            onClick={handleClaimCoupon}
+            variant="outlined"
+            onClick={() => handleClaimCoupon()}
             disabled={!couponCode.trim() || claimLoading}
-            loading={claimLoading}
             sx={{ px: 4 }}
           >
             Claim
           </Button>
         </FlexBox>
-
-        {couponMsg && (
-          <Alert severity={couponMsg.type} sx={{ mt: 2, borderRadius: 2 }}>
-            {couponMsg.text}
-          </Alert>
-        )}
       </PanelCard>
 
       {/* Claimed coupon details */}

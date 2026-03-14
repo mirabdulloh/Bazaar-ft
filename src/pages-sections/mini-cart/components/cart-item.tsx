@@ -1,7 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 // MUI
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -16,6 +14,7 @@ import Trash from "icons/Trash";
 import FlexBox from "components/flex-box/flex-box";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
+import { resolveCartImage } from "lib/cart";
 import { toCssColor } from "lib/colorUtils";
 // CUSTOM DATA MODEL
 import { CartItem } from "contexts/CartContext";
@@ -65,11 +64,13 @@ interface Props {
 // ==============================================================
 
 export default function MiniCartItem({ item, onCart }: Props) {
+  const resolvedThumbnail = resolveCartImage(item.thumbnail);
+
   return (
     <StyledRoot>
       <Link href={`/products/${item.slug}`}>
         <StyledAvatar variant="rounded">
-          <Image alt={item.title} src={item.thumbnail} fill sizes="(100px, 100px)" unoptimized={!!API_URL && item.thumbnail.startsWith(API_URL)} />
+          <Image alt={item.title} src={resolvedThumbnail} fill sizes="(100px, 100px)" unoptimized />
         </StyledAvatar>
       </Link>
 

@@ -3,7 +3,7 @@
 import { createContext, PropsWithChildren, useMemo, useReducer } from "react";
 
 // =================================================================================
-type InitialState = { cart: CartItem[] };
+type InitialState = { cart: CartItem[]; couponCode: string; selectedAddressId: string };
 
 export interface CartItem {
   id: string;
@@ -18,11 +18,13 @@ export interface CartItem {
 
 interface CartActionType {
   payload?: CartItem;
-  type: "CHANGE_CART_AMOUNT" | "CLEAR_CART";
+  couponCode?: string;
+  addressId?: string;
+  type: "CHANGE_CART_AMOUNT" | "CLEAR_CART" | "SET_COUPON_CODE" | "SET_CHECKOUT_ADDRESS";
 }
 
 // =================================================================================
-const INITIAL_STATE = { cart: [] as CartItem[] };
+const INITIAL_STATE = { cart: [] as CartItem[], couponCode: "", selectedAddressId: "" };
 
 // ==============================================================
 interface ContextProps {
@@ -32,6 +34,15 @@ interface ContextProps {
 // ==============================================================
 
 export const CartContext = createContext<ContextProps>({} as ContextProps);
+
+export const getCartItemKey = (item: Pick<CartItem, "id" | "size" | "color">) =>
+  `${item.id}__${item.size ?? ""}__${item.color ?? ""}`;
+
+export const getCartSubtotal = (cart: CartItem[]) =>
+  cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+export const getCartQuantity = (cart: CartItem[]) =>
+  cart.reduce((acc, item) => acc + item.qty, 0);
 
 const reducer = (state: InitialState, action: CartActionType) => {
   switch (action.type) {
@@ -71,7 +82,13 @@ const reducer = (state: InitialState, action: CartActionType) => {
       return { ...state, cart: [...cartList, cartItem] };
 
     case "CLEAR_CART":
-      return { ...state, cart: [] };
+      return { ...state, cart: [], couponCode: "", selectedAddressId: "" };
+
+    case "SET_COUPON_CODE":
+      return { ...state, couponCode: action.couponCode?.trim().toUpperCase() ?? "" };
+
+    case "SET_CHECKOUT_ADDRESS":
+      return { ...state, selectedAddressId: action.addressId ?? "" };
 
     default: {
       return state;
