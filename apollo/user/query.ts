@@ -688,6 +688,29 @@ export const GET_REVIEWS = gql`
   }
 `;
 
+export const GET_MY_REVIEWS = gql`
+  query GetMyReviews($input: AllReviewsInquiry!) {
+    getMyReviews(input: $input) {
+      list {
+        _id
+        productId
+        memberId
+        orderItemId
+        reviewRating
+        reviewComment
+        reviewImages
+        reviewStatus
+        reviewLikes
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;
+
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const GET_ADDRESSES = gql`

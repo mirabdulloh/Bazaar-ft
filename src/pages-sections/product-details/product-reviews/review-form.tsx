@@ -140,7 +140,17 @@ export default function ReviewForm({ productId, onSuccess }: Props) {
             },
           }
         );
-        reviewImages = response.data?.data?.imagesUploader ?? [];
+        reviewImages = (response.data?.data?.imagesUploader ?? [])
+          .filter((image: unknown): image is string => typeof image === "string")
+          .map((image: string) => image.trim())
+          .filter(Boolean);
+
+        if (reviewImages.length !== files.length) {
+          setUploading(false);
+          sweetMixinErrorAlert("Some images failed to upload. Use PNG, JPG, or JPEG files only.");
+          return;
+        }
+
         setUploading(false);
       }
 

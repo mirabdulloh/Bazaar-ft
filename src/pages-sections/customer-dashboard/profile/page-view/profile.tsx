@@ -56,6 +56,7 @@ import { userVar } from "../../../../../apollo/store";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import {
   GET_MY_ORDERS,
+  GET_MY_REVIEWS,
   GET_MEMBER,
   GET_MEMBER_FOLLOWINGS,
   GET_MEMBER_FOLLOWERS,
@@ -626,6 +627,13 @@ export function ProfilePageView() {
     skip: !user._id
   });
 
+  const { data: myReviewsData, refetch: refetchMyReviews } = useQuery(GET_MY_REVIEWS, {
+    fetchPolicy: "cache-and-network",
+    variables: { input: { page: 1, limit: 200, sort: "createdAt", direction: "DESC", search: {} } },
+    notifyOnNetworkStatusChange: true,
+    skip: !user._id
+  });
+
   const { loading: articlesLoading, data: articlesData } = useQuery(GET_BOARD_ARTICLES, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 10, search: { memberId: user._id } } },
@@ -634,6 +642,7 @@ export function ProfilePageView() {
 
   // ── Data extraction ──
   const orders: T[] = (ordersData as T)?.getMyOrders?.orders ?? [];
+  const myReviews: T[] = (myReviewsData as T)?.getMyReviews?.list ?? [];
   const visitedProducts: T[] = (visitedData as T)?.getVisitedProducts?.products ?? [];
   const followings: T[] = (followingsData as T)?.getMemberFollowings?.list ?? [];
   const followers: T[] = (followersData as T)?.getMemberFollowers?.list ?? [];
@@ -674,8 +683,8 @@ export function ProfilePageView() {
 
   const handleCreateReview = useCallback(async (input: T) => {
     await createReview({ variables: { input } });
-    await sweetTopSmallSuccessAlert("Review submitted");
-  }, [createReview]);
+    await refetchMyReviews({ input: { page: 1, limit: 200, sort: "createdAt", direction: "DESC", search: {} } });
+  }, [createReview, refetchMyReviews]);
 
   // ── Follow / Unfollow handlers ──
   const refetchFollowPanels = useCallback(async () => {
@@ -762,6 +771,7 @@ export function ProfilePageView() {
         return (
           <OrderHistoryPanel
             orders={orders}
+            myReviews={myReviews}
             loading={ordersLoading}
             onCreateReview={handleCreateReview}
           />
@@ -1409,10 +1419,12 @@ function OrdersPanel({
 
 function OrderHistoryPanel({
   orders,
+  myReviews,
   loading,
   onCreateReview
 }: {
   orders: T[];
+  myReviews: T[];
   loading: boolean;
   onCreateReview: (input: T) => Promise<void>;
 }) {
@@ -1424,10 +1436,11 @@ function OrderHistoryPanel({
   const [reviewTarget, setReviewTarget] = useState<T | null>(null);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewRating, setReviewRating] = useState<number | null>(5);
-  const [reviewingItemIds, setReviewingItemIds] = useState<string[]>([]);
+  const [reviewedProductIdsLocal, setReviewedProductIdsLocal] = useState<string[]>([]);
   const [reviewFiles, setReviewFiles] = useState<File[]>([]);
   const [reviewPreviews, setReviewPreviews] = useState<string[]>([]);
   const [uploadingReviewImages, setUploadingReviewImages] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const historyOrders = useMemo(
     () =>
@@ -1440,11 +1453,20 @@ function OrderHistoryPanel({
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(historyOrders.length / ITEMS_PER_PAGE));
   const paginatedOrders = historyOrders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const reviewedProductIds = useMemo(
+    () =>
+      new Set<string>([
+        ...myReviews.map((review) => String(review.productId)),
+        ...reviewedProductIdsLocal,
+      ]),
+    [myReviews, reviewedProductIdsLocal]
+  );
 
   const openReviewDialog = useCallback((target: T) => {
     setReviewTarget(target);
     setReviewComment("");
     setReviewRating(5);
+    setReviewError("");
     reviewPreviews.forEach((preview) => URL.revokeObjectURL(preview));
     setReviewFiles([]);
     setReviewPreviews([]);
@@ -1456,6 +1478,7 @@ function OrderHistoryPanel({
     setReviewTarget(null);
     setReviewComment("");
     setReviewRating(5);
+    setReviewError("");
     reviewPreviews.forEach((preview) => URL.revokeObjectURL(preview));
     setReviewFiles([]);
     setReviewPreviews([]);
@@ -1484,16 +1507,18 @@ function OrderHistoryPanel({
 
   const handleSubmitReview = useCallback(async () => {
     if (!reviewTarget?.item?._id || !reviewTarget?.product?._id || !reviewRating || !reviewComment.trim()) {
-      await sweetMixinErrorAlert("Write a review and choose a rating.");
+      setReviewError("Write a review and choose a rating.");
       return;
     }
 
-    if (reviewFiles.length < 1 || reviewFiles.length > 5) {
-      await sweetMixinErrorAlert("Add between 1 and 5 review images.");
+    if (reviewFiles.length > 5) {
+      setReviewError("You can upload up to 5 review images.");
       return;
     }
 
     const itemId = String(reviewTarget.item._id);
+    const productId = String(reviewTarget.product._id);
+    setReviewError("");
     try {
       let reviewImages: string[] = [];
 
@@ -1527,22 +1552,37 @@ function OrderHistoryPanel({
           },
         });
 
-        reviewImages = response.data?.data?.imagesUploader ?? [];
+        reviewImages = (response.data?.data?.imagesUploader ?? [])
+          .filter((image: unknown): image is string => typeof image === "string")
+          .map((image: string) => image.trim())
+          .filter(Boolean);
+
+        if (reviewImages.length !== reviewFiles.length) {
+          setUploadingReviewImages(false);
+          setReviewError("Some images failed to upload. Use PNG, JPG, or JPEG files only.");
+          return;
+        }
+
         setUploadingReviewImages(false);
       }
 
       await onCreateReview({
-        productId: String(reviewTarget.product._id),
+        productId,
         orderItemId: itemId,
         reviewRating,
         reviewComment: reviewComment.trim(),
         reviewImages,
       });
-      setReviewingItemIds((prev) => Array.from(new Set([...prev, itemId])));
+      setReviewedProductIdsLocal((prev) => Array.from(new Set([...prev, productId])));
       closeReviewDialog();
+      await sweetTopSmallSuccessAlert("Review submitted");
     } catch (err: any) {
       setUploadingReviewImages(false);
-      await sweetMixinErrorAlert(err?.message || "Failed to submit review");
+      const message = err?.message || "Failed to submit review";
+      if (message.includes("already reviewed this product")) {
+        setReviewedProductIdsLocal((prev) => Array.from(new Set([...prev, productId])));
+      }
+      setReviewError(message);
     }
   }, [closeReviewDialog, onCreateReview, reviewComment, reviewFiles, reviewRating, reviewTarget]);
 
@@ -1689,7 +1729,7 @@ function OrderHistoryPanel({
                     const product = item.product as T;
                     const productImageCandidates = getOrderProductImageCandidates(item);
                     const variantText = getOrderItemVariantText(item);
-                    const alreadyReviewed = reviewingItemIds.includes(String(item._id));
+                    const alreadyReviewed = reviewedProductIds.has(String(product?._id));
                     const canReview = String(order.orderStatus) === "DELIVERED";
 
                     return (
@@ -1817,6 +1857,8 @@ function OrderHistoryPanel({
         <DialogTitle>Write Review</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
+            {reviewError && <Alert severity="error">{reviewError}</Alert>}
+
             <Box>
               <Typography variant="body2" fontWeight={600} mb={1}>
                 Rating
@@ -1839,7 +1881,7 @@ function OrderHistoryPanel({
 
             <Box>
               <Typography variant="body2" fontWeight={600} mb={1}>
-                Review Images
+                Review Images (optional)
               </Typography>
               <FlexBox gap={1.25} flexWrap="wrap">
                 {reviewPreviews.map((src, index) => (

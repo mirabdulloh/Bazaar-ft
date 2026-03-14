@@ -26,7 +26,6 @@ import { Message, T } from "lib/types/common";
 import { LIKE_TARGET_REVIEW } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { sweetMixinErrorAlert, sweetTopSmallErrorAlert } from "../../../lib/sweetAlert";
-import ReviewForm from "./review-form";
 
 type Props = {
   productId: string;
@@ -321,14 +320,6 @@ export default function ProductReviews(props: Props) {
           )}
         </>
       )}
-
-      {/* WRITE A REVIEW */}
-      <Box sx={{ mt: 5, pt: 4, borderTop: "1px solid", borderColor: "divider" }}>
-        <Typography variant="h4" sx={{ mb: 3 }}>
-          Write a Review
-        </Typography>
-        <ReviewForm productId={productId} onSuccess={() => getReviewsRefetch()} />
-      </Box>
 
       {/* LIGHTBOX */}
       {lightboxOpen && lightboxImages.length > 0 && (
