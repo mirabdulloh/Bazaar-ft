@@ -268,6 +268,7 @@ function toProductModel(product: T): Product {
 
   return {
     id: String(product?._id ?? ""),
+    memberId: String(product?.memberId ?? ""),
     slug: String(product?._id ?? ""),
     title,
     price,
@@ -1623,13 +1624,14 @@ function OrderHistoryPanel({
       return;
     }
 
-    dispatch({
-      type: "CHANGE_CART_AMOUNT",
-      payload: {
-        id: product.id,
-        slug: product.slug,
-        price: product.price,
-        title: product.title,
+      dispatch({
+        type: "CHANGE_CART_AMOUNT",
+        payload: {
+          id: product.id,
+          brandId: product.memberId,
+          slug: product.slug,
+          price: product.price,
+          title: product.title,
         thumbnail: product.thumbnail,
         qty: 1,
       }
@@ -2150,6 +2152,7 @@ function ProductGridPanel({
     const discount = discPrice && price ? Math.round(((price - discPrice) / price) * 100) : 0;
     return {
       id: p._id as string,
+      memberId: p.memberId as string,
       slug: p._id as string,
       title: p.productTitle as string,
       price,

@@ -34,7 +34,15 @@ export default function ButtonGroup({ product }: { product: Product }) {
     setTimeout(() => {
       dispatch({
         type: "CHANGE_CART_AMOUNT",
-        payload: { id: product.id, slug: product.slug, price: product.price, title: product.title, thumbnail: product.thumbnail, qty: 1 }
+        payload: {
+          id: product.id,
+          brandId: product.memberId,
+          slug: product.slug,
+          price: product.price,
+          title: product.title,
+          thumbnail: product.thumbnail,
+          qty: 1,
+        }
       });
       setLoading(false);
     }, 500);

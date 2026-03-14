@@ -3,6 +3,7 @@ import Review from "./Review.model";
 
 export default interface Product {
   unit?: any;
+  memberId?: string;
   slug: string;
   price: number;
   title: string;

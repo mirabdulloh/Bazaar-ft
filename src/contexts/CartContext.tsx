@@ -7,6 +7,7 @@ type InitialState = { cart: CartItem[]; couponCode: string; selectedAddressId: s
 
 export interface CartItem {
   id: string;
+  brandId?: string;
   qty: number;
   title: string;
   slug: string;

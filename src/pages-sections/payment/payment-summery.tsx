@@ -26,7 +26,7 @@ export default function PaymentSummary() {
 
   const { subtotal, discount, total } = useMemo(() => {
     const subtotal = getCartSubtotal(state.cart);
-    const discount = calculateEstimatedCouponDiscount(appliedCoupon, subtotal);
+    const discount = calculateEstimatedCouponDiscount(appliedCoupon, state.cart);
     return {
       subtotal,
       discount,

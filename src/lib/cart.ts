@@ -4,6 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type CouponLike = {
   couponType?: string | null;
+  brandId?: string | null;
   discountType?: string | null;
   discountValue?: number | null;
 };
@@ -26,23 +27,36 @@ export function resolveCartImage(image?: string | null): string {
   return API_URL ? `${API_URL}${normalized}` : normalized;
 }
 
-export function calculateEstimatedCouponDiscount(coupon: CouponLike | null, subtotal: number) {
-  if (!coupon || subtotal <= 0) return 0;
-  if (coupon.couponType === "BRAND") return 0;
+export function calculateEstimatedCouponDiscount(coupon: CouponLike | null, cart: CartItem[]) {
+  if (!coupon || !cart.length) return 0;
+
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+  if (subtotal <= 0) return 0;
+
+  const eligibleSubtotal =
+    coupon.couponType === "BRAND" && coupon.brandId
+      ? cart
+          .filter((item) => item.brandId && String(item.brandId) === String(coupon.brandId))
+          .reduce((acc, item) => acc + item.price * item.qty, 0)
+      : subtotal;
+
+  if (eligibleSubtotal <= 0) return 0;
 
   if (coupon.discountType === "PERCENTAGE") {
-    return Math.min(subtotal, (subtotal * Number(coupon.discountValue ?? 0)) / 100);
+    return Math.min(eligibleSubtotal, (eligibleSubtotal * Number(coupon.discountValue ?? 0)) / 100);
   }
 
-  return Math.min(subtotal, Number(coupon.discountValue ?? 0));
+  return Math.min(eligibleSubtotal, Number(coupon.discountValue ?? 0));
 }
 
 export function getCartBrandsNote(cart: CartItem[], coupon: CouponLike | null) {
   if (!coupon) return "";
   if (coupon.couponType !== "BRAND") return "";
-  if (cart.length <= 1) {
-    return "Brand coupon will be applied during order placement if this product belongs to the coupon brand.";
+
+  const hasMatchingBrandItems = !!coupon.brandId && cart.some((item) => String(item.brandId ?? "") === String(coupon.brandId));
+  if (!hasMatchingBrandItems) {
+    return "This brand coupon does not match any products currently in your cart.";
   }
 
-  return "Brand coupon will be validated against eligible brand items during order placement.";
+  return "This brand coupon is applied only to matching products from that brand in your cart.";
 }

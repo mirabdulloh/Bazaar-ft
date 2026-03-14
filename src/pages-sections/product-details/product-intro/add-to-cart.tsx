@@ -23,7 +23,7 @@ type Props = {
 // ================================================================
 
 export default function AddToCart({ product, selectedSize, selectedColor, outOfStock }: Props) {
-  const { id, price, title, slug, thumbnail, size, colors } = product;
+  const { id, memberId, price, title, slug, thumbnail, size, colors } = product;
 
   const router = useRouter();
   const user = useReactiveVar(userVar);
@@ -63,6 +63,7 @@ export default function AddToCart({ product, selectedSize, selectedColor, outOfS
         type: "CHANGE_CART_AMOUNT",
         payload: {
           id,
+          brandId: memberId,
           slug,
           price,
           title,

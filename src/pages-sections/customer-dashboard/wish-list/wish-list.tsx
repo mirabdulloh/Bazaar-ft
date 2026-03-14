@@ -57,6 +57,7 @@ function toProduct(p: T): Product & { _rawId: string } {
   return {
     _rawId: p._id as string,
     id: p._id as string,
+    memberId: p.memberId as string,
     slug: p._id as string,
     title: p.productTitle as string,
     price,
@@ -192,7 +193,7 @@ function WishlistCard({
     setTimeout(() => {
       dispatch({
         type: "CHANGE_CART_AMOUNT",
-        payload: { id, slug: id, price, title, thumbnail, qty: 1 },
+        payload: { id, brandId: product.memberId, slug: id, price, title, thumbnail, qty: 1 },
       });
       router.push("/mini-cart", { scroll: false });
       setAddingToCart(false);

@@ -85,6 +85,7 @@ export default function VariantPickerModal() {
       type: "CHANGE_CART_AMOUNT",
       payload: {
         id: product.id,
+        brandId: product.memberId,
         slug: product.slug,
         price: product.price,
         title: product.title,

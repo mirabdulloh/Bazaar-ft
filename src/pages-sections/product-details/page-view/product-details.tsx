@@ -86,6 +86,7 @@ const toProductModel = (p: GqlProduct, categoryById: Map<string, string>): Produ
 
   return {
     id: p._id,
+    memberId: p.memberId,
     slug: p._id,
     title: p.productTitle,
     price: p.productPrice,

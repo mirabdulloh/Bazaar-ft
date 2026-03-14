@@ -18,6 +18,7 @@ import { T, Message } from "../../../lib/types/common";
 
 interface GqlProduct {
   _id: string;
+  memberId?: string;
   productTitle: string;
   productPrice: number;
   productDiscountPrice: number;
@@ -43,6 +44,7 @@ function toProductModel(p: GqlProduct): Product {
       : 0;
   return {
     id: p._id,
+    memberId: p.memberId,
     slug: p._id,
     title: p.productTitle,
     price: p.productPrice,
