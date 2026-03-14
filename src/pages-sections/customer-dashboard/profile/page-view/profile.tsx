@@ -1454,6 +1454,15 @@ function ProductGridPanel({
   emptyMsg: string;
 }) {
   const base = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const resolveProductImage = (img?: string | null): string => {
+    if (!img || img === "null" || img === "undefined") {
+      return "/assets/images/products/product-1.png";
+    }
+    if (img.startsWith("http://") || img.startsWith("https://")) return img;
+    const normalized = img.startsWith("/") ? img : `/${img}`;
+    return base ? `${base}${normalized}` : normalized;
+  };
+
   const parseVariantValues = (value?: string[] | string): string[] => {
     if (!value) return [];
     const rawValues = Array.isArray(value) ? value : value.split(/[,/|]/);
@@ -1461,8 +1470,8 @@ function ProductGridPanel({
   };
 
   const toProductModel = (p: T): Product => {
-    const rawImg = (p.productImages as string[])?.[0] ?? "";
-    const thumb = rawImg.startsWith("http") ? rawImg : rawImg ? `${base}/${rawImg}` : "/assets/images/products/product-1.png";
+    const rawImages = Array.isArray(p.productImages) ? (p.productImages as string[]) : [];
+    const thumb = resolveProductImage(rawImages[0]);
     const price = p.productPrice as number;
     const discPrice = p.productDiscountPrice as number;
     const discount = discPrice && price ? Math.round(((price - discPrice) / price) * 100) : 0;
@@ -1473,9 +1482,7 @@ function ProductGridPanel({
       price,
       discount,
       thumbnail: thumb,
-      images: (p.productImages as string[] ?? []).map((img: string) =>
-        img.startsWith("http") ? img : `${base}/${img}`
-      ),
+      images: rawImages.map((img: string) => resolveProductImage(img)),
       rating: (p.productRatingAverage as number) ?? 0,
       size: parseVariantValues(p.productSize as string[] | string),
       colors: parseVariantValues(p.productColor as string[] | string),

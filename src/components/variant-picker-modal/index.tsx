@@ -64,7 +64,7 @@ export default function VariantPickerModal() {
   const colorOptions = toArray(product.colors as unknown as string | string[]);
   const hasSizes  = sizeOptions.length > 0;
   const hasColors = colorOptions.length > 0;
-  const previewImage = resolveProductImage(product.thumbnail);
+  const previewImage = resolveProductImage(product.thumbnail || product.images?.[0]);
 
   const handleConfirm = () => {
     if (!user?._id) {
