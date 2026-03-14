@@ -71,12 +71,24 @@ export default function CheckoutForm() {
             items: cart.map((item) => ({
               productId: item.id,
               itemQuantity: item.qty,
+              selectedSize: item.size || undefined,
+              selectedColor: item.color || undefined,
             })),
           },
         },
       });
+
+      const createdOrders: T[] = (data as T)?.createOrder?.orders ?? [];
+      if (!createdOrders.length) {
+        throw new Error("Order creation returned no orders.");
+      }
+
       dispatch({ type: "CLEAR_CART" });
-      router.push(`/orders/${data.createOrder._id}`);
+      if (createdOrders.length === 1) {
+        router.push(`/profile?tab=orders&orderId=${createdOrders[0]._id as string}`);
+      } else {
+        router.push("/profile?tab=orders");
+      }
     } catch (err: any) {
       sweetMixinErrorAlert(err.message ?? "Failed to place order.");
     } finally {

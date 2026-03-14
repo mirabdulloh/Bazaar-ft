@@ -61,7 +61,17 @@ import {
   GET_BOARD_ARTICLES,
   GET_ADDRESSES,
 } from "../../../../../apollo/user/query";
-import { CLAIM_COUPON, UPDATE_MEMBER, SUBSCRIBE, UNSUBSCRIBE, CHANGE_PASSWORD, DELETE_ADDRESS, CANCEL_ORDER, CREATE_REVIEW } from "../../../../../apollo/user/mutation";
+import {
+  CLAIM_COUPON,
+  UPDATE_MEMBER,
+  SUBSCRIBE,
+  UNSUBSCRIBE,
+  CHANGE_PASSWORD,
+  DELETE_ADDRESS,
+  CANCEL_ORDER,
+  CONFIRM_ORDER_RECEIVED,
+  CREATE_REVIEW
+} from "../../../../../apollo/user/mutation";
 // CUSTOM COMPONENTS
 import AddressForm from "../../address/address-form";
 import { OrderDetailsPageView } from "../../orders/page-view/order-details";
@@ -510,6 +520,7 @@ export function ProfilePageView() {
   const myArticles: T[] = (articlesData as T)?.getBoardArticles?.list ?? [];
 
   const [cancelOrder] = useMutation(CANCEL_ORDER);
+  const [confirmOrderReceived] = useMutation(CONFIRM_ORDER_RECEIVED);
   const [createReview] = useMutation(CREATE_REVIEW);
 
   const handleCancelOrder = useCallback(async (orderId: string) => {
@@ -524,6 +535,22 @@ export function ProfilePageView() {
       await sweetMixinErrorAlert(err?.message || "Failed to cancel order");
     }
   }, [cancelOrder, refetchOrders]);
+
+  const handleConfirmOrderReceived = useCallback(async (orderId: string) => {
+    const confirmed = await sweetConfirmAlert(
+      "Mark order as received?",
+      "This will complete the order and unlock review actions."
+    );
+    if (!confirmed) return;
+
+    try {
+      await confirmOrderReceived({ variables: { orderId } });
+      await sweetTopSmallSuccessAlert("Order marked as delivered");
+      await refetchOrders();
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err?.message || "Failed to confirm delivery");
+    }
+  }, [confirmOrderReceived, refetchOrders]);
 
   const handleCreateReview = useCallback(async (input: T) => {
     await createReview({ variables: { input } });
@@ -603,7 +630,14 @@ export function ProfilePageView() {
             </Box>
           );
         }
-        return <OrdersPanel orders={orders} loading={ordersLoading} onCancel={handleCancelOrder} />;
+        return (
+          <OrdersPanel
+            orders={orders}
+            loading={ordersLoading}
+            onCancel={handleCancelOrder}
+            onConfirmReceived={handleConfirmOrderReceived}
+          />
+        );
       case "order-history":
         return (
           <OrderHistoryPanel
@@ -976,11 +1010,13 @@ function OverviewPanel({ user, avatarSrc }: { user: T; avatarSrc: string }) {
 function OrdersPanel({
   orders,
   loading,
-  onCancel
+  onCancel,
+  onConfirmReceived
 }: {
   orders: T[];
   loading: boolean;
   onCancel: (orderId: string) => Promise<void>;
+  onConfirmReceived: (orderId: string) => Promise<void>;
 }) {
   const activeOrders = useMemo(
     () =>
@@ -1021,6 +1057,11 @@ function OrdersPanel({
                   <Typography variant="body2" fontWeight={700}>
                     Order #{(order._id as string).slice(-8).toUpperCase()}
                   </Typography>
+                  {!!order.brand?.memberNick && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      Brand: {String(order.brand.memberNick)}
+                    </Typography>
+                  )}
                   <Typography variant="caption" color="text.secondary">
                     {new Date(order.createdAt as string).toLocaleDateString("en-US", {
                       year: "numeric",
@@ -1064,6 +1105,16 @@ function OrdersPanel({
                       onClick={() => onCancel(String(order._id))}
                     >
                       Cancel Order
+                    </Button>
+                  )}
+                  {String(order.orderStatus) === "SHIPPED" && (
+                    <Button
+                      size="small"
+                      color="success"
+                      variant="contained"
+                      onClick={() => onConfirmReceived(String(order._id))}
+                    >
+                      Mark as Received
                     </Button>
                   )}
                 </FlexBox>

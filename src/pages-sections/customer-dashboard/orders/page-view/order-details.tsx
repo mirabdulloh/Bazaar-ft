@@ -8,6 +8,7 @@ import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import ErrorOutlineOutlined from "@mui/icons-material/ErrorOutlineOutlined";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
+import CheckCircleOutlineOutlined from "@mui/icons-material/CheckCircleOutlineOutlined";
 import OrderSummery from "../order-summery";
 import OrderProgress from "../order-progress";
 import OrderedProducts from "../ordered-products";
@@ -15,7 +16,7 @@ import DashboardHeader from "../../dashboard-header";
 import { useQuery } from "../../../../lib/hooks/useQuery";
 import { useMutation } from "@apollo/client/react";
 import { GET_ORDER } from "../../../../../apollo/user/query";
-import { CANCEL_ORDER } from "../../../../../apollo/user/mutation";
+import { CANCEL_ORDER, CONFIRM_ORDER_RECEIVED } from "../../../../../apollo/user/mutation";
 import { sweetConfirmAlert, sweetTopSmallSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 import { T } from "../../../../lib/types/common";
 
@@ -31,6 +32,7 @@ export function OrderDetailsPageView({
   title = "Order Details"
 }: ViewProps) {
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingReceived, setConfirmingReceived] = useState(false);
 
   const { data, loading, refetch } = useQuery(GET_ORDER, {
     variables: { input: orderId },
@@ -39,9 +41,11 @@ export function OrderDetailsPageView({
   });
 
   const [cancelOrder] = useMutation(CANCEL_ORDER);
+  const [confirmOrderReceived] = useMutation(CONFIRM_ORDER_RECEIVED);
 
   const order: T | null = (data as T)?.getOrder ?? null;
   const isPending = order?.orderStatus === "PENDING";
+  const isShipped = order?.orderStatus === "SHIPPED";
 
   const handleCancel = async () => {
     const confirmed = await sweetConfirmAlert(
@@ -60,6 +64,26 @@ export function OrderDetailsPageView({
       sweetMixinErrorAlert(err.message ?? "Failed to cancel order.");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleConfirmReceived = async () => {
+    const confirmed = await sweetConfirmAlert(
+      "Mark order as received?",
+      "This will complete the order and unlock review actions.",
+      "Yes, I Received It"
+    );
+    if (!confirmed) return;
+
+    setConfirmingReceived(true);
+    try {
+      await confirmOrderReceived({ variables: { orderId: String(order!._id) } });
+      await sweetTopSmallSuccessAlert("Order marked as delivered.");
+      refetch();
+    } catch (err: any) {
+      sweetMixinErrorAlert(err.message ?? "Failed to confirm delivery.");
+    } finally {
+      setConfirmingReceived(false);
     }
   };
 
@@ -87,19 +111,34 @@ export function OrderDetailsPageView({
           <OrderSummery order={order} />
 
           {/* Cancel button — only available while order is PENDING */}
-          {isPending && (
-            <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                startIcon={<CancelOutlined />}
-                onClick={handleCancel}
-                disabled={cancelling}
-                loading={cancelling}
-              >
-                Cancel Order
-              </Button>
+          {(isPending || isShipped) && (
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end", gap: 1, flexWrap: "wrap" }}>
+              {isShipped && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<CheckCircleOutlineOutlined />}
+                  onClick={handleConfirmReceived}
+                  disabled={confirmingReceived}
+                  loading={confirmingReceived}
+                >
+                  Mark as Received
+                </Button>
+              )}
+              {isPending && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<CancelOutlined />}
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  loading={cancelling}
+                >
+                  Cancel Order
+                </Button>
+              )}
             </Box>
           )}
         </>

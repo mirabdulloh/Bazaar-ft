@@ -327,73 +327,18 @@ export const LIKE_TARGET_PRODUCT = gql`
 export const CREATE_ORDER = gql`
   mutation CreateOrder($input: CreateOrderInput!) {
     createOrder(input: $input) {
-      _id
-      memberId
-      orderStatus
-      orderTotalPrice
-      orderTotalDiscountPrice
-      orderFinalPrice
-      orderPaymentMethod
-      orderPaymentStatus
-      orderDeliveryAddressId
-      orderDeliveryStatus
-      createdAt
-      updatedAt
-      member {
-        _id
-        memberType
-        memberStatus
-        memberAuthType
-        memberPhone
-        memberNick
-        memberFullName
-        memberEmail
-        memberImage
-        memberAddress
-        memberDesc
-        memberArticles
-        memberFollowers
-        memberFollowings
-        memberPoints
-        memberLikes
-        memberViews
-        memberComments
-        memberRank
-        memberWarnings
-        memberProducts
-        memberBlocks
-        memberCouponId
-        memberCouponStatus
-        memberCouponUsedAt
-        memberCouponAssignedAt
-        lastLoginAt
-        lastActiveAt
-        deletedAt
-        createdAt
-        updatedAt
-        accessToken
-      }
-      deliveryAddress {
+      orders {
         _id
         memberId
-        addressName
-        addressPhone
-        addressCountry
-        addressCity
-        addressZipCode
-        addressLine1
-        addressLine2
-        isDefault
-        createdAt
-        updatedAt
-      }
-      orderItems {
-        _id
-        orderId
-        productId
-        priceAtPurchase
-        itemQuantity
-        subtotal
+        brandId
+        orderStatus
+        orderTotalPrice
+        orderTotalDiscountPrice
+        orderFinalPrice
+        orderPaymentMethod
+        orderPaymentStatus
+        orderDeliveryAddressId
+        orderDeliveryStatus
         createdAt
         updatedAt
       }
@@ -406,6 +351,26 @@ export const CANCEL_ORDER = gql`
     cancelOrder(orderId: $orderId) {
       _id
       memberId
+      orderStatus
+      orderTotalPrice
+      orderTotalDiscountPrice
+      orderFinalPrice
+      orderPaymentMethod
+      orderPaymentStatus
+      orderDeliveryAddressId
+      orderDeliveryStatus
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const CONFIRM_ORDER_RECEIVED = gql`
+  mutation ConfirmOrderReceived($orderId: String!) {
+    confirmOrderReceived(orderId: $orderId) {
+      _id
+      memberId
+      brandId
       orderStatus
       orderTotalPrice
       orderTotalDiscountPrice
@@ -974,4 +939,3 @@ export const CLAIM_COUPON = gql`
     }
   }
 `;
-

@@ -74,6 +74,9 @@ export default function OrderedProducts({ order }: Props) {
         const price = Number(item.priceAtPurchase ?? 0);
         const qty = Number(item.itemQuantity ?? 1);
         const lineTotal = price * qty;
+        const selectedSize = String(item.selectedSize ?? "").trim();
+        const selectedColor = String(item.selectedColor ?? "").trim();
+        const hasVariantSnapshot = !!(selectedSize || selectedColor);
 
         return (
           <Box
@@ -113,14 +116,18 @@ export default function OrderedProducts({ order }: Props) {
                     <Chip label={`Qty ${qty}`} size="small" sx={{ fontWeight: 600 }} />
                     <Chip label={`Unit ${currency(price)}`} size="small" variant="outlined" />
                     <Chip label={`Line total ${currency(lineTotal)}`} size="small" variant="outlined" />
+                    {selectedSize && <Chip label={`Size ${selectedSize}`} size="small" variant="outlined" />}
+                    {selectedColor && <Chip label={`Color ${selectedColor}`} size="small" variant="outlined" />}
                   </FlexBox>
 
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.25 }}>
                     Purchased on {format(new Date(item.createdAt as string), "dd MMM yyyy")}
                   </Typography>
-                  <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 0.5 }}>
-                    Exact chosen size and color were not saved with this order.
-                  </Typography>
+                  {!hasVariantSnapshot && (
+                    <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 0.5 }}>
+                      Exact chosen size and color were not saved with this order.
+                    </Typography>
+                  )}
                 </Box>
               </FlexBox>
 

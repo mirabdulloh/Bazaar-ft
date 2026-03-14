@@ -477,6 +477,7 @@ export const GET_ORDER = gql`
     getOrder(orderId: $input) {
       _id
       memberId
+      brandId
       orderStatus
       orderTotalPrice
       orderTotalDiscountPrice
@@ -508,6 +509,8 @@ export const GET_ORDER = gql`
         priceAtPurchase
         itemQuantity
         subtotal
+        selectedSize
+        selectedColor
         createdAt
         updatedAt
         product {
@@ -554,6 +557,16 @@ export const GET_ORDER = gql`
         updatedAt
         accessToken
       }
+      brand {
+        _id
+        memberType
+        memberStatus
+        memberNick
+        memberImage
+        memberDesc
+        memberFollowers
+        memberProducts
+      }
     }
   }
 `;
@@ -564,6 +577,7 @@ export const GET_MY_ORDERS = gql`
       orders {
         _id
         memberId
+        brandId
         orderStatus
         orderTotalPrice
         orderTotalDiscountPrice
@@ -592,6 +606,8 @@ export const GET_MY_ORDERS = gql`
           priceAtPurchase
           itemQuantity
           subtotal
+          selectedSize
+          selectedColor
           createdAt
           updatedAt
           product {
@@ -616,6 +632,16 @@ export const GET_MY_ORDERS = gql`
             createdAt
             updatedAt
           }
+        }
+        brand {
+          _id
+          memberType
+          memberStatus
+          memberNick
+          memberImage
+          memberDesc
+          memberFollowers
+          memberProducts
         }
       }
       metaData {
@@ -980,4 +1006,3 @@ export const CHECK_COUPON = gql`
     }
   }
 `;
-
