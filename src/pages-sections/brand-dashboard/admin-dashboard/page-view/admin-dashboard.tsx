@@ -269,7 +269,14 @@ export default function AdminDashboardPageView() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Brand states
                 </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="flex-start">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  alignItems="flex-start"
+                  useFlexGap
+                  sx={{ rowGap: 1, columnGap: 0.75 }}
+                >
                   <Chip size="small" color="warning" label={`Pending ${stats?.pendingBrands ?? 0}`} />
                   <Chip size="small" color="success" label={`Active ${stats?.activeBrands ?? 0}`} />
                   <Chip size="small" color="default" label={`Inactive ${stats?.inactiveBrands ?? 0}`} />
@@ -281,7 +288,14 @@ export default function AdminDashboardPageView() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Member composition
                 </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="flex-start">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  alignItems="flex-start"
+                  useFlexGap
+                  sx={{ rowGap: 1, columnGap: 0.75 }}
+                >
                   <Chip size="small" color="info" label={`Users ${stats?.userMembers ?? 0}`} />
                   <Chip size="small" color="info" label={`Brands ${stats?.brandMembers ?? 0}`} />
                   <Chip size="small" color="default" label={`Admins ${stats?.adminMembers ?? 0}`} />
@@ -293,7 +307,14 @@ export default function AdminDashboardPageView() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Community moderation
                 </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="flex-start">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  alignItems="flex-start"
+                  useFlexGap
+                  sx={{ rowGap: 1, columnGap: 0.75 }}
+                >
                   <Chip size="small" color="default" label={`Articles ${stats?.inactiveArticles ?? 0} inactive`} />
                   <Chip size="small" color="default" label={`Reviews ${stats?.inactiveReviews ?? 0} inactive`} />
                 </Stack>
