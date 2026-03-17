@@ -7,9 +7,17 @@ import { useLayout } from "./dashboard-layout-context";
 const RootStyle = styled("div", {
   shouldForwardProp: (prop) => prop !== "compact"
 })<{ compact: boolean }>(({ theme, compact }) => ({
+  height: "100vh",
+  overflowY: "auto",
+  overflowX: "hidden",
+  backgroundColor: theme.palette.grey[50],
   transition: "margin-left 0.3s",
   marginLeft: compact ? 86 : 280,
-  [theme.breakpoints.down("lg")]: { marginLeft: 0 }
+  [theme.breakpoints.down("lg")]: {
+    height: "auto",
+    minHeight: "100vh",
+    marginLeft: 0
+  }
 }));
 
 export default function BodyWrapper({ children }: PropsWithChildren) {

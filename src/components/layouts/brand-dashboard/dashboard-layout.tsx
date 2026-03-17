@@ -1,6 +1,7 @@
 "use client";
 
 import { PropsWithChildren } from "react";
+import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 // LOCAL CUSTOM COMPONENTS
 import BodyWrapper from "./dashboard-body-wrapper";
@@ -20,7 +21,11 @@ export default function VendorDashboardLayout({ children }: PropsWithChildren) {
         <DashboardNavbar />
 
         {/* MAIN CONTENT AREA */}
-        <Container maxWidth="lg">{children}</Container>
+        <Box component="main" sx={{ py: 3 }}>
+          <Container maxWidth="lg" sx={{ pb: 4 }}>
+            {children}
+          </Container>
+        </Box>
       </BodyWrapper>
     </LayoutProvider>
   );

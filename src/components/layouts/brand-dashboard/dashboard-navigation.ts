@@ -3,6 +3,11 @@ import duotone from "icons/duotone";
 export const adminNavigation = [
   { type: "label", label: "Admin" },
   {
+    name: "Dashboard",
+    icon: duotone.Dashboard,
+    path: "/admin/dashboard"
+  },
+  {
     name: "Brands",
     icon: duotone.Apps,
     children: [

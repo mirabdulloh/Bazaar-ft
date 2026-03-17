@@ -1,5 +1,46 @@
 import { gql } from "@apollo/client";
 
+export const GET_ADMIN_DASHBOARD_STATS = gql`
+  query GetAdminDashboardStats {
+    getAdminDashboardStats {
+      totalBrands
+      pendingBrands
+      activeBrands
+      inactiveBrands
+      suspendedBrands
+      totalMembers
+      userMembers
+      brandMembers
+      adminMembers
+      blockedMembers
+      deletedMembers
+      openOrders
+      activePlatformCoupons
+      totalArticles
+      inactiveArticles
+      totalReviews
+      inactiveReviews
+      pendingBrandQueue {
+        _id
+        brandName
+        brandLogo
+        brandStatus
+        createdAt
+      }
+      latestOrders {
+        _id
+        customerName
+        brandName
+        orderStatus
+        orderPaymentStatus
+        orderDeliveryStatus
+        orderFinalPrice
+        createdAt
+      }
+    }
+  }
+`;
+
 // ─── Members ──────────────────────────────────────────────────────────────────
 
 export const GET_ALL_MEMBERS_BY_ADMIN = gql`

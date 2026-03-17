@@ -55,7 +55,7 @@ export function HeaderUser() {
   }
 
   const isAdminOrBrand = user.memberType === "ADMIN" || user.memberType === "BRAND";
-  const dashboardHref = user.memberType === "ADMIN" ? "/admin/brands" : "/brand/dashboard";
+  const dashboardHref = user.memberType === "ADMIN" ? "/admin/dashboard" : "/brand/dashboard";
 
   return (
     <>
