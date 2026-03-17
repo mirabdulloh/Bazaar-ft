@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -22,7 +21,7 @@ function resolveBrandLogo(brandLogo?: string | null): string {
   if (!brandLogo || brandLogo === "null" || brandLogo === "undefined") return "";
   if (brandLogo.startsWith("http://") || brandLogo.startsWith("https://")) return brandLogo;
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
   const normalized = brandLogo.startsWith("/") ? brandLogo : `/${brandLogo}`;
   return apiBase ? `${apiBase}${normalized}` : normalized;
 }
@@ -38,8 +37,8 @@ const formatDate = (value?: string | Date | null) => {
 };
 
 export default function BrandRow({ brand, onApprove, onActivate, onInactivate, onSuspend }: Props) {
-  const { brandName, brandLogo, brandStatus, brandRating, brandFollowersCount, brandReviewsCount, createdAt } = brand;
-  const resolvedBrandLogo = resolveBrandLogo(brandLogo);
+  const { brandName, brandLogo, brandStatus, brandRating, brandFollowersCount, brandReviewsCount, createdAt, memberData } = brand;
+  const resolvedBrandLogo = resolveBrandLogo(memberData?.memberImage || brandLogo);
 
   const actionButtons = (() => {
     switch (brandStatus) {
@@ -83,17 +82,19 @@ export default function BrandRow({ brand, onApprove, onActivate, onInactivate, o
         <FlexBox alignItems="center" gap={1.5}>
           {resolvedBrandLogo ? (
             <Box
+              component="img"
+              src={resolvedBrandLogo}
+              alt={brandName}
               sx={{
                 width: 40,
                 height: 40,
-                position: "relative",
                 borderRadius: 1,
                 overflow: "hidden",
-                img: { objectFit: "contain" }
+                objectFit: "cover",
+                flexShrink: 0,
+                bgcolor: "grey.100"
               }}
-            >
-              <Image fill src={resolvedBrandLogo} alt={brandName} sizes="40px" />
-            </Box>
+            />
           ) : null}
           <Typography variant="h6">{brandName}</Typography>
         </FlexBox>

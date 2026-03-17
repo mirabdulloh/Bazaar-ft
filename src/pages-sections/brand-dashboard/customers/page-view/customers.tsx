@@ -50,7 +50,9 @@ const MEMBER_TYPES = ["USER", "BRAND", "ADMIN"];
 export default function CustomersPageView() {
   // ─── Filters ────────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("USER");
+  const [memberRows, setMemberRows] = useState<any[]>([]);
+  const [memberTotal, setMemberTotal] = useState(0);
 
   // ─── Dialog state ───────────────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,7 +61,7 @@ export default function CustomersPageView() {
   const [editType, setEditType] = useState("");
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_MEMBERS_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_MEMBERS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -73,17 +75,17 @@ export default function CustomersPageView() {
           ...(typeFilter ? { memberType: typeFilter } : {})
         }
       }
+    },
+    onCompleted: (result: T) => {
+      setMemberRows(result?.getAllMembersByAdmin?.members ?? []);
+      setMemberTotal(result?.getAllMembersByAdmin?.metaData?.total ?? 0);
     }
   });
 
   const [updateMember, { loading: updating }] = useMutation(UPDATE_MEMBER_BY_ADMIN);
 
-  // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllMembersByAdmin?.members ?? [];
-  const total = (data as T)?.getAllMembersByAdmin?.metaData?.total ?? 0;
-
   const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+    useMuiTable({ listData: memberRows, defaultSort: "createdAt", defaultOrder: "desc" });
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const openEditDialog = useCallback((member: any) => {
@@ -110,9 +112,9 @@ export default function CustomersPageView() {
           }
         }
       });
+      await refetch();
       await sweetTopSmallSuccessAlert("Member updated successfully");
       handleClose();
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update member");
     }
@@ -138,16 +140,16 @@ export default function CustomersPageView() {
           }
         }
       });
+      await refetch();
       await sweetTopSmallSuccessAlert(isBlocked ? "Member unblocked" : "Member blocked");
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update member");
     }
-  }, [updateMember, refetch]);
+  }, [refetch, updateMember]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <PageWrapper title="Customers">
+    <PageWrapper title="Users">
       {/* Filters */}
       <FlexBox mb={2} gap={2} flexWrap="wrap">
         <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -179,11 +181,18 @@ export default function CustomersPageView() {
         </FormControl>
       </FlexBox>
 
-      {loading ? (
-        <Typography variant="body1">Loading customers...</Typography>
-      ) : list.length === 0 ? (
+      {loading && memberRows.length === 0 ? (
+        <Typography variant="body1">Loading users...</Typography>
+      ) : error && memberRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
-          <Typography color="text.secondary">No members found.</Typography>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load users
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : memberRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="text.secondary">No users found.</Typography>
         </Card>
       ) : (
         <Card>
@@ -214,7 +223,7 @@ export default function CustomersPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(memberTotal / rowsPerPage))}
             />
           </Stack>
         </Card>

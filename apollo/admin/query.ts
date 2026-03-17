@@ -24,6 +24,7 @@ export const GET_ADMIN_DASHBOARD_STATS = gql`
         _id
         brandName
         brandLogo
+        memberImage
         brandStatus
         createdAt
       }
@@ -106,6 +107,11 @@ export const GET_ALL_BRANDS_BY_ADMIN = gql`
         deletedAt
         createdAt
         updatedAt
+        memberData {
+          _id
+          memberNick
+          memberImage
+        }
       }
       metaData {
         total
@@ -162,6 +168,7 @@ export const GET_ALL_ORDERS_BY_ADMIN = gql`
       orders {
         _id
         memberId
+        brandId
         orderStatus
         orderTotalPrice
         orderTotalDiscountPrice
@@ -172,6 +179,30 @@ export const GET_ALL_ORDERS_BY_ADMIN = gql`
         orderDeliveryStatus
         createdAt
         updatedAt
+        member {
+          _id
+          memberNick
+          memberImage
+          memberEmail
+          memberPhone
+        }
+        brand {
+          _id
+          memberNick
+          memberImage
+          memberEmail
+          memberPhone
+        }
+        deliveryAddress {
+          _id
+          addressName
+          addressPhone
+          addressCountry
+          addressCity
+          addressZipCode
+          addressLine1
+          addressLine2
+        }
       }
       metaData {
         total

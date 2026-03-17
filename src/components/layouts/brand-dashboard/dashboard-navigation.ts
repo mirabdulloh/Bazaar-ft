@@ -8,11 +8,11 @@ export const adminNavigation = [
     path: "/admin/dashboard"
   },
   {
-    name: "Brands",
+    name: "Members",
     icon: duotone.Apps,
     children: [
       { name: "Brand List", path: "/admin/brands" },
-      { name: "Add Brand", path: "/admin/brands/create" }
+      { name: "Users", path: "/admin/customers" }
     ]
   },
   {
@@ -36,11 +36,6 @@ export const adminNavigation = [
     name: "Orders",
     icon: duotone.Order,
     path: "/admin/orders"
-  },
-  {
-    name: "Customers",
-    icon: duotone.Customers,
-    path: "/admin/customers"
   },
   {
     name: "Notices",

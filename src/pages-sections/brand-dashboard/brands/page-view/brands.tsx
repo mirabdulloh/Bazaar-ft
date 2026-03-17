@@ -47,9 +47,11 @@ export default function BrandsPageView() {
   const [page, setPage] = useState(0);
   const [orderBy, setOrderBy] = useState("createdAt");
   const [order, setOrder] = useState<Order>("desc");
+  const [brandRows, setBrandRows] = useState<any[]>([]);
+  const [brandTotal, setBrandTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, error, refetch } = useQuery(GET_ALL_BRANDS_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_BRANDS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -67,14 +69,14 @@ export default function BrandsPageView() {
             }
           : {})
       }
+    },
+    onCompleted: (result: T) => {
+      setBrandRows(result?.getAllBrandsByAdmin?.brands ?? []);
+      setBrandTotal(result?.getAllBrandsByAdmin?.metaData?.total ?? 0);
     }
   });
 
   const [updateBrand] = useMutation(UPDATE_BRAND_BY_ADMIN);
-
-  // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllBrandsByAdmin?.brands ?? [];
-  const total = (data as T)?.getAllBrandsByAdmin?.metaData?.total ?? 0;
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const updateBrandStatus = useCallback(async (brand: any, brandStatus: string, successMessage: string) => {
@@ -82,12 +84,12 @@ export default function BrandsPageView() {
       await updateBrand({
         variables: { input: { _id: brand._id, brandStatus } }
       });
+      await refetch();
       await sweetTopSmallSuccessAlert(successMessage);
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update brand");
     }
-  }, [updateBrand, refetch]);
+  }, [refetch, updateBrand]);
 
   const handleApprove = useCallback(async (brand: any) => {
     const confirmed = await sweetConfirmAlert(
@@ -142,7 +144,7 @@ export default function BrandsPageView() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <PageWrapper title="Brands">
+    <PageWrapper title="Brand List">
       <FlexBox mb={2} gap={2} justifyContent="space-between" flexWrap="wrap">
         <FlexBox gap={2} flexWrap="wrap">
           <TextField
@@ -175,9 +177,9 @@ export default function BrandsPageView() {
         </FlexBox>
       </FlexBox>
 
-      {loading ? (
+      {loading && brandRows.length === 0 ? (
         <Typography variant="body1">Loading brands...</Typography>
-      ) : error ? (
+      ) : error && brandRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="error.main" sx={{ mb: 1 }}>
             Failed to load brands
@@ -186,7 +188,7 @@ export default function BrandsPageView() {
             {error.message}
           </Typography>
         </Card>
-      ) : list.length === 0 ? (
+      ) : brandRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No brands found.</Typography>
         </Card>
@@ -203,7 +205,7 @@ export default function BrandsPageView() {
                 />
 
                 <TableBody>
-                  {list.map((brand: any) => (
+                  {brandRows.map((brand: any) => (
                     <BrandRow
                       key={brand._id}
                       brand={brand}
@@ -221,7 +223,7 @@ export default function BrandsPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / PAGE_SIZE)}
+              count={Math.max(1, Math.ceil(brandTotal / PAGE_SIZE))}
             />
           </Stack>
         </Card>

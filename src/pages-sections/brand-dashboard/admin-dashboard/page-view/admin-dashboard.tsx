@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
@@ -66,13 +66,17 @@ const statusColorMap: Record<string, "default" | "success" | "warning" | "error"
 
 export default function AdminDashboardPageView() {
   const downSm = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
-  const { data, loading, refetch } = useQuery(GET_ADMIN_DASHBOARD_STATS, {
+  const { loading, refetch } = useQuery(GET_ADMIN_DASHBOARD_STATS, {
     fetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true
+    notifyOnNetworkStatusChange: true,
+    onCompleted: (result: T) => {
+      setDashboardStats(result?.getAdminDashboardStats ?? null);
+    }
   });
   const [updateBrand, { loading: updatingBrand }] = useMutation(UPDATE_BRAND_BY_ADMIN);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
 
-  const stats = (data as T)?.getAdminDashboardStats;
+  const stats = dashboardStats;
 
   const metricCards = useMemo(
     () => [
@@ -218,7 +222,7 @@ export default function AdminDashboardPageView() {
                 (stats?.pendingBrandQueue ?? []).map((brand: any) => (
                   <QueueRow key={brand._id}>
                     <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
-                      <Avatar src={resolveBrandLogo(brand.brandLogo)} alt={brand.brandName} sx={{ width: 44, height: 44 }} />
+                      <Avatar src={resolveBrandLogo(brand.memberImage || brand.brandLogo)} alt={brand.brandName} sx={{ width: 44, height: 44 }} />
                       <Box minWidth={0}>
                         <Typography variant="h6" noWrap>{brand.brandName}</Typography>
                         <Typography variant="body2" color="text.secondary">

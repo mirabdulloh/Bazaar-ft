@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 // MUI ICON COMPONENTS
 import Edit from "@mui/icons-material/Edit";
@@ -29,10 +29,18 @@ export default function CustomerRow({ customer, onEdit, onBlock }: Props) {
     memberPoints
   } = customer;
 
-  const avatar =
-    memberImage && String(memberImage).trim().length > 0
-      ? memberImage
-      : `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(memberNick ?? "U")}&backgroundColor=6366f1&textColor=ffffff`;
+  const resolveMemberImage = (img?: string | null): string => {
+    if (!img || img === "null" || img === "undefined" || img.trim() === "") {
+      return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(memberNick ?? "U")}&backgroundColor=6366f1&textColor=ffffff`;
+    }
+    if (img.startsWith("http://") || img.startsWith("https://")) return img;
+
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+    const normalized = img.startsWith("/") ? img : `/${img}`;
+    return apiBase ? `${apiBase}${normalized}` : normalized;
+  };
+
+  const avatar = resolveMemberImage(memberImage);
 
   const isBlocked = memberStatus === "BLOCK";
 
@@ -40,8 +48,23 @@ export default function CustomerRow({ customer, onEdit, onBlock }: Props) {
     <StyledTableRow tabIndex={-1} role="checkbox">
       <StyledTableCell align="left">
         <FlexBox alignItems="center" gap={1.5}>
-          <Avatar variant="rounded">
-            <Image fill src={avatar} alt={memberNick ?? "User"} sizes="(60px, 60px)" />
+          <Avatar
+            variant="rounded"
+            src={avatar}
+            alt={memberNick ?? "User"}
+            sx={{
+              width: 40,
+              height: 40,
+              flexShrink: 0,
+              bgcolor: "grey.100",
+              "& .MuiAvatar-img": {
+                objectFit: "cover"
+              }
+            }}
+          >
+            <Box component="span" sx={{ fontSize: 14, fontWeight: 700 }}>
+              {(memberNick ?? "U").slice(0, 2).toUpperCase()}
+            </Box>
           </Avatar>
 
           <Typography variant="h6">{memberNick ?? "Unknown"}</Typography>
