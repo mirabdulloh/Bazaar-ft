@@ -11,17 +11,11 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import Button from "@mui/material/Button";
-import Add from "@mui/icons-material/Add";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { Theme } from "@mui/material/styles";
-import Link from "next/link";
+import TextField from "@mui/material/TextField";
 // GLOBAL CUSTOM COMPONENTS
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
 import FlexBox from "components/flex-box/flex-box";
-// GLOBAL CUSTOM HOOK
-import useMuiTable from "hooks/useMuiTable";
 // LOCAL CUSTOM COMPONENT
 import BrandRow from "../brand-row";
 import PageWrapper from "../../page-wrapper";
@@ -43,24 +37,35 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
 const BRAND_STATUSES = ["PENDING", "ACTIVE", "INACTIVE", "SUSPENDED"];
+type Order = "asc" | "desc";
 
 // =============================================================================
 
 export default function BrandsPageView() {
-  const downSM = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [textFilter, setTextFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const [orderBy, setOrderBy] = useState("createdAt");
+  const [order, setOrder] = useState<Order>("desc");
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_BRANDS_BY_ADMIN, {
+  const { data, loading, error, refetch } = useQuery(GET_ALL_BRANDS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
       input: {
-        page: 1,
+        page: page + 1,
         limit: PAGE_SIZE,
-        sort: "createdAt",
-        direction: "DESC",
-        ...(statusFilter ? { search: { brandStatus: statusFilter } } : {})
+        sort: orderBy,
+        direction: order.toUpperCase(),
+        ...(statusFilter || textFilter.trim()
+          ? {
+              search: {
+                ...(statusFilter ? { brandStatus: statusFilter } : {}),
+                ...(textFilter.trim() ? { text: textFilter.trim() } : {})
+              }
+            }
+          : {})
       }
     }
   });
@@ -71,74 +76,116 @@ export default function BrandsPageView() {
   const list = (data as T)?.getAllBrandsByAdmin?.brands ?? [];
   const total = (data as T)?.getAllBrandsByAdmin?.metaData?.total ?? 0;
 
-  const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
-
   // ─── Handlers ───────────────────────────────────────────────────────────────
-  const handleStatusToggle = useCallback(async (brand: any) => {
-    const newStatus = brand.brandStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+  const updateBrandStatus = useCallback(async (brand: any, brandStatus: string, successMessage: string) => {
     try {
       await updateBrand({
-        variables: { input: { _id: brand._id, brandStatus: newStatus } }
+        variables: { input: { _id: brand._id, brandStatus } }
       });
-      await sweetTopSmallSuccessAlert(`Brand ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      await sweetTopSmallSuccessAlert(successMessage);
       refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update brand");
     }
   }, [updateBrand, refetch]);
 
-  const handleDelete = useCallback(async (brand: any) => {
+  const handleApprove = useCallback(async (brand: any) => {
+    const confirmed = await sweetConfirmAlert(
+      "Approve Brand?",
+      `Approve "${brand.brandName}" and move it to ACTIVE?`,
+      "Approve"
+    );
+    if (!confirmed) return;
+    await updateBrandStatus(brand, "ACTIVE", "Brand approved");
+  }, [updateBrandStatus]);
+
+  const handleActivate = useCallback(async (brand: any) => {
+    const confirmed = await sweetConfirmAlert(
+      "Activate Brand?",
+      `Activate "${brand.brandName}" and return it to ACTIVE?`,
+      "Activate"
+    );
+    if (!confirmed) return;
+    await updateBrandStatus(brand, "ACTIVE", "Brand activated");
+  }, [updateBrandStatus]);
+
+  const handleInactivate = useCallback(async (brand: any) => {
+    const confirmed = await sweetConfirmAlert(
+      "Inactivate Brand?",
+      `Move "${brand.brandName}" to INACTIVE?`,
+      "Inactivate"
+    );
+    if (!confirmed) return;
+    await updateBrandStatus(brand, "INACTIVE", "Brand inactivated");
+  }, [updateBrandStatus]);
+
+  const handleSuspend = useCallback(async (brand: any) => {
     const confirmed = await sweetConfirmAlert(
       "Suspend Brand?",
-      `Suspend "${brand.brandName}"? The brand will be deactivated.`,
+      `Suspend "${brand.brandName}" from the marketplace?`,
       "Suspend"
     );
     if (!confirmed) return;
-    try {
-      await updateBrand({
-        variables: { input: { _id: brand._id, brandStatus: "SUSPENDED" } }
-      });
-      await sweetTopSmallSuccessAlert("Brand suspended");
-      refetch();
-    } catch (err: any) {
-      await sweetMixinErrorAlert(err.message || "Failed to suspend brand");
-    }
-  }, [updateBrand, refetch]);
+    await updateBrandStatus(brand, "SUSPENDED", "Brand suspended");
+  }, [updateBrandStatus]);
+
+  const handleChangePage = useCallback((_: unknown, newPage: number) => {
+    setPage(newPage - 1);
+  }, []);
+
+  const handleRequestSort = useCallback((property: string) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+    setPage(0);
+  }, [order, orderBy]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <PageWrapper title="Product Brands">
+    <PageWrapper title="Brands">
       <FlexBox mb={2} gap={2} justifyContent="space-between" flexWrap="wrap">
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            {BRAND_STATUSES.map((s) => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <FlexBox gap={2} flexWrap="wrap">
+          <TextField
+            size="small"
+            label="Search brand"
+            value={textFilter}
+            onChange={(e) => {
+              setTextFilter(e.target.value);
+              setPage(0);
+            }}
+            sx={{ minWidth: { sm: 260, xs: "100%" } }}
+          />
 
-        <Link href="/admin/brands/create">
-          <Button
-            color="info"
-            fullWidth={downSM}
-            variant="contained"
-            startIcon={<Add />}
-            sx={{ minHeight: 44 }}
-          >
-            Add Brand
-          </Button>
-        </Link>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <MenuItem value="">All</MenuItem>
+              {BRAND_STATUSES.map((s) => (
+                <MenuItem key={s} value={s}>{s}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </FlexBox>
       </FlexBox>
 
       {loading ? (
         <Typography variant="body1">Loading brands...</Typography>
+      ) : error ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load brands
+          </Typography>
+          <Typography color="text.secondary">
+            {error.message}
+          </Typography>
+        </Card>
       ) : list.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No brands found.</Typography>
@@ -156,12 +203,14 @@ export default function BrandsPageView() {
                 />
 
                 <TableBody>
-                  {filteredList.map((brand: any) => (
+                  {list.map((brand: any) => (
                     <BrandRow
                       key={brand._id}
                       brand={brand}
-                      onToggle={handleStatusToggle}
-                      onDelete={handleDelete}
+                      onApprove={handleApprove}
+                      onActivate={handleActivate}
+                      onInactivate={handleInactivate}
+                      onSuspend={handleSuspend}
                     />
                   ))}
                 </TableBody>
@@ -172,7 +221,7 @@ export default function BrandsPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.ceil(total / PAGE_SIZE)}
             />
           </Stack>
         </Card>

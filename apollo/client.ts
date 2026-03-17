@@ -13,6 +13,19 @@ let refreshPromise: Promise<string> | null = null;
 
 type JwtPayload = { exp?: number };
 
+function isRefreshFailureMessage(message?: string): boolean {
+	const lower = message?.toLowerCase() ?? '';
+	return (
+		lower.includes('missing refresh token') ||
+		lower.includes('refresh failed') ||
+		lower.includes('invalid refresh token') ||
+		lower.includes('jwt expired') ||
+		lower.includes('token expired') ||
+		lower.includes('not authenticated') ||
+		lower.includes('unauthorized')
+	);
+}
+
 function getHeaders() {
 	const headers = {} as HeadersInit;
 	const token = getJwtToken();
@@ -85,6 +98,16 @@ function createIsomorphicLink(): ApolloLink {
 		return new HttpLink({ uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL });
 	}
 
+	const silentLogout = () => {
+		setRefreshToken('');
+		localStorage.removeItem('accessToken');
+		localStorage.removeItem('refreshToken');
+		localStorage.removeItem('memberData');
+		sessionStorage.removeItem('refreshToken');
+		localStorage.setItem('logout', Date.now().toString());
+		window.location.replace('/');
+	};
+
 	const authLink = new ApolloLink((operation, forward) => {
 		return new Observable<FetchResult>((observer) => {
 			let subscription: { unsubscribe: () => void } | null = null;
@@ -106,6 +129,10 @@ function createIsomorphicLink(): ApolloLink {
 				if (cancelled) return;
 				subscription = forward(operation).subscribe(observer);
 			})().catch((err) => {
+				if (isRefreshFailureMessage(err?.message)) {
+					silentLogout();
+					return;
+				}
 				if (!cancelled) observer.error(err);
 			});
 
@@ -119,17 +146,6 @@ function createIsomorphicLink(): ApolloLink {
 	const httpLink = new HttpLink({
 		uri: process.env.NEXT_PUBLIC_API_GRAPHQL_URL,
 	});
-
-	// Silent logout — clear everything and redirect
-	const silentLogout = () => {
-		setRefreshToken('');
-		localStorage.removeItem('accessToken');
-		localStorage.removeItem('refreshToken');
-		localStorage.removeItem('memberData');
-		sessionStorage.removeItem('refreshToken');
-		localStorage.setItem('logout', Date.now().toString());
-		window.location.replace('/');
-	};
 
 	const errorLink = new ErrorLink(({ error, operation, forward }) => {
 		if (CombinedGraphQLErrors.is(error)) {

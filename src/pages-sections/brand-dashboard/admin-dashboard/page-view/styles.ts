@@ -57,7 +57,7 @@ export const QueueRow = styled(Box)(({ theme }) => ({
 
 export const OrderRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto auto",
+  gridTemplateColumns: "minmax(140px, 1fr) minmax(140px, 0.95fr) minmax(280px, 1.45fr) minmax(150px, 0.75fr) 64px",
   gap: theme.spacing(2),
   alignItems: "center",
   padding: theme.spacing(1.5, 0),

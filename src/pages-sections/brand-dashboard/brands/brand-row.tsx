@@ -1,19 +1,20 @@
 import Image from "next/image";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-// MUI ICON COMPONENTS
-import Delete from "@mui/icons-material/Delete";
 // GLOBAL CUSTOM COMPONENT
-import BazaarSwitch from "components/BazaarSwitch";
 import FlexBox from "components/flex-box/flex-box";
 // STYLED COMPONENTS
-import { StatusWrapper, StyledIconButton, StyledTableCell, StyledTableRow } from "../styles";
+import { StatusWrapper, StyledTableCell, StyledTableRow } from "../styles";
 
 // ========================================================================
 type Props = {
   brand: any;
-  onToggle: (brand: any) => void;
-  onDelete: (brand: any) => void;
+  onApprove: (brand: any) => void;
+  onActivate: (brand: any) => void;
+  onInactivate: (brand: any) => void;
+  onSuspend: (brand: any) => void;
 };
 // ========================================================================
 
@@ -26,9 +27,55 @@ function resolveBrandLogo(brandLogo?: string | null): string {
   return apiBase ? `${apiBase}${normalized}` : normalized;
 }
 
-export default function BrandRow({ brand, onToggle, onDelete }: Props) {
-  const { _id, brandName, brandLogo, brandStatus, brandRating, brandFollowersCount } = brand;
+const formatDate = (value?: string | Date | null) => {
+  if (!value) return "-";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date(value));
+};
+
+export default function BrandRow({ brand, onApprove, onActivate, onInactivate, onSuspend }: Props) {
+  const { brandName, brandLogo, brandStatus, brandRating, brandFollowersCount, brandReviewsCount, createdAt } = brand;
   const resolvedBrandLogo = resolveBrandLogo(brandLogo);
+
+  const actionButtons = (() => {
+    switch (brandStatus) {
+      case "PENDING":
+        return (
+          <>
+            <Button size="small" variant="contained" color="success" onClick={() => onApprove(brand)}>
+              Approve
+            </Button>
+            <Button size="small" variant="outlined" color="error" onClick={() => onSuspend(brand)}>
+              Suspend
+            </Button>
+          </>
+        );
+      case "ACTIVE":
+        return (
+          <>
+            <Button size="small" variant="outlined" color="warning" onClick={() => onInactivate(brand)}>
+              Inactivate
+            </Button>
+            <Button size="small" variant="outlined" color="error" onClick={() => onSuspend(brand)}>
+              Suspend
+            </Button>
+          </>
+        );
+      case "INACTIVE":
+      case "SUSPENDED":
+        return (
+          <Button size="small" variant="contained" color="info" onClick={() => onActivate(brand)}>
+            Activate
+          </Button>
+        );
+      default:
+        return null;
+    }
+  })();
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
@@ -64,18 +111,24 @@ export default function BrandRow({ brand, onToggle, onDelete }: Props) {
         {brandFollowersCount ?? 0}
       </StyledTableCell>
 
-      <StyledTableCell align="center">
-        <BazaarSwitch
-          color="info"
-          checked={brandStatus === "ACTIVE"}
-          onChange={() => onToggle(brand)}
-        />
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {brandReviewsCount ?? 0}
+      </StyledTableCell>
+
+      <StyledTableCell align="left" sx={{ fontWeight: 400 }}>
+        {formatDate(createdAt)}
       </StyledTableCell>
 
       <StyledTableCell align="center">
-        <StyledIconButton onClick={() => onDelete(brand)}>
-          <Delete />
-        </StyledIconButton>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1}
+          alignItems="center"
+          justifyContent="center"
+          sx={{ "& .MuiButton-root": { minWidth: { xs: "100%", md: "auto" } } }}
+        >
+          {actionButtons}
+        </Stack>
       </StyledTableCell>
     </StyledTableRow>
   );

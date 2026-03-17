@@ -61,7 +61,7 @@ const StatusWrapper = styled(Box, {
     backgroundColor = theme.palette.success[100];
   }
 
-  if (status === "Rejected" || status === "Urgent" || status === "Cancelled" || status === "DELETED" || status === "EXPIRED" || status === "BLOCK" || status === "DELETE" || status === "CANCELLED" || status === "FAILED" || status === "RETURNED") {
+  if (status === "Rejected" || status === "Urgent" || status === "Cancelled" || status === "DELETED" || status === "EXPIRED" || status === "BLOCK" || status === "DELETE" || status === "CANCELLED" || status === "FAILED" || status === "RETURNED" || status === "SUSPENDED") {
     color = theme.palette.error.main;
     backgroundColor = theme.palette.error[100];
   }

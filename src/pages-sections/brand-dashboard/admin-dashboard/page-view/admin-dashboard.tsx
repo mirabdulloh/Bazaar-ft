@@ -354,15 +354,46 @@ export default function AdminDashboardPageView() {
                       <Typography variant="body2" color="text.secondary">{formatDate(order.createdAt)}</Typography>
                     </Box>
 
-                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="flex-start">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      alignItems="flex-start"
+                      useFlexGap
+                      sx={{
+                        maxWidth: { md: 360, lg: 420 },
+                        rowGap: 1,
+                        columnGap: 0.75
+                      }}
+                    >
                       <Chip size="small" color={statusColorMap[order.orderStatus]} label={order.orderStatus} />
                       <Chip size="small" color={statusColorMap[order.orderPaymentStatus]} label={order.orderPaymentStatus} />
                       <Chip size="small" color={statusColorMap[order.orderDeliveryStatus]} label={order.orderDeliveryStatus} />
                     </Stack>
 
-                    <Typography variant="h6" sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>{formatCurrency(order.orderFinalPrice)}</Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontSize: { xs: "1rem", sm: "1.25rem" },
+                        textAlign: { md: "right" },
+                        whiteSpace: { md: "nowrap" }
+                      }}
+                    >
+                      {formatCurrency(order.orderFinalPrice)}
+                    </Typography>
 
-                    <Button component={Link} href="/admin/orders" size="small" color="info" sx={{ width: { xs: "100%", md: "auto" } }}>Open</Button>
+                    <Button
+                      component={Link}
+                      href="/admin/orders"
+                      size="small"
+                      color="info"
+                      sx={{
+                        width: { xs: "100%", md: "auto" },
+                        justifySelf: { md: "end" }
+                      }}
+                    >
+                      Open
+                    </Button>
                   </OrderRow>
                 ))
               )}
