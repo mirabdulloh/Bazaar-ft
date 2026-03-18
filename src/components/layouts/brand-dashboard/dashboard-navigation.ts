@@ -62,11 +62,6 @@ export const adminNavigation = [
     path: "/admin/addresses"
   },
   {
-    name: "Notifications",
-    icon: duotone.ProjectChart,
-    path: "/admin/notifications"
-  },
-  {
     name: "Logout",
     icon: duotone.Session,
     path: "/",
