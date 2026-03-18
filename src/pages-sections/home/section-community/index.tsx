@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslation } from "../../../../node_modules/react-i18next";
 import Link from "next/link";
-import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -33,8 +32,11 @@ interface GqlArticle {
 
 const resolveArticleAsset = (path?: string | null) => {
   if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const cleaned = String(path).trim().replace(/^['"]+|['"]+$/g, "");
+  if (!cleaned || cleaned === "null" || cleaned === "undefined") return "";
+  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) return cleaned;
+  if (cleaned.startsWith("/assets/")) return cleaned;
+  const normalized = cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
   return apiBase ? `${apiBase}${normalized}` : normalized;
 };
@@ -113,12 +115,16 @@ export default function SectionCommunity() {
                         }}
                       >
                         {resolveArticleAsset(article.articleImages?.[0]) ? (
-                          <Image
-                            fill
+                          <Box
+                            component="img"
                             alt={article.articleTitle}
                             src={resolveArticleAsset(article.articleImages?.[0])}
-                            style={{ objectFit: "cover" }}
-                            sizes="(max-width: 768px) 100vw, 33vw"
+                            sx={{
+                              display: "block",
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
                           />
                         ) : (
                           <Box
@@ -158,7 +164,7 @@ export default function SectionCommunity() {
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                           <Box display="flex" alignItems="center" gap={1}>
                             <Avatar
-                              src={article.memberData?.memberImage}
+                              src={resolveArticleAsset(article.memberData?.memberImage)}
                               alt={article.memberData?.memberNick}
                               sx={{ width: 26, height: 26 }}
                             />
