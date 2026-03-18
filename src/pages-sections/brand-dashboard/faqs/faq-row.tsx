@@ -13,11 +13,11 @@ import {
 type Props = {
   faq: any;
   onEdit: (faq: any) => void;
-  onDelete: (id: string) => void;
+  onDelete: (faq: any) => void;
 };
 
 export default function FaqRow({ faq, onEdit, onDelete }: Props) {
-  const { _id, faqQuestion, faqCategory, faqStatus, createdAt } = faq;
+  const { faqQuestion, faqCategory, faqStatus, createdAt } = faq;
 
   const truncated =
     faqQuestion && faqQuestion.length > 70
@@ -48,7 +48,7 @@ export default function FaqRow({ faq, onEdit, onDelete }: Props) {
         <StyledIconButton onClick={() => onEdit(faq)}>
           <Edit />
         </StyledIconButton>
-        <StyledIconButton onClick={() => onDelete(_id)}>
+        <StyledIconButton onClick={() => onDelete(faq)}>
           <Delete />
         </StyledIconButton>
       </StyledTableCell>

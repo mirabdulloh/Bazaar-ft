@@ -203,7 +203,7 @@ export default function FaqsPageView() {
     }
   };
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = useCallback(async (faq: any) => {
     const confirmed = await sweetConfirmAlert(
       "Delete FAQ?",
       "This FAQ will be permanently removed.",
@@ -212,11 +212,17 @@ export default function FaqsPageView() {
     if (!confirmed) return;
 
     try {
-      await removeFaq({ variables: { faqId: id } });
+      await removeFaq({ variables: { faqId: faq._id } });
       const refreshed = await refetch();
       syncFaqState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("FAQ deleted");
     } catch (err: any) {
+      if (faq.faqStatus !== "DELETED") {
+        await sweetMixinErrorAlert(
+          "This FAQ cannot be permanently deleted yet. Change its status to DELETED first, then delete it."
+        );
+        return;
+      }
       await sweetMixinErrorAlert(err.message || "Failed to delete FAQ");
     }
   }, [removeFaq, refetch, syncFaqState]);

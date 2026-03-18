@@ -12,11 +12,11 @@ import {
 type Props = {
   notice: any;
   onEdit: (notice: any) => void;
-  onDelete: (id: string) => void;
+  onDelete: (notice: any) => void;
 };
 
 export default function NoticeRow({ notice, onEdit, onDelete }: Props) {
-  const { _id, noticeTitle, noticeCategory, noticeStatus, createdAt } = notice;
+  const { noticeTitle, noticeCategory, noticeStatus, createdAt } = notice;
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
@@ -40,7 +40,7 @@ export default function NoticeRow({ notice, onEdit, onDelete }: Props) {
         <StyledIconButton onClick={() => onEdit(notice)}>
           <Edit />
         </StyledIconButton>
-        <StyledIconButton onClick={() => onDelete(_id)}>
+        <StyledIconButton onClick={() => onDelete(notice)}>
           <Delete />
         </StyledIconButton>
       </StyledTableCell>

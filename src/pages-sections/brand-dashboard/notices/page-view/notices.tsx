@@ -198,7 +198,7 @@ export default function NoticesPageView() {
     }
   };
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = useCallback(async (notice: any) => {
     const confirmed = await sweetConfirmAlert(
       "Delete Notice?",
       "This notice will be permanently removed.",
@@ -207,11 +207,17 @@ export default function NoticesPageView() {
     if (!confirmed) return;
 
     try {
-      await removeNotice({ variables: { noticeId: id } });
+      await removeNotice({ variables: { noticeId: notice._id } });
       const refreshed = await refetch();
       syncNoticeState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("Notice deleted");
     } catch (err: any) {
+      if (notice.noticeStatus !== "DELETED") {
+        await sweetMixinErrorAlert(
+          "This notice cannot be permanently deleted yet. Change its status to DELETED first, then delete it."
+        );
+        return;
+      }
       await sweetMixinErrorAlert(err.message || "Failed to delete notice");
     }
   }, [removeNotice, refetch, syncNoticeState]);

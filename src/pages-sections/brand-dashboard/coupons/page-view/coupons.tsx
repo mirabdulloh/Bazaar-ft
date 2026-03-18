@@ -69,7 +69,8 @@ const emptyForm = {
   couponMaxUsage: "",
   minOrderCount: "",
   couponStartDate: todayStr,
-  couponEndDate: nextMonthStr
+  couponEndDate: nextMonthStr,
+  couponStatus: "ACTIVE"
 };
 
 // =============================================================================
@@ -83,13 +84,15 @@ export default function CouponsPageView() {
   const [form, setForm] = useState(emptyForm);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [couponRows, setCouponRows] = useState<any[]>([]);
+  const [couponTotal, setCouponTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
   const searchObj: any = {};
   if (statusFilter) searchObj.couponStatus = statusFilter;
   if (typeFilter) searchObj.couponType = typeFilter;
 
-  const { data, loading, refetch } = useQuery(GET_ALL_COUPONS_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_COUPONS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -100,7 +103,11 @@ export default function CouponsPageView() {
         direction: "DESC",
         ...(Object.keys(searchObj).length > 0 ? { search: searchObj } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setCouponRows(result?.getAllCouponsByAdmin?.list ?? []);
+      setCouponTotal(result?.getAllCouponsByAdmin?.metaCounter?.[0]?.total ?? 0);
+    },
   });
 
   const [createCoupon, { loading: creating }] = useMutation(CREATE_COUPON_BY_ADMIN);
@@ -108,9 +115,6 @@ export default function CouponsPageView() {
   const [removeCoupon] = useMutation(REMOVE_COUPON_BY_ADMIN);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllCouponsByAdmin?.list ?? [];
-  const total = (data as T)?.getAllCouponsByAdmin?.metaCounter?.[0]?.total ?? 0;
-
   const {
     order,
     orderBy,
@@ -118,7 +122,18 @@ export default function CouponsPageView() {
     filteredList,
     handleChangePage,
     handleRequestSort
-  } = useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+  } = useMuiTable({ listData: couponRows, defaultSort: "createdAt", defaultOrder: "desc" });
+
+  const syncCouponState = useCallback((result: T | undefined) => {
+    const rows = result?.getAllCouponsByAdmin?.list ?? [];
+    const total = result?.getAllCouponsByAdmin?.metaCounter?.[0]?.total ?? 0;
+    setCouponRows(rows);
+    setCouponTotal(total);
+
+    if (!editingCoupon?._id) return;
+    const refreshedEditingCoupon = rows.find((item: any) => item._id === editingCoupon._id) ?? null;
+    setEditingCoupon(refreshedEditingCoupon);
+  }, [editingCoupon]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const openCreateDialog = () => {
@@ -140,7 +155,8 @@ export default function CouponsPageView() {
         : todayStr,
       couponEndDate: coupon.couponEndDate
         ? new Date(coupon.couponEndDate).toISOString().slice(0, 10)
-        : nextMonthStr
+        : nextMonthStr,
+      couponStatus: coupon.couponStatus || "ACTIVE"
     });
     setDialogOpen(true);
   }, []);
@@ -174,15 +190,17 @@ export default function CouponsPageView() {
 
       if (editingCoupon) {
         await updateCoupon({
-          variables: { input: { _id: editingCoupon._id, ...payload } }
+          variables: { input: { _id: editingCoupon._id, couponStatus: form.couponStatus, ...payload } }
         });
         handleClose();
-        await refetch();
+        const refreshed = await refetch();
+        syncCouponState(refreshed.data as T);
         await sweetTopSmallSuccessAlert("Coupon updated successfully");
       } else {
         await createCoupon({ variables: { input: payload } });
         handleClose();
-        await refetch();
+        const refreshed = await refetch();
+        syncCouponState(refreshed.data as T);
         await sweetTopSmallSuccessAlert("Coupon created successfully");
       }
     } catch (err: any) {
@@ -196,7 +214,8 @@ export default function CouponsPageView() {
         variables: { input: { _id: id, couponStatus: newStatus } }
       });
       await sweetTopSmallSuccessAlert(`Status changed to ${newStatus}`);
-      refetch();
+      const refreshed = await refetch();
+      syncCouponState(refreshed.data as T);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update status");
     }
@@ -213,11 +232,12 @@ export default function CouponsPageView() {
     try {
       await removeCoupon({ variables: { input: id } });
       await sweetTopSmallSuccessAlert("Coupon deleted");
-      refetch();
+      const refreshed = await refetch();
+      syncCouponState(refreshed.data as T);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to delete coupon");
     }
-  }, [removeCoupon, refetch]);
+  }, [removeCoupon, refetch, syncCouponState]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -266,9 +286,16 @@ export default function CouponsPageView() {
         </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && couponRows.length === 0 ? (
         <Typography variant="body1">Loading coupons...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && couponRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load coupons
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : couponRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No coupons found.</Typography>
         </Card>
@@ -301,7 +328,7 @@ export default function CouponsPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(couponTotal / rowsPerPage))}
             />
           </Stack>
         </Card>
@@ -407,11 +434,9 @@ export default function CouponsPageView() {
                 <FormControl fullWidth>
                   <InputLabel>Status</InputLabel>
                   <Select
-                    value={editingCoupon.couponStatus}
+                    value={form.couponStatus}
                     label="Status"
-                    onChange={(e) =>
-                      handleStatusChange(editingCoupon._id, e.target.value)
-                    }
+                    onChange={(e) => setForm({ ...form, couponStatus: e.target.value })}
                   >
                     {STATUSES.map((s) => (
                       <MenuItem key={s} value={s}>{s}</MenuItem>
