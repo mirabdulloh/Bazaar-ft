@@ -90,11 +90,6 @@ export const brandNavigation = [
     path: "/brand/orders"
   },
   {
-    name: "Chats",
-    icon: duotone.Chat,
-    path: "/brand/chats"
-  },
-  {
     name: "Coupons",
     icon: duotone.Invoice,
     path: "/brand/coupons"

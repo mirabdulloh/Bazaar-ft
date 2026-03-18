@@ -77,6 +77,8 @@ export default function BrandCouponsPageView() {
   const downSM = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [couponRows, setCouponRows] = useState<any[]>([]);
+  const [couponTotal, setCouponTotal] = useState(0);
 
   // ─── Dialog state ───────────────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -84,8 +86,8 @@ export default function BrandCouponsPageView() {
   const [form, setForm] = useState(emptyForm);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_BRAND_COUPONS, {
-    fetchPolicy: "network-only",
+  const { loading, error, refetch } = useQuery(GET_BRAND_COUPONS, {
+    fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
     variables: {
       input: {
@@ -95,15 +97,19 @@ export default function BrandCouponsPageView() {
         direction: "DESC",
         ...(statusFilter ? { search: { couponStatus: statusFilter } } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setCouponRows(result?.getBrandCoupons?.list ?? []);
+      setCouponTotal(result?.getBrandCoupons?.metaCounter?.[0]?.total ?? 0);
+    },
   });
 
   const [createCoupon, { loading: creating }] = useMutation(CREATE_BRAND_COUPON);
   const [updateCoupon, { loading: updating }] = useMutation(UPDATE_BRAND_COUPON);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getBrandCoupons?.list ?? [];
-  const total = (data as T)?.getBrandCoupons?.metaCounter?.[0]?.total ?? 0;
+  const list = couponRows;
+  const total = couponTotal;
 
   const { order, orderBy, handleRequestSort } =
     useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
@@ -165,7 +171,9 @@ export default function BrandCouponsPageView() {
           }
         });
         handleClose();
-        await refetch();
+        const refetchResult = await refetch();
+        setCouponRows((refetchResult.data as T)?.getBrandCoupons?.list ?? []);
+        setCouponTotal((refetchResult.data as T)?.getBrandCoupons?.metaCounter?.[0]?.total ?? 0);
         await sweetTopSmallSuccessAlert("Coupon updated!");
       } else {
         await createCoupon({
@@ -182,7 +190,9 @@ export default function BrandCouponsPageView() {
           }
         });
         handleClose();
-        await refetch();
+        const refetchResult = await refetch();
+        setCouponRows((refetchResult.data as T)?.getBrandCoupons?.list ?? []);
+        setCouponTotal((refetchResult.data as T)?.getBrandCoupons?.metaCounter?.[0]?.total ?? 0);
         await sweetTopSmallSuccessAlert("Coupon created!");
       }
     } catch (err: any) {
@@ -222,8 +232,15 @@ export default function BrandCouponsPageView() {
         </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && list.length === 0 ? (
         <Typography variant="body1">Loading coupons...</Typography>
+      ) : error ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load coupons
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
       ) : list.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No coupons found.</Typography>
