@@ -183,6 +183,11 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 	const isLiked = article.meLiked?.[0]?.myFavorite ?? false;
 	const coverImage =
 		resolveArticleAsset(article.articleImages?.[0]) || "/assets/images/products/product-1.png";
+	const articleHtml = toRenderableArticleHtml(article.articleContent);
+	const shouldShowCoverImage =
+		!!coverImage &&
+		!articleHtml.includes('data-article-image="true"') &&
+		!articleHtml.includes(`src="${coverImage}"`);
 
 	const openCommentsSection = () => {
 		setCommentsOpen(true);
@@ -272,7 +277,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 			<Divider sx={{ mb: 3 }} />
 
-			{coverImage && (
+			{shouldShowCoverImage && (
 				<Box
 					sx={{
 						position: "relative",
@@ -327,7 +332,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 						my: 3,
 					},
 				}}
-				dangerouslySetInnerHTML={{ __html: toRenderableArticleHtml(article.articleContent) }}
+				dangerouslySetInnerHTML={{ __html: articleHtml }}
 			/>
 
 			<Box
