@@ -3,6 +3,9 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@mui/material/Card";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -24,6 +27,7 @@ import { TableHeader, TablePagination } from "components/data-table";
 import useMuiTable from "hooks/useMuiTable";
 // LOCAL CUSTOM COMPONENT
 import BrandProductRow from "../product-row";
+import BrandProductForm from "../product-form";
 import PageWrapper from "../../page-wrapper";
 // APOLLO
 import { useMutation } from "@apollo/client/react";
@@ -59,9 +63,18 @@ export default function BrandProductsPageView() {
   const downSM = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [productRows, setProductRows] = useState<any[]>([]);
+  const [productTotal, setProductTotal] = useState(0);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_BRAND_PRODUCTS, {
+  const syncProductState = useCallback((result?: T) => {
+    setProductRows(result?.getBrandProducts?.products ?? []);
+    setProductTotal(result?.getBrandProducts?.metaData?.total ?? 0);
+  }, []);
+
+  const { loading, error, refetch } = useQuery(GET_BRAND_PRODUCTS, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -74,24 +87,41 @@ export default function BrandProductsPageView() {
           ...(statusFilter ? { productStatus: statusFilter } : {})
         }
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      syncProductState(result);
+    },
   });
 
   const [updateProduct] = useMutation(UPDATE_PRODUCT);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getBrandProducts?.products ?? [];
-  const total = (data as T)?.getBrandProducts?.metaData?.total ?? 0;
-
   const { order, orderBy, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+    useMuiTable({ listData: productRows, defaultSort: "createdAt", defaultOrder: "desc" });
 
   const handlePageChange = (_: unknown, page: number) => setCurrentPage(page);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleEdit = useCallback((product: any) => {
-    router.push(`/brand/products/${product._id}`);
-  }, [router]);
+    setEditingProductId(product._id);
+  }, []);
+
+  const handleStatusChange = useCallback(async (product: any, nextStatus: string) => {
+    if (product.productStatus === nextStatus) return;
+    try {
+      setStatusUpdatingId(product._id);
+      await updateProduct({
+        variables: { input: { _id: product._id, productStatus: nextStatus } }
+      });
+      await sweetTopSmallSuccessAlert(`Product status changed to ${nextStatus}`);
+      const result = await refetch();
+      syncProductState(result.data as T);
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err.message || "Failed to update product status");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  }, [updateProduct, refetch, syncProductState]);
 
   const handleDelete = useCallback(async (product: any) => {
     const confirmed = await sweetConfirmAlert(
@@ -105,11 +135,18 @@ export default function BrandProductsPageView() {
         variables: { input: { _id: product._id, productStatus: "DELETED" } }
       });
       await sweetTopSmallSuccessAlert("Product deleted");
-      refetch();
+      const result = await refetch();
+      syncProductState(result.data as T);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to delete product");
     }
-  }, [updateProduct, refetch]);
+  }, [updateProduct, refetch, syncProductState]);
+
+  const handleEditSaved = useCallback(async () => {
+    setEditingProductId(null);
+    const result = await refetch();
+    syncProductState(result.data as T);
+  }, [refetch, syncProductState]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -144,9 +181,13 @@ export default function BrandProductsPageView() {
         </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && productRows.length === 0 ? (
         <Typography variant="body1">Loading products...</Typography>
-      ) : list.length === 0 ? (
+      ) : error ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main">Failed to load products.</Typography>
+        </Card>
+      ) : productRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No products found.</Typography>
         </Card>
@@ -163,12 +204,14 @@ export default function BrandProductsPageView() {
                 />
 
                 <TableBody>
-                  {list.map((product: any) => (
+                  {productRows.map((product: any) => (
                     <BrandProductRow
                       key={product._id}
                       product={product}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onStatusChange={handleStatusChange}
+                      updating={statusUpdatingId === product._id}
                     />
                   ))}
                 </TableBody>
@@ -180,11 +223,30 @@ export default function BrandProductsPageView() {
             <TablePagination
               page={currentPage}
               onChange={handlePageChange}
-              count={Math.ceil(total / PAGE_SIZE)}
+              count={Math.max(1, Math.ceil(productTotal / PAGE_SIZE))}
             />
           </Stack>
         </Card>
       )}
+
+      <Dialog
+        open={!!editingProductId}
+        onClose={() => setEditingProductId(null)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>Edit Product</DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {editingProductId ? (
+            <BrandProductForm
+              productId={editingProductId}
+              embedded
+              onCancel={() => setEditingProductId(null)}
+              onSaved={handleEditSaved}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </PageWrapper>
   );
 }

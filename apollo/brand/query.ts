@@ -58,6 +58,42 @@ export const GET_BRAND_PRODUCTS = gql`
   }
 `;
 
+export const GET_BRAND_PRODUCT = gql`
+  query GetBrandProduct($input: String!) {
+    getBrandProduct(productId: $input) {
+      _id
+      memberId
+      productType
+      productCategoryId
+      productStatus
+      productTitle
+      productPrice
+      productDiscountPrice
+      productViews
+      productLikes
+      productComments
+      productRank
+      productImages
+      productRatingAverage
+      productRatingCount
+      productStockQuantity
+      productDesc
+      productSize
+      productColor
+      productMaterials
+      createdAt
+      updatedAt
+      memberData {
+        _id
+        memberNick
+        memberImage
+        memberEmail
+        memberPhone
+      }
+    }
+  }
+`;
+
 // ─── Brand Coupons ────────────────────────────────────────────────────────────
 
 export const GET_BRAND_COUPONS = gql`

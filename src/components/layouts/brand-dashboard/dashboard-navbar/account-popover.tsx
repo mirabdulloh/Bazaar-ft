@@ -29,7 +29,11 @@ function resolveImage(img?: string | null): string {
   return apiBase ? `${apiBase}${normalized}` : normalized;
 }
 
-export default function AccountPopover() {
+type Props = {
+  interactive?: boolean;
+};
+
+export default function AccountPopover({ interactive = true }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const open = Boolean(anchorEl);
   const user = useReactiveVar(userVar);
@@ -44,6 +48,14 @@ export default function AccountPopover() {
   const displayRole = brand?.brandStatus || user?.memberType || "BRAND";
 
   const handleClose = () => setAnchorEl(null);
+
+  if (!interactive) {
+    return (
+      <Avatar alt={displayName} src={avatarSrc}>
+        {displayName?.[0] || "B"}
+      </Avatar>
+    );
+  }
 
   return (
     <div>

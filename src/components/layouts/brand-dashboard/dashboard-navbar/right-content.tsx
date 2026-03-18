@@ -14,6 +14,7 @@ export default function RightContent() {
   const pathname = usePathname();
   const user = useReactiveVar(userVar);
   const isAdminDashboard = pathname.startsWith("/admin");
+  const isBrandDashboard = pathname.startsWith("/brand");
 
   return (
     <FlexBox alignItems="center" gap={2}>
@@ -30,6 +31,11 @@ export default function RightContent() {
         >
           {(user?.memberNick || "A")[0]}
         </Avatar>
+      ) : isBrandDashboard ? (
+        <>
+          <NotificationsPopover />
+          <AccountPopover interactive={false} />
+        </>
       ) : (
         <>
           <NotificationsPopover />

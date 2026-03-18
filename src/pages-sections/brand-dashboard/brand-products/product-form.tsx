@@ -11,11 +11,9 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
-import Clear from "@mui/icons-material/Clear";
-import Box from "@mui/material/Box";
 import FlexBox from "components/flex-box/flex-box";
 import DropZone from "components/DropZone";
 import PageWrapper from "../page-wrapper";
@@ -23,7 +21,8 @@ import PageWrapper from "../page-wrapper";
 import { useMutation } from "@apollo/client/react";
 import { useQuery } from "lib/hooks/useQuery";
 import { CREATE_PRODUCT, UPDATE_PRODUCT } from "../../../../apollo/brand/mutation";
-import { GET_PRODUCT, GET_CATEGORIES } from "../../../../apollo/user/query";
+import { GET_BRAND_PRODUCT } from "../../../../apollo/brand/query";
+import { GET_CATEGORIES } from "../../../../apollo/user/query";
 import { T } from "lib/types/common";
 // AUTH
 import { getJwtToken } from "lib/auth";
@@ -34,7 +33,65 @@ import { UploadImageBox, StyledClear } from "../styles";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PRODUCT_TYPES = ["CLOTHING", "SHOES", "ACCECORY", "BAG", "BEAUTY", "LIFESTYLE", "SPORTS", "OTHER"];
-const PRODUCT_STATUSES = ["DRAFT", "PENDING", "ACTIVE", "SOLD_OUT", "HIDDEN"];
+const PRODUCT_STATUSES = ["DRAFT", "PENDING", "ACTIVE", "SOLD_OUT", "HIDDEN", "DELETED"];
+const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const EU_SHOE_SIZES = ["EU 36", "EU 37", "EU 38", "EU 39", "EU 40", "EU 41", "EU 42", "EU 43", "EU 44"];
+const DENIM_SIZES = ["28/30", "30/30", "32/30", "32/32", "34/30"];
+const ACCESSORY_SIZES = ["ONE SIZE", "SMALL", "MEDIUM", "LARGE"];
+const BEAUTY_SIZES = ["50ML", "100ML", "250ML", "500ML"];
+const COLOR_OPTIONS = ["Black", "White", "Blue", "Red", "Green", "Yellow", "Orange", "Grey", "Pink", "Brown"];
+const MATERIAL_OPTIONS = ["Cotton", "Leather", "Wool", "Denim", "Polyester", "Silk", "Synthetic"];
+
+function resolveProductImage(productImage?: string | null): string {
+  if (!productImage || productImage === "null" || productImage === "undefined") return "";
+  if (productImage.startsWith("http://") || productImage.startsWith("https://")) return productImage;
+
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  const normalized = productImage.startsWith("/") ? productImage : `/${productImage}`;
+
+  if (normalized.startsWith("/assets/") || normalized.startsWith("/img/") || normalized.startsWith("/placeholder/")) {
+    return normalized;
+  }
+
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
+function parseDelimitedValues(value?: string | null): string[] {
+  if (!value) return [];
+  return Array.from(
+    new Set(
+      value
+        .split(/[,|]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function joinDelimitedValues(values: string[]): string {
+  return values.join(", ");
+}
+
+function getSizeOptions(productType: string): string[] {
+  switch (productType) {
+    case "SHOES":
+      return EU_SHOE_SIZES;
+    case "BAG":
+    case "ACCECORY":
+      return ACCESSORY_SIZES;
+    case "BEAUTY":
+      return BEAUTY_SIZES;
+    case "LIFESTYLE":
+      return [...ACCESSORY_SIZES, ...BEAUTY_SIZES];
+    case "SPORTS":
+      return [...CLOTHING_SIZES, ...EU_SHOE_SIZES];
+    case "OTHER":
+      return ["ONE SIZE", ...CLOTHING_SIZES];
+    case "CLOTHING":
+    default:
+      return [...CLOTHING_SIZES, ...DENIM_SIZES];
+  }
+}
 
 const initialForm = {
   productType: "CLOTHING",
@@ -53,13 +110,15 @@ const initialForm = {
 // ============================================================================
 type Props = {
   productId?: string;
+  embedded?: boolean;
+  onSaved?: (product?: any) => void | Promise<void>;
+  onCancel?: () => void;
 };
 // ============================================================================
 
-export default function BrandProductForm({ productId }: Props) {
+export default function BrandProductForm({ productId, embedded = false, onSaved, onCancel }: Props) {
   const router = useRouter();
   const isEdit = !!productId;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
 
   const [form, setForm] = useState(initialForm);
   /** Server paths (uploads/products/...) for images already on server */
@@ -68,6 +127,9 @@ export default function BrandProductForm({ productId }: Props) {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   /** Blob preview URLs for newFiles (parallel array) */
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
+  const selectedSizes = parseDelimitedValues(form.productSize);
+  const selectedColors = parseDelimitedValues(form.productColor);
+  const availableSizeOptions = getSizeOptions(form.productType);
 
   // ─── Load categories ────────────────────────────────────────────────────────
   const { data: catData } = useQuery(GET_CATEGORIES, {
@@ -78,7 +140,7 @@ export default function BrandProductForm({ productId }: Props) {
   ) ?? [];
 
   // ─── Load existing product for edit ─────────────────────────────────────────
-  const { data: prodData, loading: loadingProduct } = useQuery(GET_PRODUCT, {
+  const { data: prodData, loading: loadingProduct, error: productError } = useQuery(GET_BRAND_PRODUCT, {
     skip: !isEdit,
     fetchPolicy: "network-only",
     variables: { input: productId }
@@ -86,7 +148,7 @@ export default function BrandProductForm({ productId }: Props) {
 
   useEffect(() => {
     if (!isEdit || !prodData) return;
-    const product = (prodData as T)?.getProduct;
+    const product = (prodData as T)?.getBrandProduct;
     if (!product) return;
 
     setForm({
@@ -137,6 +199,11 @@ export default function BrandProductForm({ productId }: Props) {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
+  const handleMultiValueChange = useCallback((field: "productSize" | "productColor") => (event: any) => {
+    const value = event.target.value as string[];
+    setForm((prev) => ({ ...prev, [field]: joinDelimitedValues(value) }));
+  }, []);
+
   // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!form.productTitle.trim()) {
@@ -147,12 +214,12 @@ export default function BrandProductForm({ productId }: Props) {
       await sweetMixinErrorAlert("Product price must be greater than 0.");
       return;
     }
-    if (!form.productSize.trim()) {
-      await sweetMixinErrorAlert("Product size is required.");
+    if (selectedSizes.length === 0) {
+      await sweetMixinErrorAlert("Select at least one size.");
       return;
     }
-    if (!form.productColor.trim()) {
-      await sweetMixinErrorAlert("Product color is required.");
+    if (selectedColors.length === 0) {
+      await sweetMixinErrorAlert("Select at least one color.");
       return;
     }
     if (totalImages === 0) {
@@ -212,8 +279,8 @@ export default function BrandProductForm({ productId }: Props) {
         productTitle: form.productTitle.trim(),
         productPrice: Number(form.productPrice),
         productImages: allImages,
-        productSize: form.productSize.trim(),
-        productColor: form.productColor.trim()
+        productSize: joinDelimitedValues(selectedSizes),
+        productColor: joinDelimitedValues(selectedColors)
       };
 
       if (isEdit) input.productStatus = form.productStatus;
@@ -226,13 +293,15 @@ export default function BrandProductForm({ productId }: Props) {
 
       if (isEdit) {
         input._id = productId;
-        await updateProduct({ variables: { input } });
+        const result = await updateProduct({ variables: { input } });
         await sweetTopSmallSuccessAlert("Product updated");
+        await onSaved?.(result?.data?.updateProduct);
       } else {
-        await createProduct({ variables: { input } });
+        const result = await createProduct({ variables: { input } });
         await sweetTopSmallSuccessAlert("Product created");
+        await onSaved?.(result?.data?.createProduct);
       }
-      router.push("/brand/products");
+      if (!onSaved) router.push("/brand/products");
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to save product");
     }
@@ -240,7 +309,250 @@ export default function BrandProductForm({ productId }: Props) {
 
   const saving = creating || updating;
 
+  const handleCancel = useCallback(() => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    router.push("/brand/products");
+  }, [onCancel, router]);
+
+  const renderContent = () => (
+    <Card sx={{ p: 3, boxShadow: embedded ? "none" : undefined }}>
+      <Grid container spacing={3}>
+        {/* Product Title */}
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            fullWidth
+            label="Product Title"
+            value={form.productTitle}
+            onChange={handleChange("productTitle")}
+            required
+          />
+        </Grid>
+
+        {/* Type, Status & Category */}
+        <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
+          <FormControl fullWidth>
+            <InputLabel>Product Type</InputLabel>
+            <Select
+              value={form.productType}
+              label="Product Type"
+              onChange={handleChange("productType")}
+            >
+              {PRODUCT_TYPES.map((t) => (
+                <MenuItem key={t} value={t}>{t}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {isEdit && (
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={form.productStatus}
+                label="Status"
+                onChange={handleChange("productStatus")}
+              >
+                {PRODUCT_STATUSES.map((s) => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
+
+        <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
+          <FormControl fullWidth>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={form.productCategoryId}
+              label="Category"
+              onChange={handleChange("productCategoryId")}
+            >
+              <MenuItem value="">None</MenuItem>
+              {categories.map((cat: any) => (
+                <MenuItem key={cat._id} value={cat._id}>{cat.categoryName}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Price */}
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            label="Price"
+            type="number"
+            value={form.productPrice}
+            onChange={handleChange("productPrice")}
+            required
+            slotProps={{
+              input: { inputProps: { min: 0, step: 0.01 } }
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            label="Discount Price"
+            type="number"
+            value={form.productDiscountPrice}
+            onChange={handleChange("productDiscountPrice")}
+            slotProps={{
+              input: { inputProps: { min: 0, step: 0.01 } }
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            fullWidth
+            label="Stock Quantity"
+            type="number"
+            value={form.productStockQuantity}
+            onChange={handleChange("productStockQuantity")}
+            slotProps={{
+              input: { inputProps: { min: 0 } }
+            }}
+          />
+        </Grid>
+
+        {/* Size, Color, Materials */}
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormControl fullWidth required>
+            <InputLabel>Sizes</InputLabel>
+            <Select
+              multiple
+              value={selectedSizes}
+              label="Sizes"
+              onChange={handleMultiValueChange("productSize")}
+              renderValue={(selected) => (
+                <FlexBox flexWrap="wrap" gap={0.5}>
+                  {(selected as string[]).map((value) => (
+                    <Chip key={value} label={value} size="small" />
+                  ))}
+                </FlexBox>
+              )}
+            >
+              {availableSizeOptions.map((size) => (
+                <MenuItem key={size} value={size}>{size}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormControl fullWidth required>
+            <InputLabel>Colors</InputLabel>
+            <Select
+              multiple
+              value={selectedColors}
+              label="Colors"
+              onChange={handleMultiValueChange("productColor")}
+              renderValue={(selected) => (
+                <FlexBox flexWrap="wrap" gap={0.5}>
+                  {(selected as string[]).map((value) => (
+                    <Chip key={value} label={value} size="small" />
+                  ))}
+                </FlexBox>
+              )}
+            >
+              {COLOR_OPTIONS.map((color) => (
+                <MenuItem key={color} value={color}>{color}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormControl fullWidth>
+            <InputLabel>Material</InputLabel>
+            <Select
+              value={form.productMaterials}
+              label="Material"
+              onChange={handleChange("productMaterials")}
+            >
+              <MenuItem value="">None</MenuItem>
+              {MATERIAL_OPTIONS.map((material) => (
+                <MenuItem key={material} value={material}>{material}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Description */}
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            label="Description"
+            value={form.productDesc}
+            onChange={handleChange("productDesc")}
+          />
+        </Grid>
+
+        {/* Images */}
+        <Grid size={{ xs: 12 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>Product Images</Typography>
+          <DropZone
+            onChange={handleImageDrop}
+            info="Upload product images (PNG, JPG, GIF)"
+          />
+
+          {allDisplayImages.length > 0 && (
+            <FlexBox gap={1} mt={2} flexWrap="wrap">
+              {allDisplayImages.map((url, idx) => {
+                const imgSrc = url.startsWith("blob:") ? url : resolveProductImage(url);
+                return (
+                  <UploadImageBox key={idx}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imgSrc}
+                      alt={`product-${idx}`}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                    <StyledClear onClick={() => handleRemoveImage(idx)} />
+                  </UploadImageBox>
+                );
+              })}
+            </FlexBox>
+          )}
+        </Grid>
+
+        {/* Actions */}
+        <Grid size={{ xs: 12 }}>
+          <FlexBox gap={2} justifyContent="flex-end">
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="info"
+              onClick={handleSubmit}
+              disabled={saving}
+              startIcon={saving ? <CircularProgress size={18} /> : undefined}
+            >
+              {isEdit ? "Update Product" : "Create Product"}
+            </Button>
+          </FlexBox>
+        </Grid>
+      </Grid>
+    </Card>
+  );
+
   if (isEdit && loadingProduct) {
+    if (embedded) {
+      return <Typography sx={{ p: 3 }}>Loading product...</Typography>;
+    }
     return (
       <PageWrapper title="Edit Product">
         <Typography>Loading product...</Typography>
@@ -248,209 +560,35 @@ export default function BrandProductForm({ productId }: Props) {
     );
   }
 
+  if (isEdit && productError) {
+    if (embedded) {
+      return (
+        <Card sx={{ p: 4, textAlign: "center", boxShadow: "none" }}>
+          <Typography variant="h6" gutterBottom>Product Not Available</Typography>
+          <Typography color="text.secondary">
+            This product could not be loaded for editing.
+          </Typography>
+        </Card>
+      );
+    }
+    return (
+      <PageWrapper title="Edit Product">
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant="h6" gutterBottom>Product Not Available</Typography>
+          <Typography color="text.secondary">
+            This product could not be loaded for editing.
+          </Typography>
+        </Card>
+      </PageWrapper>
+    );
+  }
+
   // ─── Render ─────────────────────────────────────────────────────────────────
+  if (embedded) return renderContent();
+
   return (
     <PageWrapper title={isEdit ? "Edit Product" : "Add New Product"}>
-      <Card sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          {/* Product Title */}
-          <Grid size={{ xs: 12 }}>
-            <TextField
-              fullWidth
-              label="Product Title"
-              value={form.productTitle}
-              onChange={handleChange("productTitle")}
-              required
-            />
-          </Grid>
-
-          {/* Type, Status & Category */}
-          <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Product Type</InputLabel>
-              <Select
-                value={form.productType}
-                label="Product Type"
-                onChange={handleChange("productType")}
-              >
-                {PRODUCT_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {isEdit && (
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={form.productStatus}
-                  label="Status"
-                  onChange={handleChange("productStatus")}
-                >
-                  {PRODUCT_STATUSES.map((s) => (
-                    <MenuItem key={s} value={s}>{s}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          )}
-
-          <Grid size={{ xs: 12, sm: isEdit ? 4 : 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={form.productCategoryId}
-                label="Category"
-                onChange={handleChange("productCategoryId")}
-              >
-                <MenuItem value="">None</MenuItem>
-                {categories.map((cat: any) => (
-                  <MenuItem key={cat._id} value={cat._id}>{cat.categoryName}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Price */}
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Price"
-              type="number"
-              value={form.productPrice}
-              onChange={handleChange("productPrice")}
-              required
-              slotProps={{
-                input: { inputProps: { min: 0, step: 0.01 } }
-              }}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Discount Price"
-              type="number"
-              value={form.productDiscountPrice}
-              onChange={handleChange("productDiscountPrice")}
-              slotProps={{
-                input: { inputProps: { min: 0, step: 0.01 } }
-              }}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Stock Quantity"
-              type="number"
-              value={form.productStockQuantity}
-              onChange={handleChange("productStockQuantity")}
-              slotProps={{
-                input: { inputProps: { min: 0 } }
-              }}
-            />
-          </Grid>
-
-          {/* Size, Color, Materials */}
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Size"
-              value={form.productSize}
-              onChange={handleChange("productSize")}
-              required
-              placeholder="e.g. S, M, L, XL or 250ml"
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Color"
-              value={form.productColor}
-              onChange={handleChange("productColor")}
-              required
-              placeholder="e.g. Black, White, Red"
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Materials"
-              value={form.productMaterials}
-              onChange={handleChange("productMaterials")}
-              placeholder="e.g. Cotton, Polyester"
-            />
-          </Grid>
-
-          {/* Description */}
-          <Grid size={{ xs: 12 }}>
-            <TextField
-              fullWidth
-              multiline
-              minRows={4}
-              label="Description"
-              value={form.productDesc}
-              onChange={handleChange("productDesc")}
-            />
-          </Grid>
-
-          {/* Images */}
-          <Grid size={{ xs: 12 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Product Images</Typography>
-            <DropZone
-              onChange={handleImageDrop}
-              info="Upload product images (PNG, JPG, GIF)"
-            />
-
-            {allDisplayImages.length > 0 && (
-              <FlexBox gap={1} mt={2} flexWrap="wrap">
-                {allDisplayImages.map((url, idx) => {
-                  // Server images need API base prefix; blob URLs are used as-is
-                  const imgSrc = url.startsWith("blob:") ? url : `${apiBase}/${url}`;
-                  return (
-                    <UploadImageBox key={idx}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={imgSrc}
-                        alt={`product-${idx}`}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      />
-                      <StyledClear onClick={() => handleRemoveImage(idx)} />
-                    </UploadImageBox>
-                  );
-                })}
-              </FlexBox>
-            )}
-          </Grid>
-
-          {/* Actions */}
-          <Grid size={{ xs: 12 }}>
-            <FlexBox gap={2} justifyContent="flex-end">
-              <Button
-                variant="outlined"
-                color="inherit"
-                onClick={() => router.push("/brand/products")}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="info"
-                onClick={handleSubmit}
-                disabled={saving}
-                startIcon={saving ? <CircularProgress size={18} /> : undefined}
-              >
-                {isEdit ? "Update Product" : "Create Product"}
-              </Button>
-            </FlexBox>
-          </Grid>
-        </Grid>
-      </Card>
+      {renderContent()}
     </PageWrapper>
   );
 }
