@@ -5,6 +5,11 @@ const PRIMARY = '#6366f1';
 const DANGER  = '#ef4444';
 const SUCCESS = '#22c55e';
 
+function liftSwalAboveMui(popup: HTMLElement) {
+	const container = popup.closest('.swal2-container') as HTMLElement | null;
+	if (container) container.style.zIndex = '16000';
+}
+
 // ─── Small toast — top-end, auto-dismiss ──────────────────────────────────────
 const Toast = Swal.mixin({
 	toast: true,
@@ -105,6 +110,7 @@ export const sweetMixinSuccessAlert = async (message: string): Promise<void> => 
 		timer: 3500,
 		timerProgressBar: true,
 		didOpen: (popup) => {
+			liftSwalAboveMui(popup);
 			popup.style.borderRadius = '20px';
 			popup.style.border       = '1px solid rgba(255,255,255,0.08)';
 			popup.style.boxShadow    = '0 25px 60px rgba(0,0,0,0.45)';
@@ -140,6 +146,7 @@ export const sweetMixinErrorAlert = async (message: string): Promise<void> => {
 		confirmButtonText: 'Got it',
 		confirmButtonColor: PRIMARY,
 		didOpen: (popup) => {
+			liftSwalAboveMui(popup);
 			popup.style.borderRadius = '20px';
 			popup.style.border       = '1px solid rgba(239,68,68,0.18)';
 			popup.style.boxShadow    = '0 25px 60px rgba(0,0,0,0.45)';
@@ -182,6 +189,7 @@ export const sweetConfirmAlert = async (
 		cancelButtonColor: '#374151',
 		reverseButtons: true,
 		didOpen: (popup) => {
+			liftSwalAboveMui(popup);
 			popup.style.borderRadius = '20px';
 			popup.style.border       = '1px solid rgba(245,158,11,0.18)';
 			popup.style.boxShadow    = '0 25px 60px rgba(0,0,0,0.45)';

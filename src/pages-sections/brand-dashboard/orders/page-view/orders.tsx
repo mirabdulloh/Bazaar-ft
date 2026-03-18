@@ -1,18 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button, { type ButtonProps } from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
+import Checkbox from "@mui/material/Checkbox";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TableSortLabel from "@mui/material/TableSortLabel";
 import Typography from "@mui/material/Typography";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
@@ -20,7 +25,7 @@ import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import CancelOutlined from "@mui/icons-material/CancelOutlined";
 import ShoppingBagOutlined from "@mui/icons-material/ShoppingBagOutlined";
 import OverlayScrollbar from "components/overlay-scrollbar";
-import { TableHeader, TablePagination } from "components/data-table";
+import { TablePagination } from "components/data-table";
 import FlexBox from "components/flex-box/flex-box";
 import PageWrapper from "../../page-wrapper";
 import OrderRow, { OrderData } from "../order-row";
@@ -41,11 +46,12 @@ import {
 import { useQuery } from "lib/hooks/useQuery";
 import { useMutation } from "@apollo/client/react";
 import { GET_BRAND_ORDERS } from "../../../../../apollo/brand/query";
-import { UPDATE_ORDER_BY_BRAND } from "../../../../../apollo/brand/mutation";
+import { UPDATE_ORDER_BY_BRAND, UPDATE_ORDERS_BY_BRAND } from "../../../../../apollo/brand/mutation";
 import { sweetConfirmAlert, sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "lib/sweetAlert";
 import { currency } from "lib";
 import { T } from "lib/types/common";
 import { getComparator, stableSort } from "hooks/useMuiTable";
+import UpDown from "icons/UpDown";
 
 const PAGE_SIZE = 20;
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -141,7 +147,10 @@ export default function OrdersPageView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [orderBy, setOrderBy] = useState("createdAt");
   const [orderDirection, setOrderDirection] = useState<"asc" | "desc">("desc");
-  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
+  const [orderRows, setOrderRows] = useState<OrderData[]>([]);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [actingStatus, setActingStatus] = useState<string>("");
 
   const queryVariables = useMemo(
@@ -157,16 +166,21 @@ export default function OrdersPageView() {
     [currentPage, statusFilter]
   );
 
-  const { data, loading, refetch } = useQuery(GET_BRAND_ORDERS, {
+  const { loading, error, refetch } = useQuery(GET_BRAND_ORDERS, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
     variables: queryVariables,
+    onCompleted: (result: T) => {
+      setOrderRows(result?.getBrandOrders?.orders ?? []);
+      setOrderTotal(result?.getBrandOrders?.metaData?.total ?? 0);
+    },
   });
 
   const [updateOrderByBrand] = useMutation(UPDATE_ORDER_BY_BRAND);
+  const [updateOrdersByBrand] = useMutation(UPDATE_ORDERS_BY_BRAND);
 
-  const rawList: OrderData[] = (data as T)?.getBrandOrders?.orders ?? [];
-  const total = (data as T)?.getBrandOrders?.metaData?.total ?? 0;
+  const rawList = orderRows;
+  const total = orderTotal;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const sortedList = useMemo(
@@ -174,18 +188,29 @@ export default function OrdersPageView() {
     [orderBy, orderDirection, rawList]
   );
 
-  useEffect(() => {
-    if (!selectedOrder?._id) return;
-    const fresh = rawList.find((item) => item._id === selectedOrder._id);
-    if (fresh) {
-      setSelectedOrder(fresh);
-      return;
-    }
-
-    if (!loading) {
-      setSelectedOrder(null);
-    }
-  }, [loading, rawList, selectedOrder?._id]);
+  const selectedOrder = useMemo(
+    () => rawList.find((item) => item._id === selectedOrderId) ?? null,
+    [rawList, selectedOrderId]
+  );
+  const bulkEligibleOrders = useMemo(
+    () => sortedList.filter((item) => item.orderStatus === "PENDING" || item.orderStatus === "CONFIRMED"),
+    [sortedList]
+  );
+  const selectedOrders = useMemo(
+    () => sortedList.filter((item) => selectedOrderIds.includes(item._id)),
+    [selectedOrderIds, sortedList]
+  );
+  const allSelectedStatuses = useMemo(
+    () => [...new Set(selectedOrders.map((item) => item.orderStatus))],
+    [selectedOrders]
+  );
+  const bulkAction =
+    allSelectedStatuses.length === 1 && allSelectedStatuses[0] === "PENDING"
+      ? { nextStatus: "CONFIRMED", label: "Confirm Selected", confirm: "Confirm selected orders?", success: "Selected orders confirmed" }
+      : allSelectedStatuses.length === 1 && allSelectedStatuses[0] === "CONFIRMED"
+        ? { nextStatus: "SHIPPED", label: "Mark Selected as Shipped", confirm: "Mark selected orders as shipped?", success: "Selected orders marked as shipped" }
+        : null;
+  const allEligibleSelected = bulkEligibleOrders.length > 0 && bulkEligibleOrders.every((item) => selectedOrderIds.includes(item._id));
 
   const handleRequestSort = useCallback((property: string) => {
     if (property === "action" || property === "member") return;
@@ -195,8 +220,18 @@ export default function OrdersPageView() {
   }, [orderBy, orderDirection]);
 
   const handleView = useCallback((order: OrderData) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order._id);
   }, []);
+
+  const handleSelectOrder = useCallback((order: OrderData, checked: boolean) => {
+    setSelectedOrderIds((prev) =>
+      checked ? [...new Set([...prev, order._id])] : prev.filter((id) => id !== order._id)
+    );
+  }, []);
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    setSelectedOrderIds(checked ? bulkEligibleOrders.map((item) => item._id) : []);
+  }, [bulkEligibleOrders]);
 
   const handleStatusUpdate = useCallback(async (order: OrderData, nextStatus: string) => {
     const copy = getConfirmCopy(nextStatus);
@@ -217,22 +252,72 @@ export default function OrdersPageView() {
       });
 
       const updated = (result as T)?.updateOrderByBrand as T | undefined;
-      if (updated && selectedOrder?._id === order._id) {
-        setSelectedOrder((prev) => (prev ? ({ ...prev, ...updated } as OrderData) : prev));
+      if (updated) {
+        setOrderRows((prev) =>
+          prev
+            .map((item) => (item._id === order._id ? ({ ...item, ...updated } as OrderData) : item))
+            .filter((item) => !statusFilter || item.orderStatus === statusFilter)
+        );
+      }
+
+      const refetchResult = await refetch();
+      const nextRows = (refetchResult.data as T)?.getBrandOrders?.orders ?? [];
+      const nextTotal = (refetchResult.data as T)?.getBrandOrders?.metaData?.total ?? 0;
+      setOrderRows(nextRows);
+      setOrderTotal(nextTotal);
+      setSelectedOrderIds((prev) => prev.filter((id) => nextRows.some((item: OrderData) => item._id === id)));
+
+      if (!nextRows.some((item: OrderData) => item._id === order._id)) {
+        setSelectedOrderId(null);
       }
 
       await sweetTopSmallSuccessAlert(copy.success);
-      await refetch();
-
-      if (statusFilter && statusFilter !== nextStatus) {
-        setSelectedOrder(null);
-      }
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update order");
     } finally {
       setActingStatus("");
     }
-  }, [refetch, selectedOrder?._id, statusFilter, updateOrderByBrand]);
+  }, [refetch, statusFilter, updateOrderByBrand]);
+
+  const handleBulkStatusUpdate = useCallback(async () => {
+    if (!bulkAction || selectedOrders.length === 0) return;
+
+    const confirmed = await sweetConfirmAlert(
+      bulkAction.confirm,
+      `This will update ${selectedOrders.length} orders.`,
+      bulkAction.label
+    );
+    if (!confirmed) return;
+
+    setActingStatus(`bulk:${bulkAction.nextStatus}`);
+
+    try {
+      await updateOrdersByBrand({
+        variables: {
+          input: {
+            _ids: selectedOrders.map((item) => item._id),
+            orderStatus: bulkAction.nextStatus,
+          },
+        },
+      });
+
+      const refetchResult = await refetch();
+      const nextRows = (refetchResult.data as T)?.getBrandOrders?.orders ?? [];
+      const nextTotal = (refetchResult.data as T)?.getBrandOrders?.metaData?.total ?? 0;
+      setOrderRows(nextRows);
+      setOrderTotal(nextTotal);
+      setSelectedOrderIds([]);
+      if (selectedOrderId && !nextRows.some((item: OrderData) => item._id === selectedOrderId)) {
+        setSelectedOrderId(null);
+      }
+
+      await sweetTopSmallSuccessAlert(bulkAction.success);
+    } catch (err: any) {
+      await sweetMixinErrorAlert(err.message || "Failed to update selected orders");
+    } finally {
+      setActingStatus("");
+    }
+  }, [bulkAction, refetch, selectedOrderId, selectedOrders, updateOrdersByBrand]);
 
   const activeActions = selectedOrder ? getStatusAction(selectedOrder.orderStatus) : [];
 
@@ -246,6 +331,7 @@ export default function OrdersPageView() {
             onClick={() => {
               setStatusFilter(item.value);
               setCurrentPage(1);
+              setSelectedOrderIds([]);
             }}
           >
             {item.label}
@@ -253,12 +339,50 @@ export default function OrdersPageView() {
         ))}
       </FilterToolbarCard>
 
+      {selectedOrders.length > 0 && (
+        <Card sx={{ p: 2, mb: 2, borderRadius: 3, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
+          <FlexBox justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap">
+            <Typography fontWeight={700}>
+              {selectedOrders.length} order{selectedOrders.length > 1 ? "s" : ""} selected
+            </Typography>
+
+            <FlexBox gap={1} flexWrap="wrap">
+              {bulkAction ? (
+                <Button
+                  variant="contained"
+                  color={bulkAction.nextStatus === "CONFIRMED" ? "primary" : "warning"}
+                  onClick={handleBulkStatusUpdate}
+                  disabled={actingStatus === `bulk:${bulkAction.nextStatus}`}
+                >
+                  {bulkAction.label}
+                </Button>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Select orders with the same status to confirm or ship them together.
+                </Typography>
+              )}
+
+              <Button variant="text" color="inherit" onClick={() => setSelectedOrderIds([])}>
+                Clear Selection
+              </Button>
+            </FlexBox>
+          </FlexBox>
+        </Card>
+      )}
+
       {loading && rawList.length === 0 ? (
         <Stack gap={1.5}>
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} variant="rounded" height={72} sx={{ borderRadius: 3 }} />
           ))}
         </Stack>
+      ) : error ? (
+        <Card sx={{ p: 5, textAlign: "center", borderRadius: 4, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load orders
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
       ) : rawList.length === 0 ? (
         <Card sx={{ p: 5, textAlign: "center", borderRadius: 4, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
           <ShoppingBagOutlined sx={{ fontSize: 48, color: "grey.400", mb: 1.5 }} />
@@ -274,18 +398,45 @@ export default function OrdersPageView() {
           <OverlayScrollbar>
             <TableContainer sx={{ minWidth: 900 }}>
               <Table>
-                <TableHeader
-                  order={orderDirection}
-                  orderBy={orderBy}
-                  heading={tableHeading}
-                  onRequestSort={handleRequestSort}
-                />
+                <TableHead sx={{ backgroundColor: "grey.50" }}>
+                  <TableRow>
+                    <TableCell padding="checkbox" align="center">
+                      <Checkbox
+                        size="small"
+                        checked={allEligibleSelected}
+                        indeterminate={selectedOrderIds.length > 0 && !allEligibleSelected}
+                        disabled={bulkEligibleOrders.length === 0}
+                        onChange={(event) => handleSelectAll(event.target.checked)}
+                      />
+                    </TableCell>
+                    {tableHeading.map((headCell) => (
+                      <TableCell
+                        key={headCell.id}
+                        align={headCell.align as "left" | "center" | "right"}
+                        sortDirection={orderBy === headCell.id ? orderDirection : false}
+                        sx={{ fontWeight: 500, padding: "16px 20px" }}
+                      >
+                        <TableSortLabel
+                          active={orderBy === headCell.id}
+                          onClick={() => handleRequestSort(headCell.id)}
+                          direction={orderBy === headCell.id ? orderDirection : "asc"}
+                          IconComponent={() => <UpDown sx={{ fontSize: 12, ml: 1, color: "grey.400" }} />}
+                        >
+                          {headCell.label}
+                        </TableSortLabel>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
                 <TableBody>
                   {sortedList.map((item) => (
                     <OrderRow
                       key={item._id}
                       order={item}
                       onView={handleView}
+                      selectable={item.orderStatus === "PENDING" || item.orderStatus === "CONFIRMED"}
+                      selected={selectedOrderIds.includes(item._id)}
+                      onSelect={handleSelectOrder}
                     />
                   ))}
                 </TableBody>
@@ -295,7 +446,10 @@ export default function OrdersPageView() {
 
           <Stack alignItems="center" my={4}>
             <TablePagination
-              onChange={(_, page) => setCurrentPage(page)}
+              onChange={(_, page) => {
+                setCurrentPage(page);
+                setSelectedOrderIds([]);
+              }}
               count={totalPages}
               page={currentPage}
             />
@@ -306,7 +460,7 @@ export default function OrdersPageView() {
       <Drawer
         anchor="right"
         open={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
+        onClose={() => setSelectedOrderId(null)}
         PaperProps={{ sx: { width: { xs: "100%", sm: 620 }, maxWidth: "100%" } }}
       >
         {selectedOrder && (
@@ -327,7 +481,7 @@ export default function OrdersPageView() {
               <Button
                 variant="text"
                 color="inherit"
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => setSelectedOrderId(null)}
                 startIcon={<CloseRounded />}
                 sx={{ textTransform: "none" }}
               >

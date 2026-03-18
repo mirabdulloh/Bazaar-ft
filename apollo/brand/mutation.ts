@@ -145,3 +145,23 @@ export const UPDATE_ORDER_BY_BRAND = gql`
     }
   }
 `;
+
+export const UPDATE_ORDERS_BY_BRAND = gql`
+  mutation UpdateOrdersByBrand($input: BrandBulkOrderUpdate!) {
+    updateOrdersByBrand(input: $input) {
+      _id
+      memberId
+      brandId
+      orderStatus
+      orderTotalPrice
+      orderTotalDiscountPrice
+      orderFinalPrice
+      orderPaymentMethod
+      orderPaymentStatus
+      orderDeliveryAddressId
+      orderDeliveryStatus
+      createdAt
+      updatedAt
+    }
+  }
+`;

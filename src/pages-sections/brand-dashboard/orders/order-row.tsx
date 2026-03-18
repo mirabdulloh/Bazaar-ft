@@ -1,5 +1,6 @@
 import { format } from "date-fns/format";
 // MUI ICON COMPONENTS
+import Checkbox from "@mui/material/Checkbox";
 import Visibility from "@mui/icons-material/Visibility";
 // CUSTOM UTILS LIBRARY FUNCTION
 import { currency } from "lib";
@@ -77,10 +78,13 @@ export interface OrderData {
 type Props = {
   order: OrderData;
   onView?: (order: OrderData) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (order: OrderData, checked: boolean) => void;
 };
 // ========================================================================
 
-export default function OrderRow({ order, onView }: Props) {
+export default function OrderRow({ order, onView, selectable = false, selected = false, onSelect }: Props) {
   const {
     _id,
     orderStatus,
@@ -93,6 +97,15 @@ export default function OrderRow({ order, onView }: Props) {
 
   return (
     <StyledTableRow tabIndex={-1} role="checkbox">
+      <StyledTableCell align="center" padding="checkbox">
+        <Checkbox
+          size="small"
+          checked={selected}
+          disabled={!selectable}
+          onChange={(event) => onSelect?.(order, event.target.checked)}
+        />
+      </StyledTableCell>
+
       <StyledTableCell align="left" sx={{ fontWeight: 600 }}>
         #{_id?.slice(0, 8)}
       </StyledTableCell>
