@@ -1379,27 +1379,37 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                               {message.parentMessageData ? (
                                 <Box
                                   sx={{
-                                    mb: message.message || attachmentSrc ? 0.9 : 0,
-                                    px: 1,
-                                    py: 0.8,
-                                    borderRadius: 2,
-                                    borderLeft: "3px solid",
-                                    borderColor: own ? "rgba(255,255,255,0.7)" : "primary.light",
-                                    bgcolor: own ? "rgba(255,255,255,0.14)" : "rgba(37,99,235,0.06)",
+                                    mb: message.message || attachmentSrc ? 0.7 : 0,
+                                    px: 0.95,
+                                    py: 0.6,
+                                    borderRadius: 1.75,
+                                    borderLeft: "2px solid",
+                                    borderLeftColor: own ? "rgba(255,255,255,0.72)" : "primary.light",
+                                    bgcolor: own ? "rgba(255,255,255,0.10)" : "rgba(37,99,235,0.05)",
                                   }}
                                 >
-                                  <Typography variant="caption" sx={{ fontWeight: 700, color: own ? "inherit" : "primary.main" }}>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      display: "block",
+                                      fontWeight: 700,
+                                      lineHeight: 1.15,
+                                      color: own ? "inherit" : "primary.main",
+                                    }}
+                                  >
                                     {getQuotedSenderLabel(message.parentMessageData as ChatMessage, user._id)}
                                   </Typography>
                                   <Typography
                                     variant="caption"
                                     sx={{
-                                      display: "block",
-                                      mt: 0.2,
-                                      color: own ? "rgba(255,255,255,0.88)" : "text.secondary",
-                                      whiteSpace: "nowrap",
+                                      display: "-webkit-box",
+                                      mt: 0.15,
+                                      lineHeight: 1.2,
+                                      color: own ? "rgba(255,255,255,0.86)" : "text.secondary",
+                                      WebkitLineClamp: 1,
+                                      WebkitBoxOrient: "vertical",
                                       overflow: "hidden",
-                                      textOverflow: "ellipsis",
+                                      wordBreak: "break-word",
                                     }}
                                   >
                                     {getQuotedMessagePreview(message.parentMessageData as ChatMessage)}
@@ -1453,11 +1463,16 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                                   size="small"
                                   onClick={() => setReplyTarget(message)}
                                   sx={{
-                                    ml: 0.15,
-                                    width: 22,
-                                    height: 22,
+                                    ml: 0.2,
+                                    width: 24,
+                                    height: 24,
                                     color: "inherit",
-                                    opacity: 0.82,
+                                    opacity: 0.72,
+                                    bgcolor: own ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.04)",
+                                    "&:hover": {
+                                      opacity: 1,
+                                      bgcolor: own ? "rgba(255,255,255,0.14)" : "rgba(15,23,42,0.08)",
+                                    },
                                   }}
                                 >
                                   <ReplyRounded sx={{ fontSize: 14 }} />
@@ -1512,24 +1527,33 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                   }}
                 >
                   {(replyTarget || pendingImage) && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        px: 1.1,
-                        py: 0.9,
-                        borderRadius: 3,
-                        bgcolor: "rgba(248,250,252,0.96)",
-                        border: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Stack spacing={0.6} minWidth={0} flex={1}>
-                        {replyTarget && (
-                          <>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                    <Stack spacing={0.85}>
+                      {replyTarget && (
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{
+                            px: 1.05,
+                            py: 0.75,
+                            borderRadius: 2.5,
+                            bgcolor: "rgba(248,250,252,0.96)",
+                            border: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Stack
+                            spacing={0.15}
+                            minWidth={0}
+                            flex={1}
+                            sx={{
+                              pl: 1,
+                              borderLeft: "2px solid",
+                              borderLeftColor: "primary.light",
+                            }}
+                          >
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main", lineHeight: 1.15 }}>
                               Replying to {getQuotedSenderLabel(replyTarget, user._id)}
                             </Typography>
                             <Typography
@@ -1539,14 +1563,35 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
+                                lineHeight: 1.2,
                               }}
                             >
                               {getQuotedMessagePreview(replyTarget)}
                             </Typography>
-                          </>
-                        )}
-                        {pendingImage && (
-                          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                          </Stack>
+
+                          <IconButton size="small" onClick={() => setReplyTarget(null)} sx={{ flexShrink: 0 }}>
+                            <CloseRounded fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      )}
+
+                      {pendingImage && (
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{
+                            px: 1.1,
+                            py: 0.95,
+                            borderRadius: 3,
+                            bgcolor: "rgba(248,250,252,0.96)",
+                            border: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Stack direction="row" spacing={1} alignItems="center" minWidth={0} flex={1}>
                             <Box
                               component="img"
                               src={pendingImage.previewUrl}
@@ -1558,11 +1603,12 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                                 borderRadius: 2,
                                 border: "1px solid",
                                 borderColor: "divider",
+                                flexShrink: 0,
                               }}
                             />
                             <Stack minWidth={0}>
                               <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                                Image ready
+                                Image ready to send
                               </Typography>
                               <Typography
                                 variant="caption"
@@ -1573,19 +1619,12 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                               </Typography>
                             </Stack>
                           </Stack>
-                        )}
-                      </Stack>
 
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setReplyTarget(null);
-                          clearPendingImage();
-                        }}
-                        sx={{ flexShrink: 0 }}
-                      >
-                        <CloseRounded fontSize="small" />
-                      </IconButton>
+                          <IconButton size="small" onClick={() => clearPendingImage()} sx={{ flexShrink: 0 }}>
+                            <CloseRounded fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      )}
                     </Stack>
                   )}
 
