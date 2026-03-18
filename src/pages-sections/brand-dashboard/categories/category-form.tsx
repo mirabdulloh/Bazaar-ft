@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -23,17 +24,24 @@ import {
 } from "lib/sweetAlert";
 
 const CATEGORY_STATUSES = ["ACTIVE", "INACTIVE"];
+const CATEGORY_LEVELS = [
+  { value: "PARENT", label: "Top Level Category" },
+  { value: "CHILD", label: "Child Category" }
+] as const;
 
 // ================================================================
 interface Props {
   categoryId?: string;
+  embedded?: boolean;
+  onSuccess?: () => void;
 }
 // ================================================================
 
-export default function CategoryForm({ categoryId }: Props) {
+export default function CategoryForm({ categoryId, embedded = false, onSuccess }: Props) {
   const [categoryName, setCategoryName] = useState("");
   const [parentCategoryId, setParentCategoryId] = useState("");
   const [categoryStatus, setCategoryStatus] = useState("ACTIVE");
+  const [categoryLevel, setCategoryLevel] = useState<"PARENT" | "CHILD">("PARENT");
   const [saving, setSaving] = useState(false);
 
   // ─── Load all categories (for parent dropdown + editing) ─────────────────
@@ -54,8 +62,9 @@ export default function CategoryForm({ categoryId }: Props) {
       setCategoryName(category.categoryName || "");
       setParentCategoryId(category.parentCategoryId || "");
       setCategoryStatus(category.categoryStatus || "ACTIVE");
+      setCategoryLevel(category.parentCategoryId ? "CHILD" : "PARENT");
     }
-  }, [data, categoryId]);
+  }, [allCategories, categoryId, data]);
 
   const [createCategory] = useMutation(CREATE_CATEGORY);
   const [updateCategory] = useMutation(UPDATE_CATEGORY);
@@ -76,26 +85,32 @@ export default function CategoryForm({ categoryId }: Props) {
             input: {
               _id: categoryId,
               categoryName: categoryName.trim(),
-              ...(parentCategoryId ? { parentCategoryId } : {}),
+              ...(categoryLevel === "CHILD" && parentCategoryId ? { parentCategoryId } : {}),
               categoryStatus
             }
           }
         });
         await sweetTopSmallSuccessAlert("Category updated successfully");
+        onSuccess?.();
       } else {
         // CREATE
         await createCategory({
           variables: {
             input: {
               categoryName: categoryName.trim(),
-              ...(parentCategoryId ? { parentCategoryId } : {})
+              ...(categoryLevel === "CHILD" && parentCategoryId ? { parentCategoryId } : {})
             }
           }
         });
         await sweetTopSmallSuccessAlert("Category created successfully");
-        setCategoryName("");
-        setParentCategoryId("");
-        setCategoryStatus("ACTIVE");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          setCategoryName("");
+          setParentCategoryId("");
+          setCategoryStatus("ACTIVE");
+          setCategoryLevel("PARENT");
+        }
       }
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to save category");
@@ -107,10 +122,10 @@ export default function CategoryForm({ categoryId }: Props) {
   if (loading) return <Typography>Loading...</Typography>;
 
   // Filter out current category from parent dropdown (can't be its own parent)
-  const parentOptions = allCategories.filter((c: any) => c._id !== categoryId);
+  const parentOptions = allCategories.filter((c: any) => c._id !== categoryId && !c.parentCategoryId);
 
-  return (
-    <Card className="p-3">
+  const content = (
+    <Box className={embedded ? undefined : "p-3"}>
       <form onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           <Grid size={{ sm: 6, xs: 12 }}>
@@ -127,13 +142,39 @@ export default function CategoryForm({ categoryId }: Props) {
 
           <Grid size={{ sm: 6, xs: 12 }}>
             <FormControl fullWidth>
+              <InputLabel>Category Level</InputLabel>
+              <Select
+                value={categoryLevel}
+                label="Category Level"
+                onChange={(e) => {
+                  const nextLevel = e.target.value as "PARENT" | "CHILD";
+                  setCategoryLevel(nextLevel);
+                  if (nextLevel === "PARENT") {
+                    setParentCategoryId("");
+                  }
+                }}
+              >
+                {CATEGORY_LEVELS.map((level) => (
+                  <MenuItem key={level.value} value={level.value}>
+                    {level.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={{ sm: 6, xs: 12 }}>
+            <FormControl fullWidth>
               <InputLabel>Parent Category</InputLabel>
               <Select
                 value={parentCategoryId}
                 label="Parent Category"
                 onChange={(e) => setParentCategoryId(e.target.value)}
+                disabled={categoryLevel !== "CHILD"}
               >
-                <MenuItem value="">None (Top Level)</MenuItem>
+                <MenuItem value="">
+                  {categoryLevel === "CHILD" ? "Select Parent Category" : "Top Level Category"}
+                </MenuItem>
                 {parentOptions.map((cat: any) => (
                   <MenuItem key={cat._id} value={cat._id}>
                     {cat.categoryName}
@@ -172,6 +213,10 @@ export default function CategoryForm({ categoryId }: Props) {
           </Grid>
         </Grid>
       </form>
-    </Card>
+    </Box>
   );
+
+  if (embedded) return content;
+
+  return <Card className="p-3">{content}</Card>;
 }

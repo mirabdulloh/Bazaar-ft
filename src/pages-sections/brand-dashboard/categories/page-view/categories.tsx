@@ -13,9 +13,11 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Button from "@mui/material/Button";
 import Add from "@mui/icons-material/Add";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Theme } from "@mui/material/styles";
-import Link from "next/link";
 // GLOBAL CUSTOM COMPONENTS
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
@@ -24,6 +26,7 @@ import FlexBox from "components/flex-box/flex-box";
 import useMuiTable from "hooks/useMuiTable";
 // LOCAL CUSTOM COMPONENT
 import CategoryRow from "../category-row";
+import CategoryForm from "../category-form";
 import PageWrapper from "../../page-wrapper";
 // TABLE HEAD COLUMN DATA
 import { tableHeading } from "../table-heading";
@@ -49,9 +52,13 @@ const CATEGORY_STATUSES = ["ACTIVE", "INACTIVE"];
 export default function CategoriesPageView() {
   const downSM = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [categoryRows, setCategoryRows] = useState<any[]>([]);
+  const [categoryTotal, setCategoryTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_CATEGORIES_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_CATEGORIES_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -62,17 +69,18 @@ export default function CategoriesPageView() {
         direction: "DESC",
         ...(statusFilter ? { search: { categoryStatus: statusFilter } } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setCategoryRows(result?.getAllCategoriesByAdmin?.list ?? []);
+      setCategoryTotal(result?.getAllCategoriesByAdmin?.metaData?.total ?? 0);
+    },
   });
 
   const [deleteCategory] = useMutation(DELETE_CATEGORY);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllCategoriesByAdmin?.list ?? [];
-  const total = (data as T)?.getAllCategoriesByAdmin?.metaData?.total ?? 0;
-
   const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+    useMuiTable({ listData: categoryRows, defaultSort: "createdAt", defaultOrder: "desc" });
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (category: any) => {
@@ -86,12 +94,28 @@ export default function CategoriesPageView() {
       await deleteCategory({
         variables: { input: category._id }
       });
+      const refreshed = await refetch();
+      setCategoryRows(refreshed?.data?.getAllCategoriesByAdmin?.list ?? []);
+      setCategoryTotal(refreshed?.data?.getAllCategoriesByAdmin?.metaData?.total ?? 0);
       await sweetTopSmallSuccessAlert("Category deleted");
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to delete category");
     }
   }, [deleteCategory, refetch]);
+
+  const handleEditSuccess = useCallback(async () => {
+    setEditingCategory(null);
+    const refreshed = await refetch();
+    setCategoryRows(refreshed?.data?.getAllCategoriesByAdmin?.list ?? []);
+    setCategoryTotal(refreshed?.data?.getAllCategoriesByAdmin?.metaData?.total ?? 0);
+  }, [refetch]);
+
+  const handleCreateSuccess = useCallback(async () => {
+    setCreateDialogOpen(false);
+    const refreshed = await refetch();
+    setCategoryRows(refreshed?.data?.getAllCategoriesByAdmin?.list ?? []);
+    setCategoryTotal(refreshed?.data?.getAllCategoriesByAdmin?.metaData?.total ?? 0);
+  }, [refetch]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -111,22 +135,28 @@ export default function CategoriesPageView() {
           </Select>
         </FormControl>
 
-        <Link href="/admin/categories/create">
-          <Button
-            color="info"
-            fullWidth={downSM}
-            variant="contained"
-            startIcon={<Add />}
-            sx={{ minHeight: 44 }}
-          >
-            Add Category
-          </Button>
-        </Link>
+        <Button
+          color="info"
+          fullWidth={downSM}
+          variant="contained"
+          startIcon={<Add />}
+          sx={{ minHeight: 44 }}
+          onClick={() => setCreateDialogOpen(true)}
+        >
+          Add Category
+        </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && categoryRows.length === 0 ? (
         <Typography variant="body1">Loading categories...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && categoryRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load categories
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : categoryRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No categories found.</Typography>
         </Card>
@@ -147,6 +177,7 @@ export default function CategoriesPageView() {
                     <CategoryRow
                       key={category._id}
                       category={category}
+                      onEdit={setEditingCategory}
                       onDelete={handleDelete}
                     />
                   ))}
@@ -158,11 +189,44 @@ export default function CategoriesPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(categoryTotal / rowsPerPage))}
             />
           </Stack>
         </Card>
       )}
+
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Add Category</DialogTitle>
+        <DialogContent dividers>
+          <CategoryForm
+            embedded
+            onSuccess={handleCreateSuccess}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingCategory)}
+        onClose={() => setEditingCategory(null)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Edit Category</DialogTitle>
+        <DialogContent dividers>
+          {editingCategory ? (
+            <CategoryForm
+              embedded
+              categoryId={editingCategory._id}
+              onSuccess={handleEditSuccess}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </PageWrapper>
   );
 }

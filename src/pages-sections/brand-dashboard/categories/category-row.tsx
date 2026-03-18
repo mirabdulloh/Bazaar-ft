@@ -1,4 +1,3 @@
-import Link from "next/link";
 // MUI ICON COMPONENTS
 import Edit from "@mui/icons-material/Edit";
 import Delete from "@mui/icons-material/Delete";
@@ -8,11 +7,12 @@ import { StyledTableRow, CategoryWrapper, StyledTableCell, StyledIconButton, Sta
 // ========================================================================
 type Props = {
   category: any;
+  onEdit: (category: any) => void;
   onDelete: (category: any) => void;
 };
 // ========================================================================
 
-export default function CategoryRow({ category, onDelete }: Props) {
+export default function CategoryRow({ category, onEdit, onDelete }: Props) {
   const { _id, categoryName, categoryStatus, parentCategoryId, createdAt } = category;
 
   return (
@@ -36,11 +36,9 @@ export default function CategoryRow({ category, onDelete }: Props) {
       </StyledTableCell>
 
       <StyledTableCell align="center">
-        <Link href={`/admin/categories/${_id}`}>
-          <StyledIconButton>
-            <Edit />
-          </StyledIconButton>
-        </Link>
+        <StyledIconButton onClick={() => onEdit(category)}>
+          <Edit />
+        </StyledIconButton>
 
         <StyledIconButton onClick={() => onDelete(category)}>
           <Delete />

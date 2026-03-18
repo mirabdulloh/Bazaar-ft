@@ -1,13 +1,5 @@
-import { Metadata } from "next";
-import { CreateCategoryPageView } from "pages-sections/brand-dashboard/categories/page-view";
-
-export const metadata: Metadata = {
-  title: "Create Category - BAZAAR",
-  description: `BAZAAR — Fashion platform connecting brands and shoppers`,
-  
-  keywords: ["e-commerce", "e-commerce template", "next.js", "react"]
-};
+import { redirect } from "next/navigation";
 
 export default function CreateCategory() {
-  return <CreateCategoryPageView />;
+  redirect("/admin/categories");
 }

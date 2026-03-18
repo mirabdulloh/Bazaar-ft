@@ -26,10 +26,7 @@ export const adminNavigation = [
   {
     name: "Categories",
     icon: duotone.Accounts,
-    children: [
-      { name: "Category List", path: "/admin/categories" },
-      { name: "Create Category", path: "/admin/categories/create" }
-    ]
+    path: "/admin/categories"
   },
   {
     name: "Orders",
