@@ -19,12 +19,20 @@ import ArrowBack from "@mui/icons-material/ArrowBack";
 import FormatBold from "@mui/icons-material/FormatBold";
 import FormatItalic from "@mui/icons-material/FormatItalic";
 import StrikethroughS from "@mui/icons-material/StrikethroughS";
+import FormatUnderlined from "@mui/icons-material/FormatUnderlined";
 import Title from "@mui/icons-material/Title";
 import LinkIcon from "@mui/icons-material/Link";
 import ImageOutlined from "@mui/icons-material/ImageOutlined";
 import FormatListBulleted from "@mui/icons-material/FormatListBulleted";
 import FormatListNumbered from "@mui/icons-material/FormatListNumbered";
 import CheckBoxOutlined from "@mui/icons-material/CheckBoxOutlined";
+import FormatQuote from "@mui/icons-material/FormatQuote";
+import HorizontalRule from "@mui/icons-material/HorizontalRule";
+import FormatAlignLeft from "@mui/icons-material/FormatAlignLeft";
+import FormatAlignCenter from "@mui/icons-material/FormatAlignCenter";
+import FormatAlignRight from "@mui/icons-material/FormatAlignRight";
+import Undo from "@mui/icons-material/Undo";
+import Redo from "@mui/icons-material/Redo";
 import Link from "next/link";
 import { useMutation } from "@apollo/client/react";
 import { CREATE_BOARD_ARTICLE } from "../../../../../apollo/user/mutation";
@@ -38,7 +46,24 @@ import {
 
 const ARTICLE_CATEGORIES = ["FASHIONGUIDES", "TIPS", "REVIEW", "NEWS", "OTHER"];
 
-type EditorAction = "heading" | "bold" | "italic" | "strike" | "image" | "link" | "bullet" | "numbered" | "check";
+type EditorAction =
+  | "heading"
+  | "bold"
+  | "italic"
+  | "underline"
+  | "strike"
+  | "quote"
+  | "divider"
+  | "image"
+  | "link"
+  | "bullet"
+  | "numbered"
+  | "check"
+  | "alignLeft"
+  | "alignCenter"
+  | "alignRight"
+  | "undo"
+  | "redo";
 
 async function getValidToken(): Promise<string> {
   let token = getJwtToken();
@@ -237,8 +262,17 @@ export default function CreateArticlePageView() {
       case "italic":
         runEditorCommand("italic");
         return;
+      case "underline":
+        runEditorCommand("underline");
+        return;
       case "strike":
         runEditorCommand("strikeThrough");
+        return;
+      case "quote":
+        runEditorCommand("formatBlock", "<blockquote>");
+        return;
+      case "divider":
+        insertEditorHtml("<hr />");
         return;
       case "link": {
         const url = window.prompt("Enter the link URL", "https://");
@@ -256,6 +290,21 @@ export default function CreateArticlePageView() {
         insertEditorHtml(
           '<label style="display:flex;align-items:flex-start;gap:8px;margin:8px 0;"><input type="checkbox" disabled /><span>Checklist item</span></label>'
         );
+        return;
+      case "alignLeft":
+        runEditorCommand("justifyLeft");
+        return;
+      case "alignCenter":
+        runEditorCommand("justifyCenter");
+        return;
+      case "alignRight":
+        runEditorCommand("justifyRight");
+        return;
+      case "undo":
+        runEditorCommand("undo");
+        return;
+      case "redo":
+        runEditorCommand("redo");
         return;
       default:
         return;
@@ -373,14 +422,23 @@ export default function CreateArticlePageView() {
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("italic")} size="small">
                       <FormatItalic />
                     </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("underline")} size="small">
+                      <FormatUnderlined />
+                    </IconButton>
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("strike")} size="small">
                       <StrikethroughS />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("quote")} size="small">
+                      <FormatQuote />
                     </IconButton>
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("image")} size="small" disabled={uploadingImage}>
                       <ImageOutlined />
                     </IconButton>
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("link")} size="small">
                       <LinkIcon />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("divider")} size="small">
+                      <HorizontalRule />
                     </IconButton>
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("bullet")} size="small">
                       <FormatListBulleted />
@@ -390,6 +448,21 @@ export default function CreateArticlePageView() {
                     </IconButton>
                     <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("check")} size="small">
                       <CheckBoxOutlined />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("alignLeft")} size="small">
+                      <FormatAlignLeft />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("alignCenter")} size="small">
+                      <FormatAlignCenter />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("alignRight")} size="small">
+                      <FormatAlignRight />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("undo")} size="small">
+                      <Undo />
+                    </IconButton>
+                    <IconButton onMouseDown={(e) => e.preventDefault()} onClick={() => applyEditorAction("redo")} size="small">
+                      <Redo />
                     </IconButton>
                   </FlexBox>
 
@@ -417,6 +490,20 @@ export default function CreateArticlePageView() {
                         margin: "16px 0 8px",
                         fontWeight: 700,
                         lineHeight: 1.3,
+                      },
+                      "& blockquote": {
+                        margin: "16px 0",
+                        padding: "8px 16px",
+                        borderLeft: "4px solid",
+                        borderColor: "divider",
+                        color: "text.secondary",
+                        fontStyle: "italic",
+                      },
+                      "& hr": {
+                        border: 0,
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                        margin: "24px 0",
                       },
                       "& h2": {
                         fontSize: "1.75rem",
