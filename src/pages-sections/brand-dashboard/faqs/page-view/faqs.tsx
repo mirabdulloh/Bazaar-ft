@@ -60,7 +60,8 @@ const STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
 const emptyForm = {
   faqQuestion: "",
   faqAnswer: "",
-  faqCategory: "GENERAL"
+  faqCategory: "GENERAL",
+  faqStatus: "ACTIVE"
 };
 
 // =============================================================================
@@ -74,13 +75,15 @@ export default function FaqsPageView() {
   const [form, setForm] = useState(emptyForm);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [faqRows, setFaqRows] = useState<any[]>([]);
+  const [faqTotal, setFaqTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
   const searchObj: any = {};
   if (statusFilter) searchObj.faqStatus = statusFilter;
   if (categoryFilter) searchObj.faqCategory = categoryFilter;
 
-  const { data, loading, refetch } = useQuery(GET_ALL_FAQS_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_FAQS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -91,7 +94,11 @@ export default function FaqsPageView() {
         direction: "DESC",
         ...(Object.keys(searchObj).length > 0 ? { search: searchObj } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setFaqRows(result?.getAllFaqsByAdmin?.list ?? []);
+      setFaqTotal(result?.getAllFaqsByAdmin?.metaCounter?.[0]?.total ?? 0);
+    },
   });
 
   const [createFaq, { loading: creating }] = useMutation(CREATE_FAQ_BY_ADMIN);
@@ -99,9 +106,6 @@ export default function FaqsPageView() {
   const [removeFaq] = useMutation(REMOVE_FAQ_BY_ADMIN);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllFaqsByAdmin?.list ?? [];
-  const total = (data as T)?.getAllFaqsByAdmin?.metaCounter?.total ?? 0;
-
   const {
     order,
     orderBy,
@@ -109,7 +113,18 @@ export default function FaqsPageView() {
     filteredList,
     handleChangePage,
     handleRequestSort
-  } = useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+  } = useMuiTable({ listData: faqRows, defaultSort: "createdAt", defaultOrder: "desc" });
+
+  const syncFaqState = useCallback((result: T | undefined) => {
+    const rows = result?.getAllFaqsByAdmin?.list ?? [];
+    const total = result?.getAllFaqsByAdmin?.metaCounter?.[0]?.total ?? 0;
+    setFaqRows(rows);
+    setFaqTotal(total);
+
+    if (!editingFaq?._id) return;
+    const refreshedEditingFaq = rows.find((item: any) => item._id === editingFaq._id) ?? null;
+    setEditingFaq(refreshedEditingFaq);
+  }, [editingFaq]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const openCreateDialog = () => {
@@ -123,7 +138,8 @@ export default function FaqsPageView() {
     setForm({
       faqQuestion: faq.faqQuestion || "",
       faqAnswer: faq.faqAnswer || "",
-      faqCategory: faq.faqCategory || "GENERAL"
+      faqCategory: faq.faqCategory || "GENERAL",
+      faqStatus: faq.faqStatus || "ACTIVE"
     });
     setDialogOpen(true);
   }, []);
@@ -147,7 +163,8 @@ export default function FaqsPageView() {
               _id: editingFaq._id,
               faqQuestion: form.faqQuestion,
               faqAnswer: form.faqAnswer,
-              faqCategory: form.faqCategory
+              faqCategory: form.faqCategory,
+              faqStatus: form.faqStatus
             }
           }
         });
@@ -166,7 +183,8 @@ export default function FaqsPageView() {
       }
 
       handleClose();
-      refetch();
+      const refreshed = await refetch();
+      syncFaqState(refreshed.data as T);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Something went wrong");
     }
@@ -177,8 +195,9 @@ export default function FaqsPageView() {
       await updateFaq({
         variables: { input: { _id: id, faqStatus: newStatus } }
       });
+      const refreshed = await refetch();
+      syncFaqState(refreshed.data as T);
       await sweetTopSmallSuccessAlert(`Status changed to ${newStatus}`);
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update status");
     }
@@ -194,12 +213,13 @@ export default function FaqsPageView() {
 
     try {
       await removeFaq({ variables: { faqId: id } });
+      const refreshed = await refetch();
+      syncFaqState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("FAQ deleted");
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to delete FAQ");
     }
-  }, [removeFaq, refetch]);
+  }, [removeFaq, refetch, syncFaqState]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -248,9 +268,16 @@ export default function FaqsPageView() {
         </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && faqRows.length === 0 ? (
         <Typography variant="body1">Loading FAQs...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && faqRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load FAQs
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : faqRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No FAQs found.</Typography>
         </Card>
@@ -283,7 +310,7 @@ export default function FaqsPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(faqTotal / rowsPerPage))}
             />
           </Stack>
         </Card>
@@ -335,9 +362,9 @@ export default function FaqsPageView() {
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
-                value={editingFaq.faqStatus}
+                value={form.faqStatus}
                 label="Status"
-                onChange={(e) => handleStatusChange(editingFaq._id, e.target.value)}
+                onChange={(e) => setForm({ ...form, faqStatus: e.target.value })}
               >
                 {STATUSES.map((s) => (
                   <MenuItem key={s} value={s}>{s}</MenuItem>

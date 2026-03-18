@@ -25,7 +25,6 @@ import FlexBox from "components/flex-box/flex-box";
 // GLOBAL CUSTOM COMPONENTS
 import OverlayScrollbar from "components/overlay-scrollbar";
 import { TableHeader, TablePagination } from "components/data-table";
-import SearchInput from "components/SearchInput";
 
 // GLOBAL CUSTOM HOOK
 import useMuiTable from "hooks/useMuiTable";
@@ -61,7 +60,8 @@ const STATUSES = ["ACTIVE", "INACTIVE", "DELETED"];
 const emptyForm = {
   noticeTitle: "",
   noticeContent: "",
-  noticeCategory: "GENERAL"
+  noticeCategory: "GENERAL",
+  noticeStatus: "ACTIVE"
 };
 
 // =============================================================================
@@ -74,9 +74,11 @@ export default function NoticesPageView() {
   const [editingNotice, setEditingNotice] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [noticeRows, setNoticeRows] = useState<any[]>([]);
+  const [noticeTotal, setNoticeTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_NOTICES_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_NOTICES_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -87,7 +89,11 @@ export default function NoticesPageView() {
         direction: "DESC",
         ...(statusFilter ? { search: { noticeStatus: statusFilter } } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setNoticeRows(result?.getAllNoticesByAdmin?.list ?? []);
+      setNoticeTotal(result?.getAllNoticesByAdmin?.metaCounter?.[0]?.total ?? 0);
+    },
   });
 
   const [createNotice, { loading: creating }] = useMutation(CREATE_NOTICE_BY_ADMIN);
@@ -95,9 +101,6 @@ export default function NoticesPageView() {
   const [removeNotice] = useMutation(REMOVE_NOTICE_BY_ADMIN);
 
   // ─── Data mapping ──────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllNoticesByAdmin?.list ?? [];
-  const total = (data as T)?.getAllNoticesByAdmin?.metaCounter?.total ?? 0;
-
   const {
     order,
     orderBy,
@@ -105,7 +108,18 @@ export default function NoticesPageView() {
     filteredList,
     handleChangePage,
     handleRequestSort
-  } = useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+  } = useMuiTable({ listData: noticeRows, defaultSort: "createdAt", defaultOrder: "desc" });
+
+  const syncNoticeState = useCallback((result: T | undefined) => {
+    const rows = result?.getAllNoticesByAdmin?.list ?? [];
+    const total = result?.getAllNoticesByAdmin?.metaCounter?.[0]?.total ?? 0;
+    setNoticeRows(rows);
+    setNoticeTotal(total);
+
+    if (!editingNotice?._id) return;
+    const refreshedEditingNotice = rows.find((item: any) => item._id === editingNotice._id) ?? null;
+    setEditingNotice(refreshedEditingNotice);
+  }, [editingNotice]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const openCreateDialog = () => {
@@ -119,7 +133,8 @@ export default function NoticesPageView() {
     setForm({
       noticeTitle: notice.noticeTitle || "",
       noticeContent: notice.noticeContent || "",
-      noticeCategory: notice.noticeCategory || "GENERAL"
+      noticeCategory: notice.noticeCategory || "GENERAL",
+      noticeStatus: notice.noticeStatus || "ACTIVE"
     });
     setDialogOpen(true);
   }, []);
@@ -143,7 +158,8 @@ export default function NoticesPageView() {
               _id: editingNotice._id,
               noticeTitle: form.noticeTitle,
               noticeContent: form.noticeContent,
-              noticeCategory: form.noticeCategory
+              noticeCategory: form.noticeCategory,
+              noticeStatus: form.noticeStatus
             }
           }
         });
@@ -162,7 +178,8 @@ export default function NoticesPageView() {
       }
 
       handleClose();
-      refetch();
+      const refreshed = await refetch();
+      syncNoticeState(refreshed.data as T);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Something went wrong");
     }
@@ -173,8 +190,9 @@ export default function NoticesPageView() {
       await updateNotice({
         variables: { input: { _id: id, noticeStatus: newStatus } }
       });
+      const refreshed = await refetch();
+      syncNoticeState(refreshed.data as T);
       await sweetTopSmallSuccessAlert(`Status changed to ${newStatus}`);
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update status");
     }
@@ -190,12 +208,13 @@ export default function NoticesPageView() {
 
     try {
       await removeNotice({ variables: { noticeId: id } });
+      const refreshed = await refetch();
+      syncNoticeState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("Notice deleted");
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to delete notice");
     }
-  }, [removeNotice, refetch]);
+  }, [removeNotice, refetch, syncNoticeState]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -230,9 +249,16 @@ export default function NoticesPageView() {
         </Button>
       </FlexBox>
 
-      {loading ? (
+      {loading && noticeRows.length === 0 ? (
         <Typography variant="body1">Loading notices...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && noticeRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load notices
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : noticeRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No notices found.</Typography>
         </Card>
@@ -265,7 +291,7 @@ export default function NoticesPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(noticeTotal / rowsPerPage))}
             />
           </Stack>
         </Card>
@@ -317,9 +343,9 @@ export default function NoticesPageView() {
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
-                value={editingNotice.noticeStatus}
+                value={form.noticeStatus}
                 label="Status"
-                onChange={(e) => handleStatusChange(editingNotice._id, e.target.value)}
+                onChange={(e) => setForm({ ...form, noticeStatus: e.target.value })}
               >
                 {STATUSES.map((s) => (
                   <MenuItem key={s} value={s}>{s}</MenuItem>
