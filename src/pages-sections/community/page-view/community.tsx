@@ -41,6 +41,14 @@ const CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
 	{ value: "OTHER", label: "Other" },
 ];
 
+const resolveArticleAsset = (path?: string | null) => {
+	if (!path) return "";
+	if (path.startsWith("http://") || path.startsWith("https://")) return path;
+	const normalized = path.startsWith("/") ? path : `/${path}`;
+	const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+	return apiBase ? `${apiBase}${normalized}` : normalized;
+};
+
 const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "createdAt", direction: "DESC", search: {} } }: T) => {
 	const user = useReactiveVar(userVar);
 	const [searchArticles, setSearchArticles] = useState({ ...initialInput });
@@ -162,7 +170,7 @@ const CommunityPageView = ({ initialInput = { page: 1, limit: 12, sort: "created
 						{articles.map((article: Article) => {
 							const isLiked = article.meLiked?.[0]?.myFavorite ?? false;
 							const coverImage =
-								article.articleImages?.[0] ??
+								resolveArticleAsset(article.articleImages?.[0]) ||
 								"/assets/images/products/product-1.png";
 
 							return (

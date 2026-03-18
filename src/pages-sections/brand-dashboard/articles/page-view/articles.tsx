@@ -11,6 +11,11 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Button from "@mui/material/Button";
+import Add from "@mui/icons-material/Add";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { Theme } from "@mui/material/styles";
+import Link from "next/link";
 import FlexBox from "components/flex-box/flex-box";
 
 // GLOBAL CUSTOM COMPONENTS
@@ -50,15 +55,18 @@ const CATEGORIES = ["FASHIONGUIDES", "TIPS", "REVIEW", "NEWS", "OTHER"];
 // =============================================================================
 
 export default function ArticlesPageView() {
+  const downSM = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [articleRows, setArticleRows] = useState<any[]>([]);
+  const [articleTotal, setArticleTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
   const searchObj: any = {};
   if (statusFilter) searchObj.articleStatus = statusFilter;
   if (categoryFilter) searchObj.articleCategory = categoryFilter;
 
-  const { data, loading, refetch } = useQuery(GET_ALL_BOARD_ARTICLES_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_BOARD_ARTICLES_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -69,16 +77,17 @@ export default function ArticlesPageView() {
         direction: "DESC",
         ...(Object.keys(searchObj).length > 0 ? { search: searchObj } : {})
       }
-    }
+    },
+    onCompleted: (result: T) => {
+      setArticleRows(result?.getAllBoardArticlesByAdmin?.list ?? []);
+      setArticleTotal(result?.getAllBoardArticlesByAdmin?.metaCounter?.[0]?.total ?? 0);
+    },
   });
 
   const [updateArticle] = useMutation(UPDATE_BOARD_ARTICLE_BY_ADMIN);
   const [removeArticle] = useMutation(REMOVE_BOARD_ARTICLE_BY_ADMIN);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllBoardArticlesByAdmin?.list ?? [];
-  const total = (data as T)?.getAllBoardArticlesByAdmin?.metaCounter?.total ?? 0;
-
   const {
     order,
     orderBy,
@@ -86,7 +95,12 @@ export default function ArticlesPageView() {
     filteredList,
     handleChangePage,
     handleRequestSort
-  } = useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+  } = useMuiTable({ listData: articleRows, defaultSort: "createdAt", defaultOrder: "desc" });
+
+  const syncArticleState = useCallback((result: T | undefined) => {
+    setArticleRows(result?.getAllBoardArticlesByAdmin?.list ?? []);
+    setArticleTotal(result?.getAllBoardArticlesByAdmin?.metaCounter?.[0]?.total ?? 0);
+  }, []);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleStatusChange = useCallback(async (id: string, newStatus: string) => {
@@ -94,14 +108,15 @@ export default function ArticlesPageView() {
       await updateArticle({
         variables: { input: { _id: id, articleStatus: newStatus } }
       });
+      const refreshed = await refetch();
+      syncArticleState(refreshed.data as T);
       await sweetTopSmallSuccessAlert(`Article ${newStatus.toLowerCase()}`);
-      refetch();
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to update article");
     }
-  }, [updateArticle, refetch]);
+  }, [updateArticle, refetch, syncArticleState]);
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = useCallback(async (article: any) => {
     const confirmed = await sweetConfirmAlert(
       "Remove Article?",
       "This article will be permanently removed.",
@@ -110,51 +125,79 @@ export default function ArticlesPageView() {
     if (!confirmed) return;
 
     try {
-      await removeArticle({ variables: { input: id } });
+      await removeArticle({ variables: { input: article._id } });
+      const refreshed = await refetch();
+      syncArticleState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("Article removed");
-      refetch();
     } catch (err: any) {
+      if (article.articleStatus !== "DELETED") {
+        await sweetMixinErrorAlert(
+          "This article cannot be permanently deleted yet. Change its status to DELETED first, then remove it."
+        );
+        return;
+      }
       await sweetMixinErrorAlert(err.message || "Failed to remove article");
     }
-  }, [removeArticle, refetch]);
+  }, [removeArticle, refetch, syncArticleState]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <PageWrapper title="Community Articles">
       {/* Filters */}
-      <FlexBox mb={2} gap={2} flexWrap="wrap">
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            {STATUSES.map((s) => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <FlexBox mb={2} gap={2} justifyContent="space-between" flexWrap="wrap">
+        <FlexBox gap={2} flexWrap="wrap">
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              {STATUSES.map((s) => (
+                <MenuItem key={s} value={s}>{s}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>Category</InputLabel>
-          <Select
-            value={categoryFilter}
-            label="Category"
-            onChange={(e) => setCategoryFilter(e.target.value)}
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={categoryFilter}
+              label="Category"
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              {CATEGORIES.map((c) => (
+                <MenuItem key={c} value={c}>{c}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </FlexBox>
+
+        <Link href="/admin/articles/create">
+          <Button
+            color="info"
+            fullWidth={downSM}
+            variant="contained"
+            startIcon={<Add />}
+            sx={{ minHeight: 44 }}
           >
-            <MenuItem value="">All</MenuItem>
-            {CATEGORIES.map((c) => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            Write Article
+          </Button>
+        </Link>
       </FlexBox>
 
-      {loading ? (
+      {loading && articleRows.length === 0 ? (
         <Typography variant="body1">Loading articles...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && articleRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load articles
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : articleRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No articles found.</Typography>
         </Card>
@@ -187,7 +230,7 @@ export default function ArticlesPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(articleTotal / rowsPerPage))}
             />
           </Stack>
         </Card>

@@ -51,7 +51,10 @@ export const adminNavigation = [
   {
     name: "Articles",
     icon: duotone.Pages,
-    path: "/admin/articles"
+    children: [
+      { name: "Article List", path: "/admin/articles" },
+      { name: "Write New Article", path: "/admin/articles/create" }
+    ]
   },
   {
     name: "Chats",

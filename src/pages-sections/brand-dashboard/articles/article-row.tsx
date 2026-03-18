@@ -13,7 +13,7 @@ import {
 type Props = {
   article: any;
   onStatusChange: (id: string, newStatus: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (article: any) => void;
 };
 
 export default function ArticleRow({ article, onStatusChange, onDelete }: Props) {
@@ -74,7 +74,7 @@ export default function ArticleRow({ article, onStatusChange, onDelete }: Props)
             </StyledIconButton>
           </Tooltip>
         )}
-        <StyledIconButton onClick={() => onDelete(_id)}>
+        <StyledIconButton onClick={() => onDelete(article)}>
           <Delete />
         </StyledIconButton>
       </StyledTableCell>

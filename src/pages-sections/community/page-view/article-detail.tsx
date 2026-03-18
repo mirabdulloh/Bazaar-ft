@@ -42,6 +42,26 @@ const CATEGORY_LABELS: Record<string, string> = {
 	OTHER: "Other",
 };
 
+const resolveArticleAsset = (path?: string | null) => {
+	if (!path) return "";
+	if (path.startsWith("http://") || path.startsWith("https://")) return path;
+	const normalized = path.startsWith("/") ? path : `/${path}`;
+	const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+	return apiBase ? `${apiBase}${normalized}` : normalized;
+};
+
+const toRenderableArticleHtml = (content?: string | null) => {
+	if (!content) return "<p>No content available.</p>";
+	const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+	if (looksLikeHtml) return content;
+
+	return content
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/\n/g, "<br />");
+};
+
 const ArticleDetailPageView = ({ initialInput }: T) => {
 	const router = useRouter();
 	const user = useReactiveVar(userVar);
@@ -162,7 +182,7 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 
 	const isLiked = article.meLiked?.[0]?.myFavorite ?? false;
 	const coverImage =
-		article.articleImages?.[0] ?? "/assets/images/products/product-1.png";
+		resolveArticleAsset(article.articleImages?.[0]) || "/assets/images/products/product-1.png";
 
 	const openCommentsSection = () => {
 		setCommentsOpen(true);
@@ -278,13 +298,37 @@ const ArticleDetailPageView = ({ initialInput }: T) => {
 				</Box>
 			)}
 
-			<Typography
-				variant="body1"
-				color="text.primary"
-				sx={{ fontSize: { xs: 16.5, sm: 17 }, lineHeight: 1.9, whiteSpace: "pre-wrap" }}
-			>
-				{article.articleContent ?? "No content available."}
-			</Typography>
+			<Box
+				sx={{
+					fontSize: { xs: 16.5, sm: 17 },
+					lineHeight: 1.9,
+					color: "text.primary",
+					"& h1, & h2, & h3": {
+						fontWeight: 700,
+						lineHeight: 1.3,
+						mb: 1.5,
+						mt: 3,
+					},
+					"& p": {
+						mb: 1.75,
+					},
+					"& ul, & ol": {
+						pl: 3,
+						mb: 2,
+					},
+					"& a": {
+						color: "primary.main",
+					},
+					"& img": {
+						maxWidth: "100%",
+						height: "auto",
+						borderRadius: 2,
+						display: "block",
+						my: 3,
+					},
+				}}
+				dangerouslySetInnerHTML={{ __html: toRenderableArticleHtml(article.articleContent) }}
+			/>
 
 			<Box
 				id="article-comments"

@@ -31,6 +31,14 @@ interface GqlArticle {
   };
 }
 
+const resolveArticleAsset = (path?: string | null) => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+};
+
 export default function SectionCommunity() {
   const [articles, setArticles] = useState<GqlArticle[]>([]);
   const { t } = useTranslation();
@@ -104,11 +112,11 @@ export default function SectionCommunity() {
                           overflow: "hidden",
                         }}
                       >
-                        {article.articleImages?.[0] ? (
+                        {resolveArticleAsset(article.articleImages?.[0]) ? (
                           <Image
                             fill
                             alt={article.articleTitle}
-                            src={article.articleImages[0]}
+                            src={resolveArticleAsset(article.articleImages?.[0])}
                             style={{ objectFit: "cover" }}
                             sizes="(max-width: 768px) 100vw, 33vw"
                           />
