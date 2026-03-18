@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
@@ -110,6 +110,7 @@ async function getValidToken(): Promise<string> {
 
 export default function CreateArticlePageView() {
   const router = useRouter();
+  const pathname = usePathname();
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
   const contentInputRef = useRef<HTMLDivElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -123,6 +124,8 @@ export default function CreateArticlePageView() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [createArticle] = useMutation(CREATE_BOARD_ARTICLE);
+  const isBrandRoute = pathname.startsWith("/brand/");
+  const articleListPath = isBrandRoute ? "/brand/articles" : "/admin/articles";
 
   const resolveUploadedImage = (path: string) => {
     if (!path) return "";
@@ -337,7 +340,7 @@ export default function CreateArticlePageView() {
       });
 
       await sweetTopSmallSuccessAlert("Article created successfully");
-      router.push("/admin/articles");
+      router.push(articleListPath);
     } catch (err: any) {
       await sweetMixinErrorAlert(err.message || "Failed to create article");
     } finally {
@@ -349,7 +352,7 @@ export default function CreateArticlePageView() {
     <PageWrapper title="Write Article">
       <Stack spacing={3}>
         <Box>
-          <Link href="/admin/articles">
+          <Link href={articleListPath}>
             <Button startIcon={<ArrowBack />} color="inherit">
               Back To Articles
             </Button>

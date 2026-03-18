@@ -6,15 +6,46 @@ import { sweetTopSmallErrorAlert, sweetTopSmallSuccessAlert } from '../sweetAler
 import { LOGIN, SIGN_UP } from '../../../apollo/user/mutation';
 
 let refreshTokenMemory = '';
+let accessTokenMemory = '';
+
+function clearLegacyAccessToken() {
+	if (typeof window !== 'undefined') {
+		localStorage.removeItem('accessToken');
+	}
+}
+
+function isTokenExpired(token?: string): boolean {
+	if (!token) return true;
+	try {
+		const payload = jwtDecode<{ exp?: number }>(token);
+		if (!payload.exp) return true;
+		return payload.exp * 1000 <= Date.now();
+	} catch {
+		return true;
+	}
+}
 
 export function getJwtToken(): any {
 	if (typeof window !== 'undefined') {
-		return localStorage.getItem('accessToken') ?? '';
+		clearLegacyAccessToken();
+		if (!accessTokenMemory) {
+			accessTokenMemory = sessionStorage.getItem('accessToken') ?? '';
+		}
+		if (accessTokenMemory && isTokenExpired(accessTokenMemory)) {
+			setJwtToken('');
+			return '';
+		}
+		return accessTokenMemory;
 	}
 }
 
 export function setJwtToken(token: string) {
-	localStorage.setItem('accessToken', token);
+	accessTokenMemory = token ?? '';
+	if (typeof window !== 'undefined') {
+		clearLegacyAccessToken();
+		if (accessTokenMemory) sessionStorage.setItem('accessToken', accessTokenMemory);
+		else sessionStorage.removeItem('accessToken');
+	}
 }
 
 export function getRefreshToken(): string {
@@ -234,10 +265,12 @@ export const logOut = (redirect?: (href: string) => void) => {
 };
 
 const deleteStorage = () => {
+	setJwtToken('');
 	setRefreshToken('');
 	localStorage.removeItem('accessToken');
 	localStorage.removeItem('refreshToken');
 	localStorage.removeItem('memberData');
+	sessionStorage.removeItem('accessToken');
 	sessionStorage.removeItem('refreshToken');
 	window.localStorage.setItem('logout', Date.now().toString());
 };

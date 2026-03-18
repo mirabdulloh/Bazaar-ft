@@ -105,6 +105,14 @@ export const brandNavigation = [
     path: "/brand/reviews"
   },
   {
+    name: "Articles",
+    icon: duotone.Pages,
+    children: [
+      { name: "My Articles", path: "/brand/articles" },
+      { name: "Write New Article", path: "/brand/articles/create" }
+    ]
+  },
+  {
     name: "Chats",
     icon: duotone.Chat,
     path: "/brand/chats"

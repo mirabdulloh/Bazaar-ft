@@ -99,10 +99,12 @@ function createIsomorphicLink(): ApolloLink {
 	}
 
 	const silentLogout = () => {
+		setJwtToken('');
 		setRefreshToken('');
 		localStorage.removeItem('accessToken');
 		localStorage.removeItem('refreshToken');
 		localStorage.removeItem('memberData');
+		sessionStorage.removeItem('accessToken');
 		sessionStorage.removeItem('refreshToken');
 		localStorage.setItem('logout', Date.now().toString());
 		window.location.replace('/');
