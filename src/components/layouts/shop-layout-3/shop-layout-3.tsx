@@ -21,6 +21,7 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
+  HeaderChat,
 
   HeaderLogin,
   HeaderNotifications,
@@ -61,6 +62,7 @@ export default function ShopLayout3({
 
         <HeaderNotifications />
         <HeaderCart />
+        <HeaderChat />
         
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
@@ -90,6 +92,7 @@ export default function ShopLayout3({
             <HeaderLogin />
             <HeaderNotifications />
             <HeaderCart />
+            <HeaderChat />
             
           </Header.Right>
         </Header>

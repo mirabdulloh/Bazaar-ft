@@ -119,6 +119,16 @@ export const GET_CHAT = gql`
   ${CHAT_LIST_FIELDS}
 `;
 
+export const GET_CHAT_PRESENCE = gql`
+  query GetChatPresence($chatId: String!) {
+    getChatPresence(chatId: $chatId) {
+      targetMemberId
+      isOnline
+      lastActiveAt
+    }
+  }
+`;
+
 export const GET_MY_CHATS = gql`
   query GetMyChats($input: ChatsInquiry!) {
     getMyChats(input: $input) {

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client/react";
 import type { Socket } from "socket.io-client";
+import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
@@ -17,6 +19,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import InputAdornment from "@mui/material/InputAdornment";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
@@ -25,6 +28,8 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import { useTheme } from "@mui/material/styles";
 import ForumOutlined from "@mui/icons-material/ForumOutlined";
 import MarkChatUnreadOutlined from "@mui/icons-material/MarkChatUnreadOutlined";
 import SearchRounded from "@mui/icons-material/SearchRounded";
@@ -34,6 +39,12 @@ import SendRounded from "@mui/icons-material/SendRounded";
 import AddCommentRounded from "@mui/icons-material/AddCommentRounded";
 import AutorenewRounded from "@mui/icons-material/AutorenewRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
+import ImageRounded from "@mui/icons-material/ImageRounded";
+import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
+import DoneRounded from "@mui/icons-material/DoneRounded";
+import DoneAllRounded from "@mui/icons-material/DoneAllRounded";
+import ReplyRounded from "@mui/icons-material/ReplyRounded";
+import ImageOutlined from "@mui/icons-material/ImageOutlined";
 import PageWrapper from "pages-sections/brand-dashboard/page-wrapper";
 import DashboardHeader from "pages-sections/customer-dashboard/dashboard-header";
 import { userVar } from "../../../apollo/store";
@@ -50,12 +61,13 @@ import {
   GET_ADMIN_SUPPORT_CHATS,
   GET_ALL_MESSAGES_BY_ADMIN,
   GET_BRAND_CHATS,
+  GET_CHAT_PRESENCE,
   GET_MESSAGES,
   GET_MY_CHATS,
   GET_MY_SUPPORT_CHATS,
 } from "../../../apollo/chat/query";
 import { createChatSocket } from "lib/chat/socket";
-import { getJwtToken } from "lib/auth";
+import { getJwtToken, getRefreshToken, setJwtToken, setRefreshToken, setUserFromMemberData } from "lib/auth";
 import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from "lib/sweetAlert";
 
 type ViewerMode = "user" | "brand" | "admin";
@@ -90,11 +102,36 @@ type ChatMessage = {
   messageType: "TEXT" | "IMAGE" | "FILE";
   message?: string | null;
   attachments?: string[] | null;
+  readByMemberIds?: string[] | null;
   isReadByMe: boolean;
   isOwnMessage: boolean;
   createdAt: string;
   senderData?: any;
+  replyToId?: string | null;
+  parentMessageData?: {
+    _id: string;
+    senderId: string;
+    senderType: string;
+    messageType: "TEXT" | "IMAGE" | "FILE";
+    message?: string | null;
+    attachments?: string[] | null;
+    createdAt: string;
+  } | null;
 };
+
+type ChatPresence = {
+  targetMemberId?: string | null;
+  isOnline: boolean;
+  lastActiveAt?: string | null;
+};
+
+type PendingImage = {
+  file: File;
+  previewUrl: string;
+  name: string;
+};
+
+type JwtPayload = { exp?: number };
 
 const CHAT_PAGE_LIMIT = 50;
 const MESSAGE_LIMIT = 100;
@@ -129,8 +166,127 @@ function formatRelativeDate(date?: string | null): string {
   return target.toLocaleDateString();
 }
 
-function formatThreadTime(date: string): string {
-  return new Date(date).toLocaleString();
+function formatLastSeen(date?: string | null): string {
+  if (!date) return "Offline";
+  const target = new Date(date);
+  const diffMs = Date.now() - target.getTime();
+  const diffMin = Math.max(1, Math.round(diffMs / 60000));
+
+  if (diffMin < 60) return `Last seen ${diffMin}m ago`;
+  const diffHour = Math.round(diffMin / 60);
+  if (diffHour < 24) return `Last seen ${diffHour}h ago`;
+  const diffDay = Math.round(diffHour / 24);
+  if (diffDay < 7) return `Last seen ${diffDay}d ago`;
+  return `Last seen ${target.toLocaleDateString()}`;
+}
+
+function formatMessageTime(date: string): string {
+  return new Date(date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function formatMessageDay(date: string): string {
+  const target = new Date(date);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (target.toDateString() === today.toDateString()) return "Today";
+  if (target.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+  return target.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: target.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function isSameCalendarDay(first?: string | null, second?: string | null): boolean {
+  if (!first || !second) return false;
+  return new Date(first).toDateString() === new Date(second).toDateString();
+}
+
+function isWithinGroupWindow(first?: string | null, second?: string | null): boolean {
+  if (!first || !second) return false;
+  return Math.abs(new Date(second).getTime() - new Date(first).getTime()) <= 5 * 60 * 1000;
+}
+
+function shouldGroupMessages(previous: ChatMessage | null, current: ChatMessage): boolean {
+  if (!previous) return false;
+  return (
+    previous.senderId === current.senderId &&
+    previous.isOwnMessage === current.isOwnMessage &&
+    isSameCalendarDay(previous.createdAt, current.createdAt) &&
+    isWithinGroupWindow(previous.createdAt, current.createdAt)
+  );
+}
+
+function isMessageReadByPeer(message: ChatMessage): boolean {
+  return Boolean(message.isOwnMessage && (message.readByMemberIds?.length ?? 0) > 1);
+}
+
+function getQuotedSenderLabel(message: ChatMessage | null | undefined, viewerId?: string): string {
+  if (!message) return "";
+  if (message.senderId === viewerId) return "You";
+  if (message.senderData?.memberNick || message.senderData?.memberFullName) {
+    return message.senderData?.memberNick || message.senderData?.memberFullName;
+  }
+  if (message.senderType === "ADMIN") return "Support";
+  if (message.senderType === "BRAND") return "Brand";
+  return "Customer";
+}
+
+function getQuotedMessagePreview(message: ChatMessage | null | undefined): string {
+  if (!message) return "";
+  if (message.message?.trim()) return message.message.trim();
+  if (message.messageType === "IMAGE" || message.attachments?.length) return "Image";
+  if (message.messageType === "FILE") return "File";
+  return "Message";
+}
+
+function isTokenExpiringSoon(token?: string, skewMs = 30_000): boolean {
+  if (!token) return true;
+  try {
+    const payload = jwtDecode<JwtPayload>(token);
+    if (!payload.exp) return true;
+    return payload.exp * 1000 <= Date.now() + skewMs;
+  } catch {
+    return true;
+  }
+}
+
+async function getValidToken(): Promise<string> {
+  const currentToken = getJwtToken();
+  if (currentToken && !isTokenExpiringSoon(currentToken)) return currentToken;
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) throw new Error("Session expired. Please log in again.");
+
+  const res = await fetch(process.env.NEXT_PUBLIC_API_GRAPHQL_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: `mutation RefreshToken($refreshToken: String!) {
+        refreshToken(refreshToken: $refreshToken) {
+          _id memberType memberStatus memberAuthType memberPhone memberNick
+          memberFullName memberEmail memberImage memberAddress memberDesc
+          memberArticles memberFollowers memberFollowings memberPoints
+          memberLikes memberViews memberComments memberRank memberWarnings
+          memberBlocks memberProducts accessToken refreshToken
+        }
+      }`,
+      variables: { refreshToken },
+    }),
+  });
+
+  const json = await res.json();
+  const data = json?.data?.refreshToken;
+  if (!data?.accessToken) throw new Error("Session expired. Please log in again.");
+
+  setJwtToken(data.accessToken);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+  setUserFromMemberData(data);
+
+  return data.accessToken;
 }
 
 function getWorkspaceTitle(mode: ViewerMode): string {
@@ -260,19 +416,28 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
   const user = useReactiveVar(userVar);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down("md"));
   const socketRef = useRef<Socket | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remoteTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMarkedKeyRef = useRef<string>("");
   const selectedChatIdRef = useRef<string>("");
   const handledOpenBrandRef = useRef<string>("");
+  const handledSelectChatRef = useRef<string>("");
 
   const [activeTab, setActiveTab] = useState<ChatTab>(getInitialTab(mode));
   const [selectedChatId, setSelectedChatId] = useState<string>("");
   const [messageInput, setMessageInput] = useState("");
   const [chatRows, setChatRows] = useState<ChatSummary[]>([]);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [socketReady, setSocketReady] = useState(false);
   const [remoteTyping, setRemoteTyping] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [supportDialogOpen, setSupportDialogOpen] = useState(false);
@@ -281,6 +446,11 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
   const [brandSearch, setBrandSearch] = useState("");
   const [selectedBrandId, setSelectedBrandId] = useState("");
   const [brandSubject, setBrandSubject] = useState("");
+  const requestedBrandId = mode === "user" ? searchParams.get("brandId")?.trim() || "" : "";
+  const requestedSubject = mode === "user" ? searchParams.get("subject")?.trim() || "" : "";
+  const requestedChatId = searchParams.get("chatId")?.trim() || "";
+  const requestedTab = searchParams.get("tab")?.trim() || "";
+  const workspaceHref = mode === "admin" ? "/admin/chats" : mode === "brand" ? "/brand/chats" : "/chat";
 
   const tabOptions = useMemo(() => getTabOptions(mode), [mode]);
   const listConfig = useMemo(() => getListQueryConfig(mode, activeTab), [mode, activeTab]);
@@ -334,9 +504,24 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
     }
 
     if (!selectedChatId || !filteredChats.some((item) => item._id === selectedChatId)) {
-      setSelectedChatId(filteredChats[0]._id);
+      setSelectedChatId((prev) => {
+        if (isMobileLayout) return prev && filteredChats.some((item) => item._id === prev) ? prev : "";
+        return filteredChats[0]._id;
+      });
     }
-  }, [filteredChats, selectedChatId]);
+  }, [filteredChats, isMobileLayout, selectedChatId]);
+
+  useEffect(() => {
+    if (!requestedChatId || !filteredChats.length) return;
+    if (handledSelectChatRef.current === requestedChatId) return;
+
+    const requestedChatExists = filteredChats.some((chat) => chat._id === requestedChatId);
+    if (!requestedChatExists) return;
+
+    handledSelectChatRef.current = requestedChatId;
+    setSelectedChatId(requestedChatId);
+    router.replace(workspaceHref);
+  }, [filteredChats, requestedChatId, router, workspaceHref]);
 
   const selectedChat = useMemo(
     () => filteredChats.find((item) => item._id === selectedChatId) ?? null,
@@ -371,6 +556,18 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
     [messageData, mode]
   );
 
+  const { data: presenceData } = useQuery(GET_CHAT_PRESENCE, {
+    variables: selectedChatId ? { chatId: selectedChatId } : undefined,
+    skip: !selectedChatId,
+    fetchPolicy: "cache-and-network",
+    pollInterval: 20000,
+  });
+
+  const chatPresence = useMemo(
+    () => (((presenceData as any)?.getChatPresence ?? null) as ChatPresence | null),
+    [presenceData]
+  );
+
   const { data: brandsData } = useQuery(GET_BRANDS, {
     skip: mode !== "user" || !brandDialogOpen,
     variables: {
@@ -399,12 +596,27 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
   const [claimSupportChat, { loading: claimingChat }] = useMutation(CLAIM_SUPPORT_CHAT);
   const [closeChat, { loading: closingChat }] = useMutation(CLOSE_CHAT);
 
-  const requestedBrandId = mode === "user" ? searchParams.get("brandId")?.trim() || "" : "";
-  const requestedSubject = mode === "user" ? searchParams.get("subject")?.trim() || "" : "";
+  useEffect(() => {
+    if (!requestedTab) return;
+    const hasTab = tabOptions.some((tab) => tab.value === requestedTab);
+    if (!hasTab) return;
+    if (activeTab !== requestedTab) setActiveTab(requestedTab as ChatTab);
+  }, [activeTab, requestedTab, tabOptions]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
+
+  useEffect(() => {
+    setReplyTarget(null);
+    setMessageInput("");
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingImage?.previewUrl) URL.revokeObjectURL(pendingImage.previewUrl);
+    };
+  }, [pendingImage?.previewUrl]);
 
   const refetchAll = useCallback(async () => {
     const tasks: Promise<unknown>[] = [refetchChats()];
@@ -418,13 +630,21 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
 
     socket.on("connect", () => {
       setSocketConnected(true);
+      setSocketReady(false);
       const token = getJwtToken();
       if (token) socket.emit("authenticate", { token });
-      if (selectedChatIdRef.current) socket.emit("joinChat", { chatId: selectedChatIdRef.current });
     });
 
     socket.on("disconnect", () => {
       setSocketConnected(false);
+      setSocketReady(false);
+    });
+
+    socket.on("authenticated", () => {
+      setSocketReady(true);
+      if (selectedChatIdRef.current) {
+        socket.emit("joinChat", { chatId: selectedChatIdRef.current });
+      }
     });
 
     socket.on("newMessage", (payload) => {
@@ -477,12 +697,12 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
   }, [refetchAll, refetchChats, refetchMessages, user._id]);
 
   useEffect(() => {
-    if (!socketRef.current || !socketConnected || !selectedChatId) return;
+    if (!socketRef.current || !socketReady || !selectedChatId) return;
     socketRef.current.emit("joinChat", { chatId: selectedChatId });
     return () => {
       socketRef.current?.emit("leaveChat", { chatId: selectedChatId });
     };
-  }, [selectedChatId, socketConnected]);
+  }, [selectedChatId, socketReady]);
 
   useEffect(() => {
     if (socketConnected || !selectedChatId) return;
@@ -504,33 +724,97 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
       .catch(() => {});
   }, [markRead, messages.length, refetchChats, refetchMessages, selectedChat]);
 
+  useEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport || !selectedChatId) return;
+
+    const scrollToBottom = () => {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: messages.length > 1 ? "smooth" : "auto",
+      });
+    };
+
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(scrollToBottom);
+    } else {
+      scrollToBottom();
+    }
+  }, [messages.length, remoteTyping, selectedChatId]);
+
+  const uploadChatImage = useCallback(async (file: File): Promise<string> => {
+    const token = await getValidToken();
+    const formData = new FormData();
+    formData.append(
+      "operations",
+      JSON.stringify({
+        query: `mutation ImageUploader($file: Upload!, $target: String!) {
+          imageUploader(file: $file, target: $target)
+        }`,
+        variables: {
+          file: null,
+          target: "chat",
+        },
+      })
+    );
+    formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
+    formData.append("0", file);
+
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_GRAPHQL_URL}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        "apollo-require-preflight": "true",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const uploaded = response.data?.data?.imageUploader;
+    if (!uploaded) throw new Error("Image upload failed");
+    return uploaded;
+  }, []);
+
+  const clearPendingImage = useCallback(() => {
+    setPendingImage((current) => {
+      if (current?.previewUrl) URL.revokeObjectURL(current.previewUrl);
+      return null;
+    });
+  }, []);
+
   const handleSendMessage = useCallback(async () => {
     const content = messageInput.trim();
-    if (!selectedChatId || !content) return;
+    if (!selectedChatId || (!content && !pendingImage)) return;
 
     try {
+      setUploadingImage(Boolean(pendingImage));
+      const attachment = pendingImage ? await uploadChatImage(pendingImage.file) : null;
       await sendMessage({
         variables: {
           input: {
             conversationId: selectedChatId,
-            messageType: "TEXT",
-            message: content,
+            messageType: attachment ? "IMAGE" : "TEXT",
+            message: content || undefined,
+            attachments: attachment ? [attachment] : undefined,
+            replyToId: replyTarget?._id,
           },
         },
       });
 
       setMessageInput("");
-      socketRef.current?.emit("stopTyping", { chatId: selectedChatId });
+      setReplyTarget(null);
+      clearPendingImage();
+      if (selectedChatIdRef.current) socketRef.current?.emit("stopTyping", { chatId: selectedChatIdRef.current });
       await Promise.all([refetchMessages(), refetchChats()]);
     } catch (error: any) {
       await sweetMixinErrorAlert(error.message || "Failed to send message");
+    } finally {
+      setUploadingImage(false);
     }
-  }, [messageInput, refetchChats, refetchMessages, selectedChatId, sendMessage]);
+  }, [clearPendingImage, messageInput, pendingImage, refetchChats, refetchMessages, replyTarget?._id, selectedChatId, sendMessage, uploadChatImage]);
 
   const handleInputTyping = useCallback(
     (value: string) => {
       setMessageInput(value);
-      if (!selectedChatId || !socketConnected) return;
+      if (!selectedChatId || !socketReady) return;
 
       if (value.trim()) {
         socketRef.current?.emit("typing", { chatId: selectedChatId });
@@ -542,8 +826,20 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
         socketRef.current?.emit("stopTyping", { chatId: selectedChatId });
       }
     },
-    [selectedChatId, socketConnected]
+    [selectedChatId, socketReady]
   );
+
+  const handlePickImage = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    clearPendingImage();
+    setPendingImage({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: file.name,
+    });
+  }, [clearPendingImage]);
 
   const handleOpenBrandChat = useCallback(async () => {
     if (!selectedBrandId) return;
@@ -657,10 +953,10 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
       } catch (error: any) {
         await sweetMixinErrorAlert(error.message || "Failed to open brand chat");
       } finally {
-        router.replace("/chat");
+        router.replace(workspaceHref);
       }
     })();
-  }, [mode, openBrandChat, refetchChats, requestedBrandId, requestedSubject, router]);
+  }, [mode, openBrandChat, refetchChats, requestedBrandId, requestedSubject, router, workspaceHref]);
 
   const emptyText =
     mode === "user"
@@ -682,11 +978,35 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
       </PageWrapper>
     );
 
+  const showListPane = !isMobileLayout || !selectedChat;
+  const showThreadPane = !isMobileLayout || Boolean(selectedChat);
+  const workspaceHeight = isMobileLayout ? "min(72dvh, 680px)" : "min(78dvh, 760px)";
+  const presenceText = useMemo(() => {
+    if (!selectedChat) return "";
+    if (selectedChat.chatScope === "ADMIN_SUPPORT" && mode !== "admin" && !selectedChat.assignedAdminId) {
+      return "Waiting for support agent";
+    }
+
+    if (chatPresence?.isOnline) return "Online";
+    return formatLastSeen(chatPresence?.lastActiveAt);
+  }, [chatPresence?.isOnline, chatPresence?.lastActiveAt, mode, selectedChat]);
+
   return (
     <Stack spacing={2}>
       {pageHeader}
 
-      <Card sx={{ p: { xs: 1.5, md: 2 }, borderRadius: 3 }}>
+      <Card
+        sx={{
+          p: { xs: 1.25, md: 2 },
+          borderRadius: 4,
+          border: "1px solid",
+          borderColor: "divider",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)",
+          boxShadow: "0 18px 48px rgba(15, 23, 42, 0.08)",
+          overflow: "hidden",
+        }}
+      >
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={2}
@@ -751,10 +1071,26 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
             display: "grid",
             gridTemplateColumns: { xs: "1fr", lg: "340px minmax(0, 1fr)" },
             gap: 2,
-            minHeight: { xs: "auto", lg: 640 },
+            height: workspaceHeight,
+            minHeight: workspaceHeight,
           }}
         >
-          <Card variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+          {showListPane && (
+          <Card
+            variant="outlined"
+            sx={{
+              borderRadius: 3,
+              overflow: "hidden",
+              height: "100%",
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              bgcolor: "rgba(255,255,255,0.82)",
+              borderColor: "rgba(148, 163, 184, 0.28)",
+              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.04)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
             {chatListLoading && !chatRows.length ? (
               <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }}>
                 <CircularProgress size={26} />
@@ -766,13 +1102,43 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                 </Typography>
               </Stack>
             ) : filteredChats.length ? (
-              <List disablePadding sx={{ maxHeight: { xs: "unset", lg: 640 }, overflowY: "auto" }}>
+              <List
+                disablePadding
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: "auto",
+                  px: 0.5,
+                  py: 0.75,
+                  scrollBehavior: "smooth",
+                  "&::-webkit-scrollbar": { width: 8 },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "rgba(148,163,184,0.4)",
+                    borderRadius: 999,
+                  },
+                }}
+              >
                 {filteredChats.map((chat, index) => (
                   <Box key={chat._id}>
                     <ListItemButton
                       selected={chat._id === selectedChatId}
                       onClick={() => setSelectedChatId(chat._id)}
-                      sx={{ alignItems: "flex-start", py: 1.5, px: 1.5 }}
+                      sx={{
+                        alignItems: "flex-start",
+                        py: { xs: 1.25, md: 1.5 },
+                        px: { xs: 1.25, md: 1.5 },
+                        mx: 1,
+                        my: 0.5,
+                        borderRadius: 2,
+                        border: "1px solid",
+                        borderColor: chat._id === selectedChatId ? "primary.light" : "transparent",
+                        bgcolor: chat._id === selectedChatId ? "rgba(37,99,235,0.08)" : "transparent",
+                        boxShadow: chat._id === selectedChatId ? "0 10px 24px rgba(37, 99, 235, 0.10)" : "none",
+                        transition: "all 160ms ease",
+                        "&:hover": {
+                          bgcolor: chat._id === selectedChatId ? "rgba(37,99,235,0.08)" : "rgba(15,23,42,0.03)",
+                        },
+                      }}
                     >
                       <Badge
                         color="primary"
@@ -785,6 +1151,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                       </Badge>
 
                       <ListItemText
+                        disableTypography
                         primary={
                           <Stack direction="row" justifyContent="space-between" spacing={1}>
                             <Typography variant="subtitle2" noWrap>
@@ -816,7 +1183,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                         }
                       />
                     </ListItemButton>
-                    {index < filteredChats.length - 1 && <Divider />}
+                    {index < filteredChats.length - 1 && <Divider sx={{ mx: 2 }} />}
                   </Box>
                 ))}
               </List>
@@ -829,15 +1196,22 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
               </Stack>
             )}
           </Card>
+          )}
 
+          {showThreadPane && (
           <Card
             variant="outlined"
             sx={{
               borderRadius: 3,
               display: "flex",
               flexDirection: "column",
-              minHeight: { xs: 420, lg: 640 },
+              minHeight: 0,
+              height: "100%",
               overflow: "hidden",
+              bgcolor: "rgba(255,255,255,0.88)",
+              borderColor: "rgba(148, 163, 184, 0.28)",
+              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.06)",
+              backdropFilter: "blur(10px)",
             }}
           >
             {selectedChat ? (
@@ -845,16 +1219,50 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                 <Stack
                   direction="row"
                   justifyContent="space-between"
-                  alignItems="center"
+                  alignItems={{ xs: "flex-start", sm: "center" }}
                   spacing={2}
-                  sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}
+                  sx={{
+                    p: { xs: 1.25, sm: 2 },
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: "rgba(248,250,252,0.9)",
+                    backdropFilter: "blur(8px)",
+                  }}
                 >
-                  <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
+                  <Stack direction="row" spacing={1.25} alignItems="center" minWidth={0}>
+                    {isMobileLayout && (
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedChatId("")}
+                        sx={{ mt: { xs: 0.25, sm: 0 } }}
+                      >
+                        <ArrowBackRounded fontSize="small" />
+                      </IconButton>
+                    )}
                     <Avatar src={getDisplayAvatar(selectedChat, mode)} />
                     <Box minWidth={0}>
-                      <Typography variant="subtitle1" noWrap>
+                      <Typography variant="subtitle1" noWrap={!isMobileLayout}>
                         {getDisplayName(selectedChat, mode)}
                       </Typography>
+                      <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.2, mb: 0.75 }}>
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: chatPresence?.isOnline ? "success.main" : "grey.400",
+                            boxShadow: chatPresence?.isOnline ? "0 0 0 4px rgba(34,197,94,0.16)" : "none",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color={chatPresence?.isOnline ? "success.main" : "text.secondary"}
+                          sx={{ fontWeight: chatPresence?.isOnline ? 600 : 500 }}
+                        >
+                          {presenceText}
+                        </Typography>
+                      </Stack>
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         <Chip
                           size="small"
@@ -872,7 +1280,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                     </Box>
                   </Stack>
 
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                     {mode === "admin" &&
                       selectedChat.chatScope === "ADMIN_SUPPORT" &&
                       !selectedChat.assignedAdminId &&
@@ -890,7 +1298,25 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                   </Stack>
                 </Stack>
 
-                <Box sx={{ flex: 1, overflowY: "auto", p: 2, bgcolor: "grey.50" }}>
+                <Box
+                  ref={messagesViewportRef}
+                  sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    p: { xs: 1.5, md: 2 },
+                    bgcolor: "#f7f9fc",
+                    backgroundImage:
+                      "radial-gradient(circle at 1px 1px, rgba(99,115,129,0.08) 1px, transparent 0)",
+                    backgroundSize: "18px 18px",
+                    scrollBehavior: "smooth",
+                    "&::-webkit-scrollbar": { width: 8 },
+                    "&::-webkit-scrollbar-thumb": {
+                      backgroundColor: "rgba(148,163,184,0.4)",
+                      borderRadius: 999,
+                    },
+                  }}
+                >
                   {messagesLoading && !messages.length ? (
                     <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 220 }}>
                       <CircularProgress size={24} />
@@ -899,47 +1325,167 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                     <Typography color="error.main">Failed to load messages.</Typography>
                   ) : messages.length ? (
                     <Stack spacing={1.25}>
-                      {messages.map((message) => {
+                      {messages.map((message, index) => {
+                        const previousMessage = index > 0 ? messages[index - 1] : null;
+                        const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
                         const own = message.isOwnMessage;
+                        const readByPeer = isMessageReadByPeer(message);
+                        const showDateSeparator = !previousMessage || !isSameCalendarDay(previousMessage.createdAt, message.createdAt);
+                        const groupedWithPrevious = shouldGroupMessages(previousMessage, message);
+                        const groupedWithNext = nextMessage ? shouldGroupMessages(message, nextMessage) : false;
+                        const attachment = message.attachments?.[0];
+                        const attachmentSrc = attachment ? resolveImage(attachment, "attachment") : "";
                         return (
-                          <Stack key={message._id} alignItems={own ? "flex-end" : "flex-start"}>
+                          <Stack
+                            key={message._id}
+                            alignItems={own ? "flex-end" : "flex-start"}
+                            spacing={0.45}
+                            sx={{ pt: showDateSeparator ? 0.5 : 0, mt: groupedWithPrevious ? 0.25 : 0.9 }}
+                          >
+                            {showDateSeparator && (
+                              <Stack alignItems="center" sx={{ width: "100%", pb: 0.5 }}>
+                                <Box
+                                  sx={{
+                                    px: 1.25,
+                                    py: 0.4,
+                                    borderRadius: 999,
+                                    bgcolor: "rgba(15,23,42,0.06)",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                  }}
+                                >
+                                  <Typography variant="caption" color="text.secondary">
+                                    {formatMessageDay(message.createdAt)}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            )}
+
                             <Box
                               sx={{
                                 px: 1.5,
                                 py: 1.1,
-                                maxWidth: "78%",
+                                maxWidth: { xs: "88%", sm: "82%", md: "78%" },
                                 borderRadius: 2.5,
                                 bgcolor: own ? "primary.main" : "background.paper",
                                 color: own ? "primary.contrastText" : "text.primary",
                                 boxShadow: own ? "none" : 1,
+                                borderTopRightRadius: own ? (groupedWithPrevious ? 1 : 0.75) : 2.5,
+                                borderTopLeftRadius: own ? 2.5 : groupedWithPrevious ? 1 : 0.75,
+                                borderBottomRightRadius: own ? (groupedWithNext ? 1 : 2.5) : 2.5,
+                                borderBottomLeftRadius: own ? 2.5 : groupedWithNext ? 1 : 2.5,
                               }}
                             >
-                              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                                {message.message || (message.attachments?.length ? "[Attachment]" : "")}
-                              </Typography>
+                              {message.parentMessageData ? (
+                                <Box
+                                  sx={{
+                                    mb: message.message || attachmentSrc ? 0.9 : 0,
+                                    px: 1,
+                                    py: 0.8,
+                                    borderRadius: 2,
+                                    borderLeft: "3px solid",
+                                    borderColor: own ? "rgba(255,255,255,0.7)" : "primary.light",
+                                    bgcolor: own ? "rgba(255,255,255,0.14)" : "rgba(37,99,235,0.06)",
+                                  }}
+                                >
+                                  <Typography variant="caption" sx={{ fontWeight: 700, color: own ? "inherit" : "primary.main" }}>
+                                    {getQuotedSenderLabel(message.parentMessageData as ChatMessage, user._id)}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      display: "block",
+                                      mt: 0.2,
+                                      color: own ? "rgba(255,255,255,0.88)" : "text.secondary",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                  >
+                                    {getQuotedMessagePreview(message.parentMessageData as ChatMessage)}
+                                  </Typography>
+                                </Box>
+                              ) : null}
 
-                              {message.attachments?.length ? (
-                                <Stack spacing={0.5} sx={{ mt: message.message ? 1 : 0 }}>
-                                  {message.attachments.map((attachment) => (
-                                    <Typography key={attachment} variant="caption" sx={{ wordBreak: "break-all" }}>
-                                      {attachment}
-                                    </Typography>
-                                  ))}
-                                </Stack>
+                              {message.message ? (
+                                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {message.message}
+                                </Typography>
+                              ) : null}
+
+                              {attachmentSrc ? (
+                                <Box
+                                  component="img"
+                                  src={attachmentSrc}
+                                  alt="chat attachment"
+                                  sx={{
+                                    mt: message.message ? 1 : 0,
+                                    display: "block",
+                                    width: "100%",
+                                    maxWidth: { xs: 220, sm: 280 },
+                                    maxHeight: { xs: 240, sm: 320 },
+                                    objectFit: "cover",
+                                    borderRadius: 2,
+                                    border: "1px solid",
+                                    borderColor: own ? "rgba(255,255,255,0.35)" : "divider",
+                                  }}
+                                />
                               ) : null}
                             </Box>
 
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                              {formatThreadTime(message.createdAt)}
-                            </Typography>
+                            {!groupedWithNext && (
+                              <Stack
+                                direction="row"
+                                spacing={0.25}
+                                alignItems="center"
+                                sx={{ mt: 0.1, px: 0.25, color: own && readByPeer ? "primary.main" : "text.secondary" }}
+                              >
+                                <Typography variant="caption" color="inherit">
+                                  {formatMessageTime(message.createdAt)}
+                                </Typography>
+                                {own &&
+                                  (readByPeer ? (
+                                    <DoneAllRounded sx={{ fontSize: 14 }} />
+                                  ) : (
+                                    <DoneRounded sx={{ fontSize: 14, opacity: 0.9 }} />
+                                  ))}
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setReplyTarget(message)}
+                                  sx={{
+                                    ml: 0.15,
+                                    width: 22,
+                                    height: 22,
+                                    color: "inherit",
+                                    opacity: 0.82,
+                                  }}
+                                >
+                                  <ReplyRounded sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Stack>
+                            )}
                           </Stack>
                         );
                       })}
 
                       {remoteTyping && (
-                        <Typography variant="caption" color="text.secondary">
-                          {remoteTyping}
-                        </Typography>
+                        <Stack alignItems="flex-start" sx={{ pt: 0.5 }}>
+                          <Box
+                            sx={{
+                              px: 1.2,
+                              py: 0.7,
+                              borderRadius: 999,
+                              bgcolor: "rgba(255,255,255,0.92)",
+                              border: "1px solid",
+                              borderColor: "divider",
+                              boxShadow: "0 8px 18px rgba(15,23,42,0.06)",
+                            }}
+                          >
+                            <Typography variant="caption" color="text.secondary">
+                              {remoteTyping}
+                            </Typography>
+                          </Box>
+                        </Stack>
                       )}
                     </Stack>
                   ) : (
@@ -954,7 +1500,120 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
 
                 <Divider />
 
-                <Stack direction="row" spacing={1} sx={{ p: 2 }}>
+                <Stack
+                  direction="column"
+                  spacing={1}
+                  sx={{
+                    p: { xs: 1, sm: 1.5 },
+                    bgcolor: "rgba(255,255,255,0.96)",
+                    borderTop: "1px solid",
+                    borderColor: "divider",
+                    boxShadow: "0 -10px 30px rgba(15,23,42,0.04)",
+                  }}
+                >
+                  {(replyTarget || pendingImage) && (
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        px: 1.1,
+                        py: 0.9,
+                        borderRadius: 3,
+                        bgcolor: "rgba(248,250,252,0.96)",
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Stack spacing={0.6} minWidth={0} flex={1}>
+                        {replyTarget && (
+                          <>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                              Replying to {getQuotedSenderLabel(replyTarget, user._id)}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {getQuotedMessagePreview(replyTarget)}
+                            </Typography>
+                          </>
+                        )}
+                        {pendingImage && (
+                          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                            <Box
+                              component="img"
+                              src={pendingImage.previewUrl}
+                              alt={pendingImage.name}
+                              sx={{
+                                width: 46,
+                                height: 46,
+                                objectFit: "cover",
+                                borderRadius: 2,
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            />
+                            <Stack minWidth={0}>
+                              <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                                Image ready
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                              >
+                                {pendingImage.name}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        )}
+                      </Stack>
+
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setReplyTarget(null);
+                          clearPendingImage();
+                        }}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        <CloseRounded fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  )}
+
+                  <Stack direction="row" spacing={1} alignItems="flex-end">
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    hidden
+                    onChange={(event) => void handlePickImage(event)}
+                  />
+
+                  <IconButton
+                    color="primary"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={!selectedChat.canReply || uploadingImage}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      bgcolor: "rgba(248,250,252,0.96)",
+                      flexShrink: 0,
+                      width: 46,
+                      height: 46,
+                    }}
+                  >
+                    {pendingImage ? <ImageOutlined fontSize="small" /> : <ImageRounded fontSize="small" />}
+                  </IconButton>
+
                   <TextField
                     fullWidth
                     multiline
@@ -974,17 +1633,33 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                         void handleSendMessage();
                       }
                     }}
-                    disabled={!selectedChat.canReply || sendingMessage}
+                    disabled={!selectedChat.canReply || sendingMessage || uploadingImage}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 3,
+                        bgcolor: "rgba(248,250,252,0.96)",
+                        alignItems: "flex-end",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                      },
+                    }}
                   />
 
                   <Button
                     variant="contained"
                     onClick={() => void handleSendMessage()}
-                    disabled={!selectedChat.canReply || !messageInput.trim() || sendingMessage}
-                    sx={{ minWidth: 48, px: 2 }}
+                    disabled={!selectedChat.canReply || (!messageInput.trim() && !pendingImage) || sendingMessage || uploadingImage}
+                    sx={{
+                      minWidth: { xs: 46, sm: 48 },
+                      px: { xs: 1.5, sm: 2 },
+                      height: 56,
+                      borderRadius: 3,
+                      flexShrink: 0,
+                      boxShadow: "0 12px 24px rgba(37, 99, 235, 0.24)",
+                    }}
                   >
-                    <SendRounded fontSize="small" />
+                    {uploadingImage ? <CircularProgress size={18} color="inherit" /> : <SendRounded fontSize="small" />}
                   </Button>
+                  </Stack>
                 </Stack>
               </>
             ) : (
@@ -996,6 +1671,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
               </Stack>
             )}
           </Card>
+          )}
         </Box>
       </Card>
 

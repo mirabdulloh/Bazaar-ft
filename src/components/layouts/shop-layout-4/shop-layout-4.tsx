@@ -13,6 +13,7 @@ import { MobileNavigationBar } from "components/mobile-navigation";
 import {
   Header,
   HeaderCart,
+  HeaderChat,
 
   HeaderLogin,
   HeaderNotifications,
@@ -71,6 +72,7 @@ export default function ShopLayout4({ children, navigation, data }: Props) {
 
         <HeaderNotifications />
         <HeaderCart />
+        <HeaderChat />
         
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
@@ -108,6 +110,7 @@ export default function ShopLayout4({ children, navigation, data }: Props) {
             <HeaderLogin />
             <HeaderNotifications />
             <HeaderCart />
+            <HeaderChat />
             
           </Header.Right>
         </Header>

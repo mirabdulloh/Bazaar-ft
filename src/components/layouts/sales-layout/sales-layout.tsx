@@ -21,6 +21,7 @@ import { Topbar, TopbarLanguageSelector, TopbarSocialLinks, TopbarLatestNotice }
 import {
   Header,
   HeaderCart,
+  HeaderChat,
 
   HeaderLogin,
   HeaderNotifications,
@@ -54,6 +55,7 @@ export default function SalesLayout({ children, data }: Props) {
 
         <HeaderNotifications />
         <HeaderCart />
+        <HeaderChat />
         
         <MobileMenu navigation={header.navigation} />
       </MobileHeader.Right>
@@ -84,6 +86,7 @@ export default function SalesLayout({ children, data }: Props) {
           <HeaderLogin />
           <HeaderNotifications />
           <HeaderCart />
+          <HeaderChat />
           
         </Header.Right>
       </Header>
