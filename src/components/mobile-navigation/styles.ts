@@ -10,9 +10,11 @@ const Wrapper = styled("div")(({ theme }) => ({
   bottom: 0,
   display: "none",
   position: "fixed",
+  alignItems: "flex-start",
   justifyContent: "space-around",
   zIndex: theme.zIndex.drawer + 1,
-  height: layoutConstant.mobileNavHeight,
+  height: `calc(${layoutConstant.mobileNavHeight}px + env(safe-area-inset-bottom, 0px))`,
+  paddingBottom: "env(safe-area-inset-bottom, 0px)",
   backgroundColor: theme.palette.background.paper,
   boxShadow: "0px 1px 4px 3px rgba(0, 0, 0, 0.1)",
   [theme.breakpoints.down("lg")]: { display: "flex", width: "100vw" }
@@ -21,6 +23,7 @@ const Wrapper = styled("div")(({ theme }) => ({
 const StyledNavLink = styled(NavLink)({
   flex: "1 1 0",
   display: "flex",
+  height: layoutConstant.mobileNavHeight,
   fontSize: "13px",
   alignItems: "center",
   flexDirection: "column",
@@ -36,6 +39,7 @@ const StyledNavLink = styled(NavLink)({
 const StyledBox = styled("div")(({ theme }) => ({
   flex: "1 1 0",
   display: "flex",
+  height: layoutConstant.mobileNavHeight,
   fontSize: "13px",
   cursor: "pointer",
   alignItems: "center",

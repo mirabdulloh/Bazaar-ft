@@ -11,7 +11,7 @@ export function Footer1({
   children,
   color = "white",
   bgcolor = "grey.900",
-  mb = { lg: 0, xs: 8 },
+  mb = 0,
   pt = { sm: 8, xs: 4 },
   ...props
 }: Footer1Props) {
