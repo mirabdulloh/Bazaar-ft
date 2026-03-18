@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useReactiveVar } from "@apollo/client/react";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
@@ -16,6 +18,7 @@ import Typography from "@mui/material/Typography";
 import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
 import { GET_BRAND } from "../../../../apollo/user/query";
+import { userVar } from "../../../../apollo/store";
 import { Brand } from "../../../lib/types/Brand";
 import { T } from "../../../lib/types/common";
 import ProductSearchPageView from "../../product-details/page-view/product-search";
@@ -31,6 +34,7 @@ function resolveBrandImage(img?: string | null): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
+	const user = useReactiveVar(userVar);
 	const [brand, setBrand] = useState<Brand | null>(null);
 
 	/** APOLLO REQUESTS **/
@@ -107,6 +111,16 @@ const BrandDetailsPageView = ({ brandId }: { brandId: string }) => {
 									variant="outlined"
 								/>
 							</Stack>
+							{user.memberType === "USER" && (
+								<Button
+									component={Link}
+									href={`/chat?brandId=${brandId}&subject=${encodeURIComponent(`Message ${brand.brandName}`)}`}
+									variant="contained"
+									sx={{ mt: 2 }}
+								>
+									Message Brand
+								</Button>
+							)}
 						</Box>
 					</Stack>
 				</CardContent>

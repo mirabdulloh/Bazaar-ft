@@ -62,6 +62,11 @@ export const adminNavigation = [
     path: "/admin/addresses"
   },
   {
+    name: "Chats",
+    icon: duotone.Chat,
+    path: "/admin/chats"
+  },
+  {
     name: "Logout",
     icon: duotone.Session,
     path: "/",
@@ -98,6 +103,11 @@ export const brandNavigation = [
     name: "Reviews",
     icon: duotone.Review,
     path: "/brand/reviews"
+  },
+  {
+    name: "Chats",
+    icon: duotone.Chat,
+    path: "/brand/chats"
   },
   {
     name: "Account Settings",
