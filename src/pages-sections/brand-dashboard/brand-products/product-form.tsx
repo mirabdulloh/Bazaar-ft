@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Card from "@mui/material/Card";
@@ -25,7 +25,7 @@ import { GET_BRAND_PRODUCT } from "../../../../apollo/brand/query";
 import { GET_CATEGORIES } from "../../../../apollo/user/query";
 import { T } from "lib/types/common";
 // AUTH
-import { getJwtToken } from "lib/auth";
+import { getJwtToken, getRefreshToken, setJwtToken, setRefreshToken, setUserFromMemberData } from "lib/auth";
 // ALERTS
 import { sweetTopSmallSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 // STYLED
@@ -41,6 +41,12 @@ const ACCESSORY_SIZES = ["ONE SIZE", "SMALL", "MEDIUM", "LARGE"];
 const BEAUTY_SIZES = ["50ML", "100ML", "250ML", "500ML"];
 const COLOR_OPTIONS = ["Black", "White", "Blue", "Red", "Green", "Yellow", "Orange", "Grey", "Pink", "Brown"];
 const MATERIAL_OPTIONS = ["Cotton", "Leather", "Wool", "Denim", "Polyester", "Silk", "Synthetic"];
+const MAX_PRODUCT_IMAGES = 5;
+
+type SizeGroup = {
+  title: string;
+  values: string[];
+};
 
 function resolveProductImage(productImage?: string | null): string {
   if (!productImage || productImage === "null" || productImage === "undefined") return "";
@@ -72,25 +78,115 @@ function joinDelimitedValues(values: string[]): string {
   return values.join(", ");
 }
 
-function getSizeOptions(productType: string): string[] {
+function getSizeGroups(productType: string, categoryName?: string): SizeGroup[] {
+  const normalizedCategory = (categoryName ?? "").toLowerCase();
+
+  if (normalizedCategory.includes("shoe")) {
+    return [{ title: "Shoes - EU", values: EU_SHOE_SIZES }];
+  }
+
+  if (
+    normalizedCategory.includes("denim") ||
+    normalizedCategory.includes("jean") ||
+    normalizedCategory.includes("trouser") ||
+    normalizedCategory.includes("pants")
+  ) {
+    return [{ title: "Denim", values: DENIM_SIZES }];
+  }
+
+  if (
+    normalizedCategory.includes("dress") ||
+    normalizedCategory.includes("shirt") ||
+    normalizedCategory.includes("tee") ||
+    normalizedCategory.includes("top") ||
+    normalizedCategory.includes("hoodie") ||
+    normalizedCategory.includes("jacket") ||
+    normalizedCategory.includes("clothing")
+  ) {
+    return [{ title: "Clothing", values: CLOTHING_SIZES }];
+  }
+
+  if (normalizedCategory.includes("bag") || normalizedCategory.includes("accessor")) {
+    return [{ title: "Accessories", values: ACCESSORY_SIZES }];
+  }
+
+  if (normalizedCategory.includes("beauty") || normalizedCategory.includes("skincare") || normalizedCategory.includes("cosmetic")) {
+    return [{ title: "Beauty", values: BEAUTY_SIZES }];
+  }
+
   switch (productType) {
     case "SHOES":
-      return EU_SHOE_SIZES;
+      return [{ title: "Shoes - EU", values: EU_SHOE_SIZES }];
     case "BAG":
     case "ACCECORY":
-      return ACCESSORY_SIZES;
+      return [{ title: "Accessories", values: ACCESSORY_SIZES }];
     case "BEAUTY":
-      return BEAUTY_SIZES;
+      return [{ title: "Beauty", values: BEAUTY_SIZES }];
     case "LIFESTYLE":
-      return [...ACCESSORY_SIZES, ...BEAUTY_SIZES];
+      return [
+        { title: "Accessories", values: ACCESSORY_SIZES },
+        { title: "Beauty", values: BEAUTY_SIZES }
+      ];
     case "SPORTS":
-      return [...CLOTHING_SIZES, ...EU_SHOE_SIZES];
+      return [
+        { title: "Clothing", values: CLOTHING_SIZES },
+        { title: "Shoes - EU", values: EU_SHOE_SIZES }
+      ];
     case "OTHER":
-      return ["ONE SIZE", ...CLOTHING_SIZES];
+      return [
+        { title: "Clothing", values: CLOTHING_SIZES },
+        { title: "Accessories", values: ["ONE SIZE"] }
+      ];
     case "CLOTHING":
     default:
-      return [...CLOTHING_SIZES, ...DENIM_SIZES];
+      return [
+        { title: "Clothing", values: CLOTHING_SIZES },
+        { title: "Denim", values: DENIM_SIZES }
+      ];
   }
+}
+
+async function getValidToken(): Promise<string> {
+  let token = getJwtToken();
+  if (!token) throw new Error("Not authenticated");
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const expiresAt = (payload.exp ?? 0) * 1000;
+    if (Date.now() < expiresAt - 30_000) return token;
+  } catch {
+    // Fall through to refresh.
+  }
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) throw new Error("Session expired. Please log in again.");
+
+  const res = await fetch(process.env.NEXT_PUBLIC_API_GRAPHQL_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: `mutation RefreshToken($refreshToken: String!) {
+        refreshToken(refreshToken: $refreshToken) {
+          _id memberType memberStatus memberAuthType memberPhone memberNick
+          memberFullName memberEmail memberImage memberAddress memberDesc
+          memberArticles memberFollowers memberFollowings memberPoints
+          memberLikes memberViews memberComments memberRank memberWarnings
+          memberBlocks memberProducts accessToken refreshToken
+        }
+      }`,
+      variables: { refreshToken },
+    }),
+  });
+
+  const json = await res.json();
+  const data = json?.data?.refreshToken;
+  if (!data?.accessToken) throw new Error("Session expired. Please log in again.");
+
+  setJwtToken(data.accessToken);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+  setUserFromMemberData(data);
+
+  return data.accessToken;
 }
 
 const initialForm = {
@@ -129,7 +225,6 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const selectedSizes = parseDelimitedValues(form.productSize);
   const selectedColors = parseDelimitedValues(form.productColor);
-  const availableSizeOptions = getSizeOptions(form.productType);
 
   // ─── Load categories ────────────────────────────────────────────────────────
   const { data: catData } = useQuery(GET_CATEGORIES, {
@@ -138,6 +233,28 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
   const categories = (catData as T)?.getCategories?.list?.filter(
     (c: any) => c.categoryStatus === "ACTIVE"
   ) ?? [];
+  const selectedCategory = categories.find((category: any) => category._id === form.productCategoryId);
+  const sizeGroups = useMemo(
+    () => getSizeGroups(form.productType, selectedCategory?.categoryName),
+    [form.productType, selectedCategory?.categoryName]
+  );
+  const availableSizeOptions = useMemo(
+    () => sizeGroups.flatMap((group) => group.values),
+    [sizeGroups]
+  );
+  const availableSizesKey = useMemo(
+    () => availableSizeOptions.join("|"),
+    [availableSizeOptions]
+  );
+
+  useEffect(() => {
+    setForm((prev) => {
+      const nextSizes = parseDelimitedValues(prev.productSize).filter((size) => availableSizeOptions.includes(size));
+      const nextJoined = joinDelimitedValues(nextSizes);
+      if (nextJoined === prev.productSize) return prev;
+      return { ...prev, productSize: nextJoined };
+    });
+  }, [availableSizesKey]);
 
   // ─── Load existing product for edit ─────────────────────────────────────────
   const { data: prodData, loading: loadingProduct, error: productError } = useQuery(GET_BRAND_PRODUCT, {
@@ -181,6 +298,7 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
   /** Combined list for display: server images + new previews */
   const allDisplayImages = [...serverImages, ...newPreviews];
   const totalImages = allDisplayImages.length;
+  const remainingImageSlots = Math.max(0, MAX_PRODUCT_IMAGES - totalImages);
 
   const handleRemoveImage = useCallback((index: number) => {
     if (index < serverImages.length) {
@@ -199,10 +317,32 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleMultiValueChange = useCallback((field: "productSize" | "productColor") => (event: any) => {
+  const handleMultiValueChange = useCallback((field: "productColor") => (event: any) => {
     const value = event.target.value as string[];
     setForm((prev) => ({ ...prev, [field]: joinDelimitedValues(value) }));
   }, []);
+
+  const toggleSize = useCallback((size: string) => {
+    setForm((prev) => {
+      const current = parseDelimitedValues(prev.productSize);
+      const next = current.includes(size) ? current.filter((item) => item !== size) : [...current, size];
+      return { ...prev, productSize: joinDelimitedValues(next) };
+    });
+  }, []);
+
+  const handleImageDropLimited = useCallback(async (files: File[]) => {
+    if (remainingImageSlots <= 0) {
+      await sweetMixinErrorAlert(`You can upload up to ${MAX_PRODUCT_IMAGES} product images.`);
+      return;
+    }
+
+    const acceptedFiles = files.slice(0, remainingImageSlots);
+    handleImageDrop(acceptedFiles);
+
+    if (files.length > acceptedFiles.length) {
+      await sweetMixinErrorAlert(`Only ${MAX_PRODUCT_IMAGES} product images are allowed.`);
+    }
+  }, [handleImageDrop, remainingImageSlots]);
 
   // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -231,7 +371,7 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
       // --- Upload new files via multipart/form-data (graphql-upload spec) ---
       let uploadedUrls: string[] = [];
       if (newFiles.length > 0) {
-        const token = getJwtToken();
+        const token = await getValidToken();
 
         const fileVars: Record<string, string[]> = {};
         newFiles.forEach((_, idx) => {
@@ -423,26 +563,34 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
 
         {/* Size, Color, Materials */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <FormControl fullWidth required>
-            <InputLabel>Sizes</InputLabel>
-            <Select
-              multiple
-              value={selectedSizes}
-              label="Sizes"
-              onChange={handleMultiValueChange("productSize")}
-              renderValue={(selected) => (
-                <FlexBox flexWrap="wrap" gap={0.5}>
-                  {(selected as string[]).map((value) => (
-                    <Chip key={value} label={value} size="small" />
-                  ))}
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Sizes
+          </Typography>
+          <FlexBox flexDirection="column" gap={1.5}>
+            {sizeGroups.map((group) => (
+              <div key={group.title}>
+                <Typography variant="caption" sx={{ color: "grey.600", mb: 0.75, display: "block" }}>
+                  {group.title}
+                </Typography>
+                <FlexBox flexWrap="wrap" gap={0.75}>
+                  {group.values.map((size) => {
+                    const selected = selectedSizes.includes(size);
+                    return (
+                      <Chip
+                        key={size}
+                        label={size}
+                        size="small"
+                        variant={selected ? "filled" : "outlined"}
+                        color={selected ? "primary" : "default"}
+                        onClick={() => toggleSize(size)}
+                        sx={{ cursor: "pointer" }}
+                      />
+                    );
+                  })}
                 </FlexBox>
-              )}
-            >
-              {availableSizeOptions.map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              </div>
+            ))}
+          </FlexBox>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -500,8 +648,14 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>Product Images</Typography>
           <DropZone
-            onChange={handleImageDrop}
-            info="Upload product images (PNG, JPG, GIF)"
+            onChange={handleImageDropLimited}
+            maxFiles={remainingImageSlots || 1}
+            disabled={remainingImageSlots === 0}
+            info={
+              remainingImageSlots === 0
+                ? `Maximum ${MAX_PRODUCT_IMAGES} product images reached. Remove one to upload another.`
+                : `Upload product images (PNG, JPG, GIF). ${remainingImageSlots} slot${remainingImageSlots === 1 ? "" : "s"} left.`
+            }
           />
 
           {allDisplayImages.length > 0 && (

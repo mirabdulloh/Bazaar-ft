@@ -33,11 +33,18 @@ interface GqlProduct {
   meLiked?: { myFavorite: boolean }[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 function resolveProductImage(img?: string | null): string {
-  if (!img || img === "null" || img === "undefined") return "";
-  if (img.startsWith("http://") || img.startsWith("https://")) return img;
-  const normalized = img.startsWith("/") ? img : `/${img}`;
+  if (!img) return "";
+  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!value || value === "null" || value === "undefined") return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  const isFrontendAsset =
+    normalized.startsWith("/assets/") || normalized.startsWith("/img/") || normalized.startsWith("/placeholder/");
+
+  if (isFrontendAsset) return normalized;
   return API_URL ? `${API_URL}${normalized}` : normalized;
 }
 

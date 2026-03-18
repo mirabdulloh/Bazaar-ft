@@ -11,16 +11,19 @@ import { useDropzone } from "react-dropzone";
 interface Props {
   info?: string;
   onChange: (files: File[]) => void;
+  maxFiles?: number;
+  disabled?: boolean;
 }
 // ========================================================
 
-export default function DropZone({ onChange, info }: Props) {
+export default function DropZone({ onChange, info, maxFiles = 10, disabled = false }: Props) {
   const onDrop = useCallback((acceptedFiles: File[]) => onChange(acceptedFiles), [onChange]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    maxFiles: 10,
+    maxFiles,
     multiple: true,
+    disabled,
     accept: { "image/*": [".png", ".gif", ".jpeg", ".jpg"] }
   });
 
@@ -37,14 +40,20 @@ export default function DropZone({ onChange, info }: Props) {
       flexDirection="column"
       borderColor="divider"
       justifyContent="center"
-      bgcolor={isDragActive ? "grey.100" : "grey.50"}
-      sx={{ transition: "all 250ms ease-in-out", outline: "none", cursor: "pointer" }}
+      bgcolor={disabled ? "grey.100" : isDragActive ? "grey.100" : "grey.50"}
+      sx={{
+        transition: "all 250ms ease-in-out",
+        outline: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
+        pointerEvents: disabled ? "none" : "auto"
+      }}
       {...getRootProps()}
     >
       <input {...getInputProps()} />
 
       <Typography variant="h5" color="text.secondary">
-        Drop file here or click to upload
+        {disabled ? "Maximum files reached" : "Drop file here or click to upload"}
       </Typography>
 
       <Divider

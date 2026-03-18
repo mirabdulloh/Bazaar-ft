@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useReactiveVar } from "@apollo/client/react";
 import { userVar } from "../../../../apollo/store";
 import { sweetTopSmallErrorAlert } from "lib/sweetAlert";
-import Image from "next/image";
 // MUI
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
@@ -38,6 +37,23 @@ interface Props {
 }
 // ========================================================
 
+function ProductImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        objectPosition: "center",
+        display: "block",
+      }}
+    />
+  );
+}
+
 export default function ProductCard2({ product, showReview = true, imageHeight, likeProductHandler }: Props) {
   const { slug, title, price, thumbnail, rating, discount, images, productLikes, productViews } =
     product;
@@ -65,23 +81,13 @@ export default function ProductCard2({ product, showReview = true, imageHeight, 
         <ImageBox className="card-img-box" imageHeight={imageHeight}>
           {/* Primary image */}
           <ImageLayer className="img-primary">
-            <Image
-              fill
-              alt={title}
-              src={thumbnail}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
+            <ProductImage alt={title} src={thumbnail} />
           </ImageLayer>
 
           {/* Secondary image — shown on hover */}
           {secondImage && (
             <ImageLayer className="img-secondary">
-              <Image
-                fill
-                alt={title}
-                src={secondImage}
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
+              <ProductImage alt={title} src={secondImage} />
             </ImageLayer>
           )}
 

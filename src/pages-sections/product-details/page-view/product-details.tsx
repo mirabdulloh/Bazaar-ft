@@ -20,6 +20,14 @@ import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../..
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+function resolveProductImage(img?: string | null): string {
+  if (!img || img === "null" || img === "undefined") return "";
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const normalized = img.startsWith("/") ? img : `/${img}`;
+  return API_URL ? `${API_URL}${normalized}` : normalized;
+}
+
 // ==============================================================
 interface Props {
   productId: string;
@@ -57,14 +65,6 @@ interface AvailableBrand {
   name: string;
   image: string;
   url: string;
-}
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-function resolveProductImage(img?: string | null): string {
-  if (!img || img === "null" || img === "undefined") return "";
-  if (img.startsWith("http://") || img.startsWith("https://")) return img;
-  const normalized = img.startsWith("/") ? img : `/${img}`;
-  return API_URL ? `${API_URL}${normalized}` : normalized;
 }
 
 const parseVariantValues = (value?: string[] | string): string[] => {

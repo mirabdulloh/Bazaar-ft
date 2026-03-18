@@ -89,8 +89,8 @@ function toProductModel(p: GqlProduct): Product {
     images: (p.productImages ?? []).map(resolveProductImage).filter(Boolean),
     rating: p.productRatingAverage ?? 0,
     categories: [],
-    size: p.productSize ? [p.productSize] : [],
-    colors: p.productColor ? [p.productColor] : [],
+    size: p.productSize ? p.productSize.split(/[,|]/g).map((item) => item.trim()).filter(Boolean) : [],
+    colors: p.productColor ? splitProductColors(p.productColor) : [],
     productLikes: p.productLikes,
     productViews: p.productViews,
     productRank: p.productRank,
@@ -126,6 +126,12 @@ const splitProductColors = (value: string) =>
   value
     .split(",")
     .flatMap((part) => part.split(/[\\/&]/g))
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+const splitProductSizes = (value: string) =>
+  value
+    .split(/[,|]/g)
     .map((token) => token.trim())
     .filter(Boolean);
 
@@ -357,7 +363,11 @@ export default function ProductSearchPageView({
       });
     }
     if (sizes.length > 0) {
-      list = list.filter((p) => p.productSize && sizes.includes(p.productSize));
+      list = list.filter((p) => {
+        if (!p.productSize) return false;
+        const productSizes = splitProductSizes(p.productSize);
+        return sizes.some((size) => productSizes.includes(size));
+      });
     }
     if (materials.length > 0) {
       list = list.filter((p) => p.productMaterials && materials.includes(p.productMaterials));
