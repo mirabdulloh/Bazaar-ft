@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 function resolveImg(img?: string | null): string {
@@ -45,11 +45,26 @@ export default function ProductRow({ product, onDelete }: Props) {
       <StyledTableCell align="left">
         <FlexBox alignItems="center" gap={1.5}>
           {image ? (
-            <Avatar variant="rounded">
-              <Image fill src={image} alt={productTitle} sizes="(100%, 100%)" />
-            </Avatar>
+            <Avatar
+              variant="rounded"
+              src={image}
+              alt={productTitle}
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                bgcolor: "grey.100",
+                "& .MuiAvatar-img": {
+                  objectFit: "cover"
+                }
+              }}
+            />
           ) : (
-            <Avatar variant="rounded">{productTitle?.[0] || "P"}</Avatar>
+            <Avatar variant="rounded">
+              <Box component="span" sx={{ fontSize: 14, fontWeight: 700 }}>
+                {productTitle?.[0] || "P"}
+              </Box>
+            </Avatar>
           )}
 
           <div>
@@ -82,9 +97,15 @@ export default function ProductRow({ product, onDelete }: Props) {
       </StyledTableCell>
 
       <StyledTableCell align="center">
-        <StyledIconButton onClick={() => onDelete(product)}>
-          <Delete />
-        </StyledIconButton>
+        {productStatus === "DELETED" ? (
+          <Typography variant="body2" color="text.secondary">
+            -
+          </Typography>
+        ) : (
+          <StyledIconButton onClick={() => onDelete(product)}>
+            <Delete />
+          </StyledIconButton>
+        )}
       </StyledTableCell>
     </StyledTableRow>
   );

@@ -51,9 +51,11 @@ const PRODUCT_STATUSES = ["DRAFT", "PENDING", "ACTIVE", "SOLD_OUT", "HIDDEN", "R
 
 export default function ProductsPageView() {
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [productRows, setProductRows] = useState<any[]>([]);
+  const [productTotal, setProductTotal] = useState(0);
 
   // ─── GraphQL ────────────────────────────────────────────────────────────────
-  const { data, loading, refetch } = useQuery(GET_ALL_PRODUCTS_BY_ADMIN, {
+  const { loading, error, refetch } = useQuery(GET_ALL_PRODUCTS_BY_ADMIN, {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     variables: {
@@ -64,23 +66,24 @@ export default function ProductsPageView() {
         direction: "DESC",
         ...(statusFilter ? { search: { productStatus: statusFilter } } : {})
       }
+    },
+    onCompleted: (result: T) => {
+      setProductRows(result?.getAllProductsByAdmin?.products ?? []);
+      setProductTotal(result?.getAllProductsByAdmin?.metaData?.total ?? 0);
     }
   });
 
   const [removeProduct] = useMutation(REMOVE_PRODUCT_BY_ADMIN);
 
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const list = (data as T)?.getAllProductsByAdmin?.products ?? [];
-  const total = (data as T)?.getAllProductsByAdmin?.metaData?.total ?? 0;
-
   const { order, orderBy, rowsPerPage, filteredList, handleChangePage, handleRequestSort } =
-    useMuiTable({ listData: list, defaultSort: "createdAt", defaultOrder: "desc" });
+    useMuiTable({ listData: productRows, defaultSort: "createdAt", defaultOrder: "desc" });
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (product: any) => {
     const confirmed = await sweetConfirmAlert(
       "Remove Product?",
-      `Remove "${product.productTitle}"? This action cannot be undone.`,
+      `Remove "${product.productTitle}"? This will mark it as DELETED.`,
       "Remove"
     );
     if (!confirmed) return;
@@ -113,9 +116,16 @@ export default function ProductsPageView() {
         </FormControl>
       </FlexBox>
 
-      {loading ? (
+      {loading && productRows.length === 0 ? (
         <Typography variant="body1">Loading products...</Typography>
-      ) : list.length === 0 ? (
+      ) : error && productRows.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="error.main" sx={{ mb: 1 }}>
+            Failed to load products
+          </Typography>
+          <Typography color="text.secondary">{error.message}</Typography>
+        </Card>
+      ) : productRows.length === 0 ? (
         <Card sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No products found.</Typography>
         </Card>
@@ -147,7 +157,7 @@ export default function ProductsPageView() {
           <Stack alignItems="center" my={4}>
             <TablePagination
               onChange={handleChangePage}
-              count={Math.ceil(total / rowsPerPage)}
+              count={Math.max(1, Math.ceil(productTotal / rowsPerPage))}
             />
           </Stack>
         </Card>
