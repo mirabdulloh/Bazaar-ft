@@ -230,6 +230,22 @@ export const GET_ALL_REVIEWS_BY_ADMIN = gql`
         reviewLikes
         createdAt
         updatedAt
+        productData {
+          _id
+          memberId
+          productTitle
+          productImages
+          productStatus
+        }
+        memberData {
+          _id
+          memberNick
+          memberFullName
+          memberEmail
+          memberImage
+          memberType
+          memberStatus
+        }
       }
       metaCounter {
         total
