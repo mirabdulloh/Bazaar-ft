@@ -29,12 +29,11 @@ type Props = {
 // ===========================================================
 
 export default function LongProductCard({ product, likeProductHandler }: Props) {
+  const user = useReactiveVar(userVar);
+  const [liked, setLiked] = useState(product.meLiked ?? false);
   if (!product) return null;
 
   const { slug, title, price, thumbnail, rating, discount, productLikes } = product;
-
-  const user = useReactiveVar(userVar);
-  const [liked, setLiked] = useState(product.meLiked ?? false);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -59,7 +58,7 @@ export default function LongProductCard({ product, likeProductHandler }: Props) 
             overflow: "hidden",
             bgcolor: "grey.100",
             transition: "box-shadow 0.3s ease",
-            "&:hover": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" },
+            "&:hover": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" }
           }}
         >
           <Image
@@ -81,7 +80,7 @@ export default function LongProductCard({ product, likeProductHandler }: Props) 
               fontSize: 15,
               mb: 0.5,
               transition: "color 0.2s",
-              "&:hover": { color: "primary.main" },
+              "&:hover": { color: "primary.main" }
             }}
           >
             {title}
