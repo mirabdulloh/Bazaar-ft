@@ -117,6 +117,13 @@ export default function ArticlesPageView() {
   }, [updateArticle, refetch, syncArticleState]);
 
   const handleDelete = useCallback(async (article: any) => {
+    if (article.articleStatus !== "INACTIVE") {
+      await sweetMixinErrorAlert(
+        "This article cannot be permanently removed yet. Change its status to INACTIVE first, then remove it."
+      );
+      return;
+    }
+
     const confirmed = await sweetConfirmAlert(
       "Remove Article?",
       "This article will be permanently removed.",
@@ -130,12 +137,6 @@ export default function ArticlesPageView() {
       syncArticleState(refreshed.data as T);
       await sweetTopSmallSuccessAlert("Article removed");
     } catch (err: any) {
-      if (article.articleStatus !== "DELETED") {
-        await sweetMixinErrorAlert(
-          "This article cannot be permanently deleted yet. Change its status to DELETED first, then remove it."
-        );
-        return;
-      }
       await sweetMixinErrorAlert(err.message || "Failed to remove article");
     }
   }, [removeArticle, refetch, syncArticleState]);

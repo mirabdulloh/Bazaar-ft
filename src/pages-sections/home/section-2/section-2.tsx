@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "../../../../node_modules/react-i18next";
 import { SectionCreator } from "components/section-header";
 import ProductCard2 from "components/product-cards/product-card-2";
@@ -15,6 +15,7 @@ import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 import { T, Message } from "../../../lib/types/common";
+import { resolveServerMedia, resolveServerMediaThumb } from "lib/server-media";
 
 interface GqlProduct {
   _id: string;
@@ -31,26 +32,13 @@ interface GqlProduct {
   meLiked?: { myFavorite: boolean }[];
 }
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-function resolveProductImage(img?: string | null): string {
-  if (!img) return "";
-  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
-  if (!value || value === "null" || value === "undefined") return "";
-  if (value.startsWith("http://") || value.startsWith("https://")) return value;
-
-  const normalized = value.startsWith("/") ? value : `/${value}`;
-  const isFrontendAsset =
-    normalized.startsWith("/assets/") || normalized.startsWith("/img/") || normalized.startsWith("/placeholder/");
-
-  if (isFrontendAsset) return normalized;
-  return API_URL ? `${API_URL}${normalized}` : normalized;
-}
-
 function toProductModel(p: GqlProduct): Product {
   const discountPct =
     p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice
       ? Math.round(((p.productPrice - p.productDiscountPrice) / p.productPrice) * 100)
       : 0;
+  const originalImage =
+    resolveServerMedia(p.productImages?.[0]) || "/assets/images/products/product-1.png";
   return {
     id: p._id,
     memberId: p.memberId,
@@ -58,8 +46,8 @@ function toProductModel(p: GqlProduct): Product {
     title: p.productTitle,
     price: p.productPrice,
     discount: discountPct,
-    thumbnail: resolveProductImage(p.productImages?.[0]) || "/assets/images/products/product-1.png",
-    images: (p.productImages ?? []).map(resolveProductImage).filter(Boolean),
+    thumbnail: resolveServerMediaThumb(p.productImages?.[0]) || originalImage,
+    images: (p.productImages ?? []).map(resolveServerMedia).filter(Boolean),
     rating: p.productRatingAverage ?? 0,
     categories: [],
     size: p.productSize ? [p.productSize] : [],
@@ -80,7 +68,7 @@ const initialInput = {
 
 export default function Section2() {
   const { t } = useTranslation();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [likeOverrides, setLikeOverrides] = useState<Record<string, number>>({});
   const user = useReactiveVar(userVar);
 
   /** APOLLO REQUESTS **/
@@ -88,21 +76,24 @@ export default function Section2() {
 
   const {
     loading: getFlashDealsLoading,
-    data: _getFlashDealsData,
-    error: _getFlashDealsError,
-    refetch: _getFlashDealsRefetch,
+    data: getFlashDealsData,
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     variables: { input: initialInput },
-    notifyOnNetworkStatusChange: true,
-    onCompleted: (data: T) => {
-      const raw: GqlProduct[] = data?.getProducts?.products ?? [];
-      const discounted = raw.filter(
-        (p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice
-      );
-      setProducts(discounted.map(toProductModel));
-    },
   });
+
+  const products = useMemo(() => {
+    const raw: GqlProduct[] = getFlashDealsData?.getProducts?.products ?? [];
+    return raw
+      .filter((p) => p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice)
+      .map((product) => {
+        const model = toProductModel(product);
+        const overriddenLikes = likeOverrides[model.id];
+        return overriddenLikes === undefined ? model : { ...model, productLikes: overriddenLikes };
+      });
+  }, [getFlashDealsData, likeOverrides]);
+
+  const showInitialLoading = getFlashDealsLoading && !products.length;
 
   /** HANDLERS **/
   const likeProductHandler = async (user: T, productId: string) => {
@@ -114,11 +105,7 @@ export default function Section2() {
       const updated = data?.likeTargetProduct;
 
       if (updated?._id) {
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === updated._id ? { ...p, productLikes: updated.productLikes } : p
-          )
-        );
+        setLikeOverrides((prev) => ({ ...prev, [updated._id]: updated.productLikes }));
       }
       await sweetLikeSuccessAlert();
     } catch (err: any) {
@@ -128,7 +115,7 @@ export default function Section2() {
     }
   };
 
-  if (getFlashDealsLoading) {
+  if (showInitialLoading) {
     return (
       <SectionCreator title={t("Flash Deals", { defaultValue: "Flash Deals" })} seeMoreLink="/products/search?sort=flash_deals">
         <Box display="flex" gap={2} overflow="hidden">
@@ -153,6 +140,7 @@ export default function Section2() {
           <ProductCard2
             key={product.id}
             product={product}
+            enableSecondaryImage={false}
             likeProductHandler={(productId) => likeProductHandler(user, productId)}
           />
         ))}

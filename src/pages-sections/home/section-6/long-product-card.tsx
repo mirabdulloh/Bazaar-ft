@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useReactiveVar } from "@apollo/client/react";
 import { userVar } from "../../../../apollo/store";
 import { sweetTopSmallErrorAlert } from "lib/sweetAlert";
+import ServerImage from "components/server-image";
 // MUI
 import Box from "@mui/material/Box";
 import Rating from "@mui/material/Rating";
@@ -25,10 +25,11 @@ import Product from "models/Product.model";
 type Props = {
   product: Product;
   likeProductHandler?: (productId: string) => void;
+  fallbackImage?: string;
 };
 // ===========================================================
 
-export default function LongProductCard({ product, likeProductHandler }: Props) {
+export default function LongProductCard({ product, likeProductHandler, fallbackImage }: Props) {
   const user = useReactiveVar(userVar);
   const [liked, setLiked] = useState(product.meLiked ?? false);
   if (!product) return null;
@@ -61,12 +62,19 @@ export default function LongProductCard({ product, likeProductHandler }: Props) 
             "&:hover": { boxShadow: "0 12px 32px rgba(0,0,0,0.12)" }
           }}
         >
-          <Image
-            fill
+          <ServerImage
             alt={title}
             src={thumbnail}
-            sizes="(max-width: 768px) 100vw, 320px"
-            style={{ objectFit: "cover", objectPosition: "center" }}
+            fallbackSrc={fallbackImage}
+            loading="lazy"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
           />
         </Box>
       </Link>

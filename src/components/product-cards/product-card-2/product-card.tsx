@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useReactiveVar } from "@apollo/client/react";
 import { userVar } from "../../../../apollo/store";
 import { sweetTopSmallErrorAlert } from "lib/sweetAlert";
+import ServerImage from "components/server-image";
 // MUI
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
@@ -34,13 +35,23 @@ interface Props {
   showReview?: boolean;
   imageHeight?: number;
   likeProductHandler?: (productId: string) => void;
+  enableSecondaryImage?: boolean;
 }
 // ========================================================
 
-function ProductImage({ src, alt }: { src: string; alt: string }) {
+function ProductImage({
+  src,
+  alt,
+  fallbackSrc,
+}: {
+  src: string;
+  alt: string;
+  fallbackSrc?: string;
+}) {
   return (
-    <img
+    <ServerImage
       src={src}
+      fallbackSrc={fallbackSrc}
       alt={alt}
       loading="lazy"
       style={{
@@ -54,10 +65,17 @@ function ProductImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export default function ProductCard2({ product, showReview = true, imageHeight, likeProductHandler }: Props) {
+export default function ProductCard2({
+  product,
+  showReview = true,
+  imageHeight,
+  likeProductHandler,
+  enableSecondaryImage = true,
+}: Props) {
   const { slug, title, price, thumbnail, rating, discount, images, productLikes, productViews } =
     product;
-  const secondImage = images?.[1];
+  const secondImage = enableSecondaryImage ? images?.[1] : undefined;
+  const primaryFallback = images?.[0] && images[0] !== thumbnail ? images[0] : undefined;
   const discountedPrice = calculateDiscount(price, discount);
   const originalPrice = currency(price);
 
@@ -81,7 +99,7 @@ export default function ProductCard2({ product, showReview = true, imageHeight, 
         <ImageBox className="card-img-box" imageHeight={imageHeight}>
           {/* Primary image */}
           <ImageLayer className="img-primary">
-            <ProductImage alt={title} src={thumbnail} />
+            <ProductImage alt={title} src={thumbnail} fallbackSrc={primaryFallback} />
           </ImageLayer>
 
           {/* Secondary image — shown on hover */}

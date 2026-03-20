@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "../../../../node_modules/react-i18next";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -17,6 +17,7 @@ import { LIKE_TARGET_PRODUCT } from "../../../../apollo/user/mutation";
 import { userVar } from "../../../../apollo/store";
 import { sweetLikeSuccessAlert, sweetMixinErrorAlert } from "lib/sweetAlert";
 import { T, Message } from "../../../lib/types/common";
+import { resolveServerMedia, resolveServerMediaThumb } from "lib/server-media";
 
 interface GqlProduct {
   _id: string;
@@ -33,26 +34,13 @@ interface GqlProduct {
   meLiked?: { myFavorite: boolean }[];
 }
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-function resolveProductImage(img?: string | null): string {
-  if (!img) return "";
-  const value = img.trim().replace(/^['"]+|['"]+$/g, "");
-  if (!value || value === "null" || value === "undefined") return "";
-  if (value.startsWith("http://") || value.startsWith("https://")) return value;
-
-  const normalized = value.startsWith("/") ? value : `/${value}`;
-  const isFrontendAsset =
-    normalized.startsWith("/assets/") || normalized.startsWith("/img/") || normalized.startsWith("/placeholder/");
-
-  if (isFrontendAsset) return normalized;
-  return API_URL ? `${API_URL}${normalized}` : normalized;
-}
-
 function toProductModel(p: GqlProduct): Product {
   const discountPct =
     p.productDiscountPrice > 0 && p.productDiscountPrice < p.productPrice
       ? Math.round(((p.productPrice - p.productDiscountPrice) / p.productPrice) * 100)
       : 0;
+  const originalImage =
+    resolveServerMedia(p.productImages?.[0]) || "/assets/images/products/product-1.png";
   return {
     id: p._id,
     memberId: p.memberId,
@@ -60,8 +48,8 @@ function toProductModel(p: GqlProduct): Product {
     title: p.productTitle,
     price: p.productPrice,
     discount: discountPct,
-    thumbnail: resolveProductImage(p.productImages?.[0]) || "/assets/images/products/product-1.png",
-    images: (p.productImages ?? []).map(resolveProductImage).filter(Boolean),
+    thumbnail: resolveServerMediaThumb(p.productImages?.[0]) || originalImage,
+    images: (p.productImages ?? []).map(resolveServerMedia).filter(Boolean),
     rating: p.productRatingAverage ?? 0,
     categories: [],
     size: p.productSize ? [p.productSize] : [],
@@ -82,7 +70,7 @@ const initialInput = {
 
 export default function Section6() {
   const { t } = useTranslation();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [likeOverrides, setLikeOverrides] = useState<Record<string, number>>({});
   const user = useReactiveVar(userVar);
 
   /** APOLLO REQUESTS **/
@@ -90,18 +78,22 @@ export default function Section6() {
 
   const {
     loading: getTrendingLoading,
-    data: _getTrendingData,
-    error: _getTrendingError,
-    refetch: _getTrendingRefetch,
+    data: getTrendingData,
   } = useQuery(GET_PRODUCTS, {
     fetchPolicy: "cache-and-network",
     variables: { input: initialInput },
-    notifyOnNetworkStatusChange: true,
-    onCompleted: (data: T) => {
-      const raw: GqlProduct[] = data?.getProducts?.products ?? [];
-      setProducts(raw.map(toProductModel));
-    },
   });
+
+  const products = useMemo(() => {
+    const raw: GqlProduct[] = getTrendingData?.getProducts?.products ?? [];
+    return raw.map((product) => {
+      const model = toProductModel(product);
+      const overriddenLikes = likeOverrides[model.id];
+      return overriddenLikes === undefined ? model : { ...model, productLikes: overriddenLikes };
+    });
+  }, [getTrendingData, likeOverrides]);
+
+  const showInitialLoading = getTrendingLoading && !products.length;
 
   /** HANDLERS **/
   const likeProductHandler = async (user: T, productId: string) => {
@@ -113,11 +105,7 @@ export default function Section6() {
       const updated = data?.likeTargetProduct;
 
       if (updated?._id) {
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === updated._id ? { ...p, productLikes: updated.productLikes } : p
-          )
-        );
+        setLikeOverrides((prev) => ({ ...prev, [updated._id]: updated.productLikes }));
       }
       await sweetLikeSuccessAlert();
     } catch (err: any) {
@@ -127,7 +115,7 @@ export default function Section6() {
     }
   };
 
-  if (getTrendingLoading) {
+  if (showInitialLoading) {
     return (
       <SectionCreator title={t("Trending Now", { defaultValue: "Trending Now" })} seeMoreLink="/products/search?sort=popular">
         {/* Mobile loading skeleton */}
@@ -179,6 +167,7 @@ export default function Section6() {
             <ProductCard2
               key={product.id}
               product={product}
+              enableSecondaryImage={false}
               likeProductHandler={(productId) => likeProductHandler(user, productId)}
             />
           ))}
@@ -191,6 +180,7 @@ export default function Section6() {
           <Grid size={{ md: 3 }}>
             <LongProductCard
               product={products[0]}
+              fallbackImage={products[0]?.images?.[0]}
               likeProductHandler={(productId) => likeProductHandler(user, productId)}
             />
           </Grid>
@@ -200,6 +190,7 @@ export default function Section6() {
               <Grid size={{ sm: 4 }} key={product.id}>
                 <ProductCard2
                   product={product}
+                  enableSecondaryImage={false}
                   likeProductHandler={(productId) => likeProductHandler(user, productId)}
                 />
               </Grid>

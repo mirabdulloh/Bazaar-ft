@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
@@ -8,7 +8,6 @@ import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import { GET_CATEGORIES } from "../../../../apollo/user/query";
-import { T } from "../../../lib/types/common";
 
 interface GqlCategory {
   _id: string;
@@ -29,26 +28,22 @@ const TILE_GRADIENTS = [
 ];
 
 export default function SectionCategories() {
-  const [categories, setCategories] = useState<GqlCategory[]>([]);
-
-  /** APOLLO REQUESTS **/
   const {
     loading: getCategoriesLoading,
-    data: _getCategoriesData,
-    error: _getCategoriesError,
-    refetch: _getCategoriesRefetch,
+    data: getCategoriesData,
   } = useQuery(GET_CATEGORIES, {
     fetchPolicy: "cache-and-network",
     variables: { input: { page: 1, limit: 12, search: {} } },
-    notifyOnNetworkStatusChange: true,
-    onCompleted: (data: T) => {
-      const all: GqlCategory[] = data?.getCategories?.list ?? [];
-      // Show only top-level categories on the homepage
-      setCategories(all.filter((c) => !c.parentCategoryId));
-    },
   });
 
-  if (!getCategoriesLoading && !categories.length) return null;
+  const categories = useMemo(() => {
+    const all: GqlCategory[] = getCategoriesData?.getCategories?.list ?? [];
+    return all.filter((category) => !category.parentCategoryId);
+  }, [getCategoriesData]);
+
+  const showInitialLoading = getCategoriesLoading && !categories.length;
+
+  if (!showInitialLoading && !categories.length) return null;
 
   return (
     <Container sx={{ mb: 5 }}>
@@ -63,7 +58,7 @@ export default function SectionCategories() {
           "&::-webkit-scrollbar": { display: "none" },
         }}
       >
-        {getCategoriesLoading
+        {showInitialLoading
           ? Array.from({ length: 6 }).map((_, i) => (
               <Box
                 key={i}

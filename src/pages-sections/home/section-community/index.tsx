@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "../../../../node_modules/react-i18next";
 import Link from "next/link";
 import Avatar from "@mui/material/Avatar";
@@ -12,10 +12,10 @@ import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
 import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
-import { FadeInCard } from "../../../components/scroll-reveal";
+import ServerImage from "components/server-image";
 import { useQuery } from "../../../lib/hooks/useQuery";
 import { GET_BOARD_ARTICLES } from "../../../../apollo/user/query";
-import { T } from "../../../lib/types/common";
+import { resolveServerMedia, resolveServerMediaThumb } from "lib/server-media";
 
 interface GqlArticle {
   _id: string;
@@ -30,27 +30,15 @@ interface GqlArticle {
   };
 }
 
-const resolveArticleAsset = (path?: string | null) => {
-  if (!path) return "";
-  const cleaned = String(path).trim().replace(/^['"]+|['"]+$/g, "");
-  if (!cleaned || cleaned === "null" || cleaned === "undefined") return "";
-  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) return cleaned;
-  if (cleaned.startsWith("/assets/")) return cleaned;
-  const normalized = cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
-  return apiBase ? `${apiBase}${normalized}` : normalized;
-};
+const resolveArticleAsset = (path?: string | null) => resolveServerMedia(path);
+const resolveArticleThumb = (path?: string | null) => resolveServerMediaThumb(path) || resolveServerMedia(path);
 
 export default function SectionCommunity() {
-  const [articles, setArticles] = useState<GqlArticle[]>([]);
   const { t } = useTranslation();
 
-  /** APOLLO REQUESTS **/
   const {
     loading: getArticlesLoading,
-    data: _getArticlesData,
-    error: _getArticlesError,
-    refetch: getArticlesRefetch,
+    data: getArticlesData,
   } = useQuery(GET_BOARD_ARTICLES, {
     fetchPolicy: "cache-and-network",
     variables: {
@@ -62,11 +50,10 @@ export default function SectionCommunity() {
         search: {},
       },
     },
-    notifyOnNetworkStatusChange: true,
-    onCompleted: (data: T) => {
-      setArticles(data?.getBoardArticles?.list ?? []);
-    },
   });
+
+  const articles = useMemo(() => getArticlesData?.getBoardArticles?.list ?? [], [getArticlesData]);
+  const showInitialLoading = getArticlesLoading && !articles.length;
 
   return (
     <Container sx={{ py: 5 }}>
@@ -82,7 +69,7 @@ export default function SectionCommunity() {
       </Box>
 
       <Grid container spacing={3}>
-        {getArticlesLoading
+        {showInitialLoading
           ? Array.from({ length: 3 }).map((_, i) => (
               <Grid size={{ xs: 12, md: 4 }} key={i}>
                 <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 3 }} />
@@ -91,98 +78,96 @@ export default function SectionCommunity() {
                 <Skeleton variant="text" width="40%" />
               </Grid>
             ))
-          : articles.map((article, i) => (
+          : articles.map((article: GqlArticle) => (
               <Grid size={{ xs: 12, md: 4 }} key={article._id}>
-                <FadeInCard index={i}>
-                  <Link href={`/community/${article._id}`} style={{ textDecoration: "none" }}>
-                    <Card
+                <Link href={`/community/${article._id}`} style={{ textDecoration: "none" }}>
+                  <Card
+                    sx={{
+                      borderRadius: 3,
+                      boxShadow: 1,
+                      transition: "box-shadow 0.2s",
+                      "&:hover": { boxShadow: 4 },
+                      height: "100%",
+                    }}
+                  >
+                    <Box
                       sx={{
-                        borderRadius: 3,
-                        boxShadow: 1,
-                        transition: "box-shadow 0.2s",
-                        "&:hover": { boxShadow: 4 },
-                        height: "100%",
+                        position: "relative",
+                        height: 200,
+                        backgroundColor: "grey.100",
+                        borderRadius: "12px 12px 0 0",
+                        overflow: "hidden",
                       }}
                     >
-                      {/* Article image */}
-                      <Box
+                      {resolveArticleAsset(article.articleImages?.[0]) ? (
+                        <ServerImage
+                          src={resolveArticleThumb(article.articleImages?.[0])}
+                          fallbackSrc={resolveArticleAsset(article.articleImages?.[0])}
+                          alt={article.articleTitle}
+                          loading="lazy"
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          }}
+                        />
+                      )}
+                    </Box>
+
+                    <CardContent>
+                      <Chip
+                        label={article.articleCategory}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ mb: 1, fontSize: 11, textTransform: "capitalize" }}
+                      />
+
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={600}
+                        color="text.primary"
                         sx={{
-                          position: "relative",
-                          height: 200,
-                          backgroundColor: "grey.100",
-                          borderRadius: "12px 12px 0 0",
+                          mb: 1.5,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                         }}
                       >
-                        {resolveArticleAsset(article.articleImages?.[0]) ? (
-                          <Box
-                            component="img"
-                            alt={article.articleTitle}
-                            src={resolveArticleAsset(article.articleImages?.[0])}
-                            sx={{
-                              display: "block",
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
+                        {article.articleTitle}
+                      </Typography>
+
+                      <Box display="flex" alignItems="center" justifyContent="space-between">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Avatar
+                            src={resolveServerMediaThumb(article.memberData?.memberImage) || resolveArticleAsset(article.memberData?.memberImage)}
+                            alt={article.memberData?.memberNick}
+                            sx={{ width: 26, height: 26 }}
                           />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            }}
-                          />
-                        )}
-                      </Box>
-
-                      <CardContent>
-                        <Chip
-                          label={article.articleCategory}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                          sx={{ mb: 1, fontSize: 11, textTransform: "capitalize" }}
-                        />
-
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={600}
-                          color="text.primary"
-                          sx={{
-                            mb: 1.5,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {article.articleTitle}
-                        </Typography>
-
-                        <Box display="flex" alignItems="center" justifyContent="space-between">
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Avatar
-                              src={resolveArticleAsset(article.memberData?.memberImage)}
-                              alt={article.memberData?.memberNick}
-                              sx={{ width: 26, height: 26 }}
-                            />
-                            <Typography variant="caption" color="text.secondary">
-                              {article.memberData?.memberNick ?? "Anonymous"}
-                            </Typography>
-                          </Box>
                           <Typography variant="caption" color="text.secondary">
-                            {new Date(article.createdAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            {article.memberData?.memberNick ?? "Anonymous"}
                           </Typography>
                         </Box>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </FadeInCard>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(article.createdAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Link>
               </Grid>
             ))}
       </Grid>
