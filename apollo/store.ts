@@ -28,17 +28,22 @@ const emptyUser: CustomJwtPayload = {
 function getInitialUser(): CustomJwtPayload {
   if (typeof window === "undefined") return emptyUser;
   try {
-    localStorage.removeItem("accessToken");
-    const token = sessionStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") ?? sessionStorage.getItem("accessToken");
     if (!token) return emptyUser;
     const payload = jwtDecode<CustomJwtPayload & { exp?: number }>(token);
     if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       sessionStorage.removeItem("accessToken");
+      sessionStorage.removeItem("refreshToken");
       return emptyUser;
     }
     return { ...emptyUser, ...payload };
   } catch {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
     return emptyUser;
   }
 }

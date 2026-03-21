@@ -71,6 +71,7 @@ import ApolloWrapper from "components/ApolloWrapper";
 import RTL from "components/rtl";
 import ProgressBar from "components/progress";
 import InitialBrandLoader from "components/initial-brand-loader";
+import I18nClientInit from "components/i18n-client-init";
 
 // IMPORT i18n SUPPORT FILE
 import "i18n";
@@ -86,6 +87,7 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body id="body" className={geist.className}>
+        <I18nClientInit />
         <ApolloWrapper>
           <CartProvider>
             <VariantPickerProvider>

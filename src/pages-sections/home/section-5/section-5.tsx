@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useTranslation } from "../../../../node_modules/react-i18next";
+import { useTranslation } from "react-i18next";
 import { SectionCreator } from "components/section-header";
 import ProductCard2 from "components/product-cards/product-card-2";
 import ProductsCarousel from "../section-3/products-carousel";

@@ -67,14 +67,14 @@ type EditorAction =
 
 async function getValidToken(): Promise<string> {
   let token = getJwtToken();
-  if (!token) throw new Error("Not authenticated");
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const expiresAt = (payload.exp ?? 0) * 1000;
-    if (Date.now() < expiresAt - 30_000) return token;
-  } catch {
-    // Fall through to refresh.
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const expiresAt = (payload.exp ?? 0) * 1000;
+      if (Date.now() < expiresAt - 30_000) return token;
+    } catch {
+      // Fall through to refresh.
+    }
   }
 
   const refreshToken = getRefreshToken();

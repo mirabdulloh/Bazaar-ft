@@ -4,7 +4,7 @@ import { useState } from "react";
 import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
-import { useTranslation } from "../../../node_modules/react-i18next";
+import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@apollo/client/react";
 // APOLLO STORE
 import { userVar } from "../../../apollo/store";

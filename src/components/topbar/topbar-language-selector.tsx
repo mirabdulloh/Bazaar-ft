@@ -3,7 +3,7 @@
 import MenuItem from "@mui/material/MenuItem";
 import TouchRipple from "@mui/material/ButtonBase";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import { useTranslation } from "../../../node_modules/react-i18next";
+import { useTranslation } from "react-i18next";
 import BazaarMenu from "components/BazaarMenu";
 
 // ==============================================================
@@ -16,6 +16,9 @@ export function TopbarLanguageSelector({ languages }: { languages: LanguageOptio
   const { i18n } = useTranslation();
 
   const handleChangeLanguage = (lang: string) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("language", lang);
+    }
     i18n.changeLanguage(lang);
   };
 

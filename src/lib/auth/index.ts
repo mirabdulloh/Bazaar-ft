@@ -8,10 +8,20 @@ import { LOGIN, SIGN_UP } from '../../../apollo/user/mutation';
 let refreshTokenMemory = '';
 let accessTokenMemory = '';
 
-function clearLegacyAccessToken() {
-	if (typeof window !== 'undefined') {
-		localStorage.removeItem('accessToken');
+function readStoredToken(key: 'accessToken' | 'refreshToken'): string {
+	if (typeof window === 'undefined') return '';
+	return localStorage.getItem(key) ?? sessionStorage.getItem(key) ?? '';
+}
+
+function writeStoredToken(key: 'accessToken' | 'refreshToken', value: string) {
+	if (typeof window === 'undefined') return;
+	if (value) {
+		localStorage.setItem(key, value);
+		sessionStorage.setItem(key, value);
+		return;
 	}
+	localStorage.removeItem(key);
+	sessionStorage.removeItem(key);
 }
 
 function isTokenExpired(token?: string): boolean {
@@ -27,10 +37,7 @@ function isTokenExpired(token?: string): boolean {
 
 export function getJwtToken(): any {
 	if (typeof window !== 'undefined') {
-		clearLegacyAccessToken();
-		if (!accessTokenMemory) {
-			accessTokenMemory = sessionStorage.getItem('accessToken') ?? '';
-		}
+		accessTokenMemory = readStoredToken('accessToken');
 		if (accessTokenMemory && isTokenExpired(accessTokenMemory)) {
 			setJwtToken('');
 			return '';
@@ -42,24 +49,19 @@ export function getJwtToken(): any {
 export function setJwtToken(token: string) {
 	accessTokenMemory = token ?? '';
 	if (typeof window !== 'undefined') {
-		clearLegacyAccessToken();
-		if (accessTokenMemory) sessionStorage.setItem('accessToken', accessTokenMemory);
-		else sessionStorage.removeItem('accessToken');
+		writeStoredToken('accessToken', accessTokenMemory);
 	}
 }
 
 export function getRefreshToken(): string {
-	if (!refreshTokenMemory && typeof window !== 'undefined') {
-		refreshTokenMemory = sessionStorage.getItem('refreshToken') ?? '';
-	}
+	refreshTokenMemory = readStoredToken('refreshToken');
 	return refreshTokenMemory;
 }
 
 export function setRefreshToken(token: string) {
 	refreshTokenMemory = token ?? '';
 	if (typeof window !== 'undefined') {
-		if (refreshTokenMemory) sessionStorage.setItem('refreshToken', refreshTokenMemory);
-		else sessionStorage.removeItem('refreshToken');
+		writeStoredToken('refreshToken', refreshTokenMemory);
 	}
 }
 

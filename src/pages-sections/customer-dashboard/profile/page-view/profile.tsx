@@ -49,7 +49,7 @@ import HomeOutlined from "@mui/icons-material/HomeOutlined";
 import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 // REACT-i18n
-import { useTranslation } from "../../../../../node_modules/react-i18next";
+import { useTranslation } from "../../react-i18next";
 // APOLLO
 import { useReactiveVar, useMutation } from "@apollo/client/react";
 import { userVar } from "../../../../../apollo/store";
