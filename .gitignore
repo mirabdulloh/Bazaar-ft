@@ -43,3 +43,4 @@ schema/
 #env
 .env.production
 .env.example
+.env.production.example
