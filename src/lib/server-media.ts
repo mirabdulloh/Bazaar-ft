@@ -31,5 +31,5 @@ export function buildUploadThumbPath(path?: string | null): string {
 }
 
 export function resolveServerMediaThumb(path?: string | null): string {
-  return resolveServerMedia(buildUploadThumbPath(path));
+  return resolveServerMedia(path);
 }

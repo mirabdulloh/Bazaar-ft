@@ -22,7 +22,7 @@ export default function LazyImage({ style, sx, ...props }: LazyImageProps) {
   const h = typeof props.height === "number" ? props.height : null;
 
   const computedStyle: React.CSSProperties = {
-    objectFit: "cover",
+    objectFit: "contain",
     ...(w && h ? { aspectRatio: `${w} / ${h}` } : {}),
     ...style,
   };

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     root: process.cwd()
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -27,6 +28,14 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "loremflickr.com"
+      },
+      {
+        protocol: "https",
+        hostname: "bazaarshop.me"
+      },
+      {
+        protocol: "https",
+        hostname: "www.bazaarshop.me"
       }
     ]
   }

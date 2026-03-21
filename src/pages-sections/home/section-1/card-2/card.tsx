@@ -18,7 +18,7 @@ export default function CardTwo({ body, title, imgUrl, badge, href, delay = 0 }:
   return (
     <Link href={href}>
       <Wrapper delay={delay}>
-        <Image fill alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
+        <Image fill priority alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
 
         <div className="content">
           <small className="badge">{badge}</small>

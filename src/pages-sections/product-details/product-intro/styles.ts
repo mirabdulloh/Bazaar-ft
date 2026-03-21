@@ -48,7 +48,7 @@ export const ProductImageWrapper = styled("div", {
     transform: zoomed ? "scale(2.4)" : "scale(1)",
     transition: "transform 0.18s ease-out"
   },
-  "& img": { objectFit: "cover" },
+  "& img": { objectFit: "contain", objectPosition: "center" },
   [theme.breakpoints.down("sm")]: { height: 300 },
   "& + .preview-images": {
     overflow: "auto",
