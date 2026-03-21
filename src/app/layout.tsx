@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
-
-export const geist = Geist({
-  subsets: ["latin"]
-});
+import { geist } from "lib/fonts";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
