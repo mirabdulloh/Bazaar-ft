@@ -33,17 +33,13 @@ function getInitialUser(): CustomJwtPayload {
     const payload = jwtDecode<CustomJwtPayload & { exp?: number }>(token);
     if (!payload.exp || payload.exp * 1000 <= Date.now()) {
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       sessionStorage.removeItem("accessToken");
-      sessionStorage.removeItem("refreshToken");
       return emptyUser;
     }
     return { ...emptyUser, ...payload };
   } catch {
     localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("refreshToken");
     return emptyUser;
   }
 }
