@@ -139,7 +139,7 @@ function getDisplayAvatar(chat: PreviewChat, memberType?: string): string {
     }
 
     return resolveImage(
-      chat.brandData?.memberData?.memberImage || chat.brandData?.brandLogo,
+      chat.brandData?.brandLogo || chat.brandData?.memberData?.memberImage,
       chat.brandData?.brandName || "Brand"
     );
   }

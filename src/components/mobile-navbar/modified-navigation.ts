@@ -2,7 +2,7 @@ import { Menu } from "models/Navigation.model";
 import { MenuItem } from "models/Navigation.model";
 
 // MODIFY THE NAVIGATION WITH NEW STRUCTURE
-export const updateNavigation = (navigation: Menu[]) => {
+export const updateNavigation = (navigation: Menu[], includeProfile = false) => {
   const withCsNormalized = navigation.map((item) => {
     if (item.title.trim().toLowerCase() !== "cs") return item;
 
@@ -44,6 +44,9 @@ export const updateNavigation = (navigation: Menu[]) => {
     return { title: curr.title, child: [] };
   });
 
-  // Add My Profile link to mobile menu
-  return [...result, { title: "My Profile", url: "/profile" }];
+  if (includeProfile) {
+    return [...result, { title: "My Profile", url: "/profile" }];
+  }
+
+  return result;
 };

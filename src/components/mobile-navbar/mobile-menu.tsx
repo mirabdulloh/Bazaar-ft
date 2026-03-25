@@ -7,7 +7,9 @@ import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import Clear from "@mui/icons-material/Clear";
+import { useReactiveVar } from "@apollo/client/react";
 import { useTranslation } from "react-i18next";
+import { userVar } from "../../../apollo/store";
 // GLOBAL CUSTOM COMPONENT
 import OverlayScrollbar from "components/overlay-scrollbar";
 // RENDER MENU LEVEL FUNCTION
@@ -24,6 +26,8 @@ type Props = { navigation: Menu[] };
 export function MobileMenu({ navigation }: Props) {
   const [openDrawer, setOpenDrawer] = useState(false);
   const { t } = useTranslation();
+  const user = useReactiveVar(userVar);
+  const isLoggedIn = !!user._id;
   const handleClose = useCallback(() => setOpenDrawer(false), []);
   const handleOpen = useCallback(() => setOpenDrawer(true), []);
 
@@ -58,7 +62,7 @@ export function MobileMenu({ navigation }: Props) {
                 <Clear fontSize="small" />
               </IconButton>
 
-              {renderLevels(updateNavigation(navigation), handleClose, t)}
+              {renderLevels(updateNavigation(navigation, isLoggedIn), handleClose, t)}
             </Box>
           </OverlayScrollbar>
         </Box>

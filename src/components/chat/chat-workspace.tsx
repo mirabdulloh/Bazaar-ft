@@ -354,7 +354,7 @@ function getDisplayAvatar(chat: ChatSummary, mode: ViewerMode): string {
     }
 
     return resolveImage(
-      chat.brandData?.memberData?.memberImage || chat.brandData?.brandLogo,
+      chat.brandData?.brandLogo || chat.brandData?.memberData?.memberImage,
       chat.brandData?.brandName || "Brand"
     );
   }
@@ -1734,7 +1734,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                     onClick={() => setSelectedBrandId(brand._id)}
                   >
                     <Avatar
-                      src={resolveImage(brand.memberData?.memberImage || brand.brandLogo, brand.brandName)}
+                      src={resolveImage(brand.brandLogo || brand.memberData?.memberImage, brand.brandName)}
                       sx={{ mr: 1.5 }}
                     />
                     <ListItemText
