@@ -33,7 +33,7 @@ type RegisterValues = {
 };
 
 const validationSchema = yup.object().shape({
-  nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Name is required"),
+  nick: yup.string().min(3, "Min 3 characters").max(25, "Max 25 characters").required("Nickname is required"),
   email: yup.string().email("Enter a valid email address").required("Email is required"),
   phone: yup.string().matches(/^\+?[0-9]{7,15}$/, "Digits only, e.g. +821012345678").required("Phone number is required"),
   password: yup.string().min(7, "Min 7 characters").max(20, "Max 20 characters").required("Password is required"),
@@ -96,8 +96,8 @@ export default function RegisterPageView() {
   return (
     <FormProvider methods={methods} onSubmit={handleSubmitForm}>
       <div className="mb-1">
-        <Label>Full Name</Label>
-        <TextField fullWidth name="nick" size="medium" placeholder="Your name" />
+        <Label>Nickname</Label>
+        <TextField fullWidth name="nick" size="medium" placeholder="your_nickname" />
       </div>
 
       <div className="mb-1">
