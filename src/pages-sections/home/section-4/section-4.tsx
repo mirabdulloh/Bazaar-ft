@@ -2,7 +2,7 @@
 
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
-import { useTranslation } from "../react-i18next";
+import { useTranslation } from "react-i18next";
 // LOCAL CUSTOM COMPONENT
 import Card from "./card";
 import CardTwo from "./card-2";
