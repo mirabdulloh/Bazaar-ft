@@ -36,6 +36,7 @@ interface Props {
 
 interface GqlProduct {
   _id: string;
+  memberId?: string;
   productType?: string;
   productTitle: string;
   productPrice: number;
