@@ -17,14 +17,6 @@ export const Wrapper = styled("div", {
   display: "flex",
   alignItems: "center",
   color: theme.palette.common.white,
-  opacity: 0,
-  transform: "translate3d(0, 24px, 0)",
-  animation: `heroSmallCardReveal 680ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms forwards`,
-  "@keyframes heroSmallCardReveal": {
-    "0%": { opacity: 0, transform: "translate3d(0, 24px, 0)" },
-    "100%": { opacity: 1, transform: "translate3d(0, 0, 0)" }
-  },
-
   "&::before": {
     inset: 0,
     zIndex: 1,
@@ -39,13 +31,8 @@ export const Wrapper = styled("div", {
   "& img": {
     objectFit: "cover",
     objectPosition: "center",
-    opacity: 0,
-    transform: "scale(1.08)",
-    animation: `heroSmallImageReveal 920ms cubic-bezier(0.22, 1, 0.36, 1) ${delay + 100}ms forwards`
-  },
-  "@keyframes heroSmallImageReveal": {
-    "0%": { opacity: 0, transform: "scale(1.08)" },
-    "100%": { opacity: 1, transform: "scale(1)" }
+    opacity: 1,
+    transform: "none"
   },
 
   "& .content": {
