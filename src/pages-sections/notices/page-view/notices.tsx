@@ -8,5 +8,5 @@ type Props = {
 };
 
 export default function NoticesPageView({ initialInput }: Props) {
-  return <CustomerSupportPageView initialTab="notices" initialNoticeInput={initialInput} />;
+  return <CustomerSupportPageView initialTab="notices" />;
 }

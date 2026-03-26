@@ -8,5 +8,5 @@ type Props = {
 };
 
 export default function FaqPageView({ initialInput }: Props) {
-  return <CustomerSupportPageView initialTab="faq" initialFaqInput={initialInput} />;
+  return <CustomerSupportPageView initialTab="faq" />;
 }
