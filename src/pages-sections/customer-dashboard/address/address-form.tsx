@@ -16,7 +16,7 @@ import { sweetMixinErrorAlert } from "lib/sweetAlert";
 import { T } from "../../../lib/types/common";
 
 // ==============================================================
-type Props = { address: T | null; onSuccess: () => void; onCancel: () => void };
+type Props = { address: T | null; onSuccess?: () => void; onCancel?: () => void };
 // ==============================================================
 
 type FormState = {
@@ -120,7 +120,7 @@ export default function AddressForm({ address, onSuccess, onCancel }: Props) {
           },
         });
       }
-      onSuccess();
+      onSuccess?.();
     } catch (err: any) {
       sweetMixinErrorAlert(err.message ?? "Failed to save address.");
     } finally {
@@ -223,7 +223,7 @@ export default function AddressForm({ address, onSuccess, onCancel }: Props) {
 
         <Grid size={12}>
           <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-            <Button variant="outlined" onClick={onCancel} disabled={saving}>
+            <Button variant="outlined" onClick={() => onCancel?.()} disabled={saving}>
               Cancel
             </Button>
             <Button type="submit" variant="contained" loading={saving}>
