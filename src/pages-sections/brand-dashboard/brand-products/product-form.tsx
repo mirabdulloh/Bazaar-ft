@@ -434,12 +434,14 @@ export default function BrandProductForm({ productId, embedded = false, onSaved,
       if (isEdit) {
         input._id = productId;
         const result = await updateProduct({ variables: { input } });
+        const savedProduct = (result.data as { updateProduct?: any } | undefined)?.updateProduct;
         await sweetTopSmallSuccessAlert("Product updated");
-        await onSaved?.(result?.data?.updateProduct);
+        await onSaved?.(savedProduct);
       } else {
         const result = await createProduct({ variables: { input } });
+        const savedProduct = (result.data as { createProduct?: any } | undefined)?.createProduct;
         await sweetTopSmallSuccessAlert("Product created");
-        await onSaved?.(result?.data?.createProduct);
+        await onSaved?.(savedProduct);
       }
       if (!onSaved) router.push("/brand/products");
     } catch (err: any) {
