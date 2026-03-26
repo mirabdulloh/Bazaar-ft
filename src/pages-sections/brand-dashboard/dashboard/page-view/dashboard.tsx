@@ -376,11 +376,11 @@ export default function DashboardPageView() {
 
             <Stack spacing={1.5}>
               {[
-                ["Active", stats.activeProducts],
-                ["Draft", stats.draftProducts],
-                ["Sold Out", stats.soldOutProducts],
-                ["Hidden", stats.hiddenProducts],
-              ].map(([label, value]) => (
+                { label: "Active", value: stats.activeProducts },
+                { label: "Draft", value: stats.draftProducts },
+                { label: "Sold Out", value: stats.soldOutProducts },
+                { label: "Hidden", value: stats.hiddenProducts },
+              ].map(({ label, value }) => (
                 <FlexStat key={label} label={label} value={String(value)} />
               ))}
 
