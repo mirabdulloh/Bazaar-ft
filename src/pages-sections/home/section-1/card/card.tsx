@@ -10,14 +10,13 @@ interface Props {
   title: string;
   imgUrl: string;
   href: string;
-  delay?: number;
 }
 // ==========================================================
 
-export default function Card({ body, title, imgUrl, badge, href, delay = 0 }: Props) {
+export default function Card({ body, title, imgUrl, badge, href }: Props) {
   return (
     <Link href={href}>
-      <Wrapper delay={delay}>
+      <Wrapper>
         <Image fill priority alt={title} sizes="(min-width: 768px) 50vw, 100vw" src={imgUrl} />
 
         <div className="content">

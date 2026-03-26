@@ -22,7 +22,6 @@ export default function Section1() {
             title={t("Wear what makes you, you.", { defaultValue: "Wear what makes you, you." })}
             imgUrl="/assets/images/banners/banner-66-hq.jpg"
             href="/products/search?sort=newest"
-            delay={220}
           />
         </Grid>
 
@@ -37,7 +36,6 @@ export default function Section1() {
             })}
             imgUrl="/assets/images/banners/banner-67-hq.jpg"
             href="/brands"
-            delay={340}
           />
         </Grid>
 
@@ -50,7 +48,6 @@ export default function Section1() {
             })}
             imgUrl="/assets/images/banners/banner-68-hq.jpg"
             href="/products/search?categoryName=Men"
-            delay={80}
           />
         </Grid>
 
@@ -63,7 +60,6 @@ export default function Section1() {
             title={t("Dress the way you feel", { defaultValue: "Dress the way you feel" })}
             imgUrl="/assets/images/banners/banner-69-hq.jpg"
             href="/products/search?categoryName=Women"
-            delay={460}
           />
         </Grid>
 
@@ -76,7 +72,6 @@ export default function Section1() {
             title={t("Up to 50% off selected brands", { defaultValue: "Up to 50% off selected brands" })}
             imgUrl="/assets/images/banners/banner-70-hq.jpg"
             href="/products/search?sort=flash_deals"
-            delay={580}
           />
         </Grid>
       </Grid>

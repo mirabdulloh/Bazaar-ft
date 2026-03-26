@@ -2,14 +2,8 @@
 
 import { styled } from "@mui/material/styles";
 
-interface WrapperProps {
-  delay?: number;
-}
-
 // STYLED COMPONENT
-export const Wrapper = styled("div", {
-  shouldForwardProp: (prop) => prop !== "delay"
-})<WrapperProps>(({ theme, delay = 0 }) => ({
+export const Wrapper = styled("div")(({ theme }) => ({
   gap: 10,
   minHeight: 500,
   // borderRadius: 12,
