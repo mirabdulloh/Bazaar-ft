@@ -275,7 +275,13 @@ function WishlistCard({
               src={thumbnail}
               alt={title}
               className="main-img"
-              sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                objectPosition: "center",
+                display: "block",
+              }}
             />
             {/* Hover image */}
             {images.length > 1 && (
@@ -287,7 +293,8 @@ function WishlistCard({
                 sx={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: "contain",
+                  objectPosition: "center",
                   display: "none",
                   position: "absolute",
                   top: 0,
