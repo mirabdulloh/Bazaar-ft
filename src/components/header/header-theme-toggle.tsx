@@ -1,22 +1,7 @@
 "use client";
 
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
-import DarkModeOutlined from "@mui/icons-material/DarkModeOutlined";
-import LightModeOutlined from "@mui/icons-material/LightModeOutlined";
-import useSettings from "hooks/useSettings";
-
+// Theme mode is not implemented in the shared settings/theme system yet.
+// Keep this component inert so it does not break production builds.
 export function HeaderThemeToggle() {
-  const { settings, updateSettings } = useSettings();
-  const isDark = settings.mode === "dark";
-
-  const toggleMode = () => updateSettings({ mode: isDark ? "light" : "dark" });
-
-  return (
-    <Tooltip title={isDark ? "Switch to light mode" : "Switch to dark mode"}>
-      <IconButton onClick={toggleMode} aria-label="Toggle color mode">
-        {isDark ? <LightModeOutlined fontSize="small" /> : <DarkModeOutlined fontSize="small" />}
-      </IconButton>
-    </Tooltip>
-  );
+  return null;
 }
