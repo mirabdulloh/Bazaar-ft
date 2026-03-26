@@ -52,7 +52,7 @@ function toProduct(p: T): Product & { _rawId: string } {
   const parseVariants = (val?: string[] | string): string[] => {
     if (!val) return [];
     const arr = Array.isArray(val) ? val : val.split(/[,/|]/);
-    return [...new Set(arr.map((v) => v.trim()).filter(Boolean))];
+    return Array.from(new Set(arr.map((v) => v.trim()).filter(Boolean)));
   };
   return {
     _rawId: p._id as string,
