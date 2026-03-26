@@ -201,7 +201,7 @@ export default function OrdersPageView() {
     [selectedOrderIds, sortedList]
   );
   const allSelectedStatuses = useMemo(
-    () => [...new Set(selectedOrders.map((item) => item.orderStatus))],
+    () => Array.from(new Set(selectedOrders.map((item) => item.orderStatus))),
     [selectedOrders]
   );
   const bulkAction =
@@ -225,7 +225,7 @@ export default function OrdersPageView() {
 
   const handleSelectOrder = useCallback((order: OrderData, checked: boolean) => {
     setSelectedOrderIds((prev) =>
-      checked ? [...new Set([...prev, order._id])] : prev.filter((id) => id !== order._id)
+      checked ? Array.from(new Set([...prev, order._id])) : prev.filter((id) => id !== order._id)
     );
   }, []);
 
