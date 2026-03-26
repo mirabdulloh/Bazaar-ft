@@ -73,9 +73,6 @@ import ProgressBar from "components/progress";
 import InitialBrandLoader from "components/initial-brand-loader";
 import I18nClientInit from "components/i18n-client-init";
 
-// IMPORT i18n SUPPORT FILE
-import "i18n";
-
 // ==============================================================
 interface RootLayoutProps {
   children: ReactNode;

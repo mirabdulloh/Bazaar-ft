@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, createContext, PropsWithChildren, useContext } from "react";
 
 const TOP_HEADER_AREA = 70;
