@@ -152,7 +152,7 @@ function WishlistCard({
   product: Product & { _rawId: string };
   onRefetch: () => void;
 }) {
-  const { id, title, price, discount, thumbnail, images } = product;
+  const { id, title, price, discount, thumbnail } = product;
   const discountedPrice =
     discount > 0 ? price - Math.round((price * discount) / 100) : 0;
 
@@ -213,8 +213,6 @@ function WishlistCard({
         transition: "all 250ms ease-in-out",
         "&:hover": {
           "& .hover-actions": { opacity: 1, transform: "translateY(0)" },
-          "& .hover-img": { display: "block" },
-          "& .main-img": { display: "none" },
         },
       }}
     >
@@ -274,7 +272,6 @@ function WishlistCard({
               component="img"
               src={thumbnail}
               alt={title}
-              className="main-img"
               sx={{
                 width: "100%",
                 height: "100%",
@@ -283,25 +280,6 @@ function WishlistCard({
                 display: "block",
               }}
             />
-            {/* Hover image */}
-            {images.length > 1 && (
-              <Box
-                component="img"
-                src={images[1]}
-                alt={title}
-                className="hover-img"
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  objectPosition: "center",
-                  display: "none",
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                }}
-              />
-            )}
           </Box>
         </Link>
 
