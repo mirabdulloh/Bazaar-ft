@@ -1,9 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
 // MUI
 import Grid from "@mui/material/Grid";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
+import ServerImage from "components/server-image";
+import { resolveServerMedia } from "lib/server-media";
 // STYLED COMPONENTS
 import { StyledCard } from "./styles";
 
@@ -19,7 +20,6 @@ type Props = {
 };
 
 export default function AvailableShops({ shops }: Props) {
-
   // IF NO SHOPS RETURN NULL
   if (!shops || !shops.length) return null;
 
@@ -35,7 +35,16 @@ export default function AvailableShops({ shops }: Props) {
             <Link href={url}>
               <StyledCard>
                 <Avatar className="shop-avatar" variant="rounded">
-                  <Image alt={name} src={image} fill sizes="(48px 48px)" />
+                  {resolveServerMedia(image) ? (
+                    <ServerImage
+                      src={resolveServerMedia(image)}
+                      alt={name}
+                      loading="lazy"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    name[0]?.toUpperCase()
+                  )}
                 </Avatar>
 
                 <p className="shop-name">{name}</p>

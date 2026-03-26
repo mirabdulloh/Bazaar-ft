@@ -9,6 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Pagination from "@mui/material/Pagination";
 import Typography from "@mui/material/Typography";
+import { resolveServerMedia } from "lib/server-media";
 // GLOBAL CUSTOM COMPONENTS
 import ProductCard1 from "components/product-cards/product-card-1";
 // CUSTOM DATA MODEL
@@ -26,6 +27,7 @@ type Props = {
 export default function MoreFromBrand({ products, brandId, brandName, brandImage }: Props) {
   const [page, setPage] = useState(1);
   const pageSize = 4;
+  const resolvedBrandImage = resolveServerMedia(brandImage);
 
   const totalPages = Math.ceil(products.length / pageSize);
   const paged = useMemo(
@@ -40,7 +42,7 @@ export default function MoreFromBrand({ products, brandId, brandName, brandImage
       {/* BRAND HEADER */}
       <Box display="flex" alignItems="center" gap={1.5} mb={3}>
         <Avatar
-          src={brandImage}
+          src={resolvedBrandImage}
           sx={{ width: 44, height: 44, bgcolor: "primary.main" }}
         >
           {brandName[0]?.toUpperCase()}

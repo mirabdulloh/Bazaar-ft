@@ -15,7 +15,7 @@ import RelatedProducts from "../related-products";
 import MoreFromBrand from "../more-from-brand";
 import ProductDescription from "../product-description";
 import { useQuery } from "../../../lib/hooks/useQuery";
-import { GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
+import { GET_BRANDS, GET_CATEGORIES, GET_PRODUCT, GET_PRODUCTS, GET_REVIEWS } from "../../../../apollo/user/query";
 // CUSTOM DATA MODEL
 import Product from "models/Product.model";
 import { T } from "../../../lib/types/common";
@@ -59,6 +59,13 @@ interface GqlProduct {
 interface GqlCategory {
   _id: string;
   categoryName: string;
+}
+
+interface GqlBrand {
+  _id: string;
+  brandName?: string;
+  brandLogo?: string;
+  memberData?: { memberImage?: string; memberNick?: string };
 }
 
 interface AvailableBrand {
@@ -137,7 +144,30 @@ export default function ProductDetailsPageView(props: Props) {
   const currentBrandId = currentRawProduct?.memberData?._id;
   const currentType = currentRawProduct?.productType;
   const brandName = currentRawProduct?.memberData?.memberNick ?? "";
-  const brandImage = currentRawProduct?.memberData?.memberImage ?? "";
+
+  const { data: brandsData } = useQuery(GET_BRANDS, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      input: {
+        page: 1,
+        limit: 200,
+        sort: "brandFollowersCount",
+        direction: "DESC",
+        search: {}
+      }
+    },
+    notifyOnNetworkStatusChange: true
+  });
+
+  const brandById = useMemo(() => {
+    const brands: GqlBrand[] = ((brandsData as T)?.getBrands?.brands ?? []) as GqlBrand[];
+    return new Map(brands.map((brand) => [brand._id, brand]));
+  }, [brandsData]);
+
+  const brandImage =
+    (currentBrandId ? brandById.get(currentBrandId)?.brandLogo : "") ??
+    currentRawProduct?.memberData?.memberImage ??
+    "";
 
   const { data: getReviewsCountData, error: getReviewsCountError } = useQuery(GET_REVIEWS, {
     fetchPolicy: "cache-and-network",
@@ -229,16 +259,18 @@ export default function ProductDetailsPageView(props: Props) {
       if (!brandId || brandId === currentBrandId) continue;
       if (grouped.has(brandId)) continue;
 
+      const brand = brandById.get(brandId);
+
       grouped.set(brandId, {
         id: brandId,
-        name: item.memberData?.memberNick || "Brand",
-        image: item.memberData?.memberImage || "/assets/images/faces/propic.png",
+        name: brand?.brandName || item.memberData?.memberNick || "Brand",
+        image: brand?.brandLogo || item.memberData?.memberImage || "/assets/images/faces/propic.png",
         url: `/brands/${brandId}`
       });
     }
 
     return Array.from(grouped.values()).slice(0, 6);
-  }, [categoryProductsRaw, currentRawProduct, currentBrandId]);
+  }, [brandById, categoryProductsRaw, currentRawProduct, currentBrandId]);
 
   if (loading && !product) {
     return (
