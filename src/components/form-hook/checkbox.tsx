@@ -18,15 +18,22 @@ export default function Checkbox({ name, size, color, ...other }: Props) {
     <Controller
       name={name}
       control={control}
-      render={({ field, fieldState: { error } }) => (
-        <div>
-          <FormControlLabel
-            control={<MuiCheckbox {...field} checked={field.value} size={size} color={color} />}
-            {...other}
-          />
-          {Boolean(error) && <FormHelperText error>{error?.message}</FormHelperText>}
-        </div>
-      )}
+      render={(controllerProps: any) => {
+        const {
+          field,
+          fieldState: { error },
+        } = controllerProps;
+
+        return (
+          <div>
+            <FormControlLabel
+              control={<MuiCheckbox {...field} checked={field.value} size={size} color={color} />}
+              {...other}
+            />
+            {Boolean(error) && <FormHelperText error>{error?.message}</FormHelperText>}
+          </div>
+        );
+      }}
     />
   );
 }

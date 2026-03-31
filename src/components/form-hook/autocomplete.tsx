@@ -34,24 +34,31 @@ export default function Autocomplete<
     <Controller
       name={name}
       control={control}
-      render={({ field, fieldState: { error } }) => (
-        <MuiAutocomplete
-          {...field}
-          options={options}
-          onChange={(_, newValue) => setValue(name, newValue, { shouldValidate: true })}
-          renderInput={(params) => (
-            <TextField
-              label={label}
-              placeholder={placeholder}
-              error={Boolean(error)}
-              helperText={error?.message || ""}
-              {...params}
-              size={size}
-            />
-          )}
-          {...other}
-        />
-      )}
+      render={(controllerProps: any) => {
+        const {
+          field,
+          fieldState: { error },
+        } = controllerProps;
+
+        return (
+          <MuiAutocomplete
+            {...field}
+            options={options}
+            onChange={(_, newValue) => setValue(name, newValue, { shouldValidate: true })}
+            renderInput={(params) => (
+              <TextField
+                label={label}
+                placeholder={placeholder}
+                error={Boolean(error)}
+                helperText={error?.message || ""}
+                {...params}
+                size={size}
+              />
+            )}
+            {...other}
+          />
+        );
+      }}
     />
   );
 }
