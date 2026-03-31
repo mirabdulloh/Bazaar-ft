@@ -11,6 +11,8 @@ type Props = {
   fallbackTitle: string;
 };
 
+const DEFAULT_NOTICE_FALLBACK = "Latest updates from BAZAAR";
+
 const LATEST_NOTICE_INPUT = {
   page: 1,
   limit: 1,
@@ -19,7 +21,7 @@ const LATEST_NOTICE_INPUT = {
   search: {}
 };
 
-export default function TopbarLatestNotice({ label, fallbackTitle }: Props) {
+export default function TopbarLatestNotice({ label }: Props) {
   const { data } = useQuery(GET_NOTICES, {
     variables: { input: LATEST_NOTICE_INPUT },
     fetchPolicy: "network-only"
@@ -27,8 +29,8 @@ export default function TopbarLatestNotice({ label, fallbackTitle }: Props) {
 
   const latestTitle = useMemo(() => {
     const list = (data as T)?.getNotices?.list ?? [];
-    return list[0]?.noticeTitle || fallbackTitle;
-  }, [data, fallbackTitle]);
+    return list[0]?.noticeTitle?.trim() || DEFAULT_NOTICE_FALLBACK;
+  }, [data]);
 
   return <Topbar.Left label={label} title={latestTitle} />;
 }
