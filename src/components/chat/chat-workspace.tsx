@@ -591,7 +591,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
 
   const [openBrandChat, { loading: openingBrandChat }] = useMutation(OPEN_OR_GET_BRAND_CHAT);
   const [openSupportChat, { loading: openingSupportChat }] = useMutation(OPEN_OR_GET_SUPPORT_CHAT);
-  const [sendMessage, { loading: sendingMessage }] = useMutation(SEND_CHAT_MESSAGE);
+  const [sendMessage] = useMutation(SEND_CHAT_MESSAGE);
   const [markRead] = useMutation(MARK_CHAT_MESSAGES_AS_READ);
   const [claimSupportChat, { loading: claimingChat }] = useMutation(CLAIM_SUPPORT_CHAT);
   const [closeChat, { loading: closingChat }] = useMutation(CLOSE_CHAT);
@@ -784,32 +784,86 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
     const content = messageInput.trim();
     if (!selectedChatId || (!content && !pendingImage)) return;
 
+    const activeChatId = selectedChatId;
+    const activeReplyTarget = replyTarget;
+    const sendingImage = pendingImage;
+    const shouldClearComposerImmediately = !sendingImage;
+
+    if (shouldClearComposerImmediately) {
+      setMessageInput("");
+      setReplyTarget(null);
+      if (selectedChatIdRef.current) socketRef.current?.emit("stopTyping", { chatId: selectedChatIdRef.current });
+    }
+
     try {
-      setUploadingImage(Boolean(pendingImage));
-      const attachment = pendingImage ? await uploadChatImage(pendingImage.file) : null;
+      setUploadingImage(Boolean(sendingImage));
+      const attachment = sendingImage ? await uploadChatImage(sendingImage.file) : null;
+
+      if (sendingImage) {
+        setMessageInput("");
+        setReplyTarget(null);
+        clearPendingImage();
+        if (selectedChatIdRef.current) socketRef.current?.emit("stopTyping", { chatId: selectedChatIdRef.current });
+      }
+
       await sendMessage({
         variables: {
           input: {
-            conversationId: selectedChatId,
+            conversationId: activeChatId,
             messageType: attachment ? "IMAGE" : "TEXT",
             message: content || undefined,
             attachments: attachment ? [attachment] : undefined,
-            replyToId: replyTarget?._id,
+            replyToId: activeReplyTarget?._id,
           },
         },
-      });
+        update: (cache, { data }) => {
+          const createdMessage = (data as any)?.sendMessage;
+          if (!createdMessage || createdMessage.conversationId !== activeChatId) return;
 
-      setMessageInput("");
-      setReplyTarget(null);
-      clearPendingImage();
-      if (selectedChatIdRef.current) socketRef.current?.emit("stopTyping", { chatId: selectedChatIdRef.current });
-      await Promise.all([refetchMessages(), refetchChats()]);
+          const query = mode === "admin" ? GET_ALL_MESSAGES_BY_ADMIN : GET_MESSAGES;
+          const resultKey = mode === "admin" ? "getAllMessagesByAdmin" : "getMessages";
+          const variables = {
+            input: {
+              page: 1,
+              limit: MESSAGE_LIMIT,
+              direction: "ASC",
+              conversationId: activeChatId,
+            },
+          };
+
+          const existing = cache.readQuery({
+            query,
+            variables,
+          }) as any;
+
+          if (!existing?.[resultKey]) return;
+
+          const existingList = existing[resultKey]?.list ?? [];
+          if (existingList.some((item: any) => item._id === createdMessage._id)) return;
+
+          cache.writeQuery({
+            query,
+            variables,
+            data: {
+              [resultKey]: {
+                ...existing[resultKey],
+                list: [...existingList, createdMessage],
+              },
+            },
+          });
+        },
+      });
+      void refetchChats();
     } catch (error: any) {
+      if (shouldClearComposerImmediately) {
+        setMessageInput(content);
+        setReplyTarget(activeReplyTarget);
+      }
       await sweetMixinErrorAlert(error.message || "Failed to send message");
     } finally {
       setUploadingImage(false);
     }
-  }, [clearPendingImage, messageInput, pendingImage, refetchChats, refetchMessages, replyTarget?._id, selectedChatId, sendMessage, uploadChatImage]);
+  }, [clearPendingImage, messageInput, mode, pendingImage, refetchChats, replyTarget, selectedChatId, sendMessage, uploadChatImage]);
 
   const handleInputTyping = useCallback(
     (value: string) => {
@@ -1672,7 +1726,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                         void handleSendMessage();
                       }
                     }}
-                    disabled={!selectedChat.canReply || sendingMessage || uploadingImage}
+                    disabled={!selectedChat.canReply || uploadingImage}
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         borderRadius: 3,
@@ -1686,7 +1740,7 @@ export default function ChatWorkspace({ mode }: { mode: ViewerMode }) {
                   <Button
                     variant="contained"
                     onClick={() => void handleSendMessage()}
-                    disabled={!selectedChat.canReply || (!messageInput.trim() && !pendingImage) || sendingMessage || uploadingImage}
+                    disabled={!selectedChat.canReply || (!messageInput.trim() && !pendingImage) || uploadingImage}
                     sx={{
                       minWidth: { xs: 46, sm: 48 },
                       px: { xs: 1.5, sm: 2 },
