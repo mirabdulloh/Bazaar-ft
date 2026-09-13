@@ -7,16 +7,16 @@ import { styled } from "@mui/material/styles";
 
 const StyledImage = styled(Image)({ width: "100%", height: "auto", display: "block" });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 type LazyImageProps = ImageProps & {
   sx?: SxProps<Theme>;
 };
 
 export default function LazyImage({ style, sx, ...props }: LazyImageProps) {
   const src = typeof props.src === "string" ? props.src : "";
-  const unoptimized =
-    (API_URL && src.startsWith(API_URL)) || src.startsWith("blob:");
+  // Only local object URLs must bypass the optimizer. API-hosted uploads are
+  // allowed via remotePatterns and benefit most from resizing (they average
+  // ~2MB straight from the camera).
+  const unoptimized = src.startsWith("blob:");
 
   const w = typeof props.width === "number" ? props.width : null;
   const h = typeof props.height === "number" ? props.height : null;

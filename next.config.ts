@@ -6,8 +6,14 @@ const nextConfig: NextConfig = {
     root: process.cwd()
   },
   images: {
-    unoptimized: true,
+    // Serve AVIF/WebP at the size actually displayed. With this off, the hero
+    // banners shipped as multi-MB originals (banner-66-hq.jpg alone is 5.09MB).
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "api.bazaarshop.me"
+      },
       {
         protocol: "https",
         hostname: "ui-lib.com"
